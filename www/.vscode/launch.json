@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+       "configurations": [
+           {
+               "name": "Launch HTML file",
+               "type": "chrome",
+               "request": "launch",
+               "runtimeExecutable": "C:\\Program Files\\Chromium\\Application\\chrome.exe",
+               "file": "${file}"
+           }
+       ]
+   }

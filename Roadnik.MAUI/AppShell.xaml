@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Roadnik.MAUI.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:pages="clr-namespace:Roadnik.MAUI.Pages"
+    Shell.FlyoutBehavior="Flyout">
+
+    <!--https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/shell/flyout?view=net-maui-7.0-->
+    
+    <Shell.FlyoutHeaderTemplate>
+        <DataTemplate>
+            <Grid BackgroundColor="Black"
+                  HeightRequest="200">
+                <Image Aspect="AspectFill"
+                       Source="road_forest.svg"
+                       Opacity="0.6" />
+                <!--<Label Text="Animals"
+                       TextColor="White"
+                       FontAttributes="Bold"
+                       HorizontalTextAlignment="Center"
+                       VerticalTextAlignment="Center" />-->
+            </Grid>
+        </DataTemplate>
+    </Shell.FlyoutHeaderTemplate>
+
+    <Shell.TabBarIsVisible>
+        <x:Boolean>false</x:Boolean>
+    </Shell.TabBarIsVisible>
+
+    <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
+        <ShellContent 
+            Title="Map" 
+            Icon="map.svg"
+            ContentTemplate="{DataTemplate pages:MainPage}" />
+        <ShellContent 
+            Title="Settings" 
+            Icon="cog_box.svg"
+            ContentTemplate="{DataTemplate pages:OptionsPage}" />
+    </FlyoutItem>
+    
+
+    <ShellContent 
+        Title="About"
+        Icon="info.png"
+        ContentTemplate="{DataTemplate pages:OptionsPage}" />
+
+    <!--<ShellContent
+        Title="Home"
+        ContentTemplate="{DataTemplate local:MainFlyoutPage}"
+        Route="MainFlyoutPage" />-->
+
+</Shell>

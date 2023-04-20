@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+             x:Class="Roadnik.MAUI.Pages.OptionsPage"
+             Title="{Binding Title}">
+
+    <ContentPage.BindingContext>
+        <views:OptionsPageViewModel />
+    </ContentPage.BindingContext>
+
+    <TableView Intent="Settings">
+        <TableRoot>
+            <TableSection Title="Server settings">
+                <TextCell
+                    Text="Server address"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="ServerAddress_Tapped"
+                    Detail="{Binding ServerName}"/>
+                <TextCell
+                    Text="Server key"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="ServerKey_Tapped"
+                    Detail="{Binding ServerKey}"/>
+            </TableSection>
+            <TableSection Title="Reporting settings">
+                <TextCell
+                    Text="Minimum interval between reports"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="MinimumInterval_Tapped"
+                    Detail="{Binding MinimumTime}"/>
+                <TextCell
+                    Text="Minimum distance to report"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="MinimumDistance_Tapped"
+                    Detail="{Binding MinimumDistance}"/>
+            </TableSection>
+        </TableRoot>
+    </TableView>
+
+</ContentPage>

@@ -1,0 +1,7 @@
+/.vs
+/Roadnik/bin
+/Roadnik/obj
+/logs
+/www/node_modules
+/data
+/www/dist/bundle.js

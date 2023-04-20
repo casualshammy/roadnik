@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<tookit:ContainerizedContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+             xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+             x:Class="Roadnik.MAUI.Pages.MainPage"
+             Title="{Binding Title}">
+
+    <ContentPage.BindingContext>
+        <views:MainPageViewModel />
+    </ContentPage.BindingContext>
+
+    <AbsoluteLayout>
+        <WebView
+            Source="{Binding WebViewUrl}"
+            AbsoluteLayout.LayoutFlags="All"  
+            AbsoluteLayout.LayoutBounds="0,0,1,1"
+            Navigating="MainWebView_Navigating"
+            Navigated="MainWebView_Navigated">
+        </WebView>
+        <ActivityIndicator 
+            Color="{Binding StartRecordButtonColor}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
+            IsRunning="{Binding IsSpinnerRequired}" />
+        <Button
+            AbsoluteLayout.LayoutFlags="PositionProportional"  
+            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
+            CornerRadius="45"
+            BackgroundColor="{Binding StartRecordButtonColor}"
+            Clicked="FAB_Clicked">
+        </Button>
+        <ImageButton 
+            Source="record_rec.svg"
+            AbsoluteLayout.LayoutFlags="PositionProportional"  
+            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
+            InputTransparent="True"/>
+    </AbsoluteLayout>
+
+
+</tookit:ContainerizedContentPage>

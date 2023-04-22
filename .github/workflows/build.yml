@@ -39,6 +39,8 @@ jobs:
 
     - name: Build Client Android
       run: python build-client.py --framework net6.0-android
+      env:
+        ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
 
     - name: Create Github Release
       id: create_release

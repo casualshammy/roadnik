@@ -36,6 +36,12 @@ jobs:
     - name: GitHub Integration
       run: python build_common/github_integration.py
 
+    - name: Push tag
+      uses: laputansoft/github-tag-action@v4.6
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ env.tag }}
+
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
 

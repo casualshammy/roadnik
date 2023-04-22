@@ -62,3 +62,5 @@ with zipfile.ZipFile(pkgFile, 'w', zipfile.ZIP_DEFLATED) as pkgZipFile:
 print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
+
+git.create_tag_and_push(f"test-tag-{version}")

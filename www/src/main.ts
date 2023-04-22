@@ -6,7 +6,6 @@ import { TimeSpan } from "./modules/timespan";
 const p_storageApi = new Api.StorageApi();
 
 async function refreshPosition(_key: string) {
-    //debugger;
     const data = await p_storageApi.getDataAsync(_key);
     if (data === null || !data.Success)
         return;
@@ -57,9 +56,8 @@ async function refreshPosition(_key: string) {
         </p>`;
     marker.setPopupContent(popUpText);
 
-    if (p_autoPan === true) {
-        map.panTo(latLng);
-    }
+    if (p_autoPan === true)
+        map.flyTo(latLng);
     
     const points = data.Entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
     path.setLatLngs(points);
@@ -94,6 +92,9 @@ const circle = L.circle([51.4768, 0.0006], 100, { color: 'blue', fillColor: '#f0
     .addTo(map);
 
 const path = L.polyline([], {color: 'red', smoothFactor: 1, weight: 5})
+    .addTo(map);
+
+const autoPanCheckbox = Maps.GetCheckBox("Auto pan", 'topleft', _checked => p_autoPan = _checked)
     .addTo(map);
 
 if (key !== null) {

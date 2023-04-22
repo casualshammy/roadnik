@@ -45,3 +45,34 @@ export function GetMapOverlayLayers() {
 
     return overlayMaps;
 }
+
+let customCtrlsCounter = 0;
+export function GetCheckBox(_text: string, _position: string, _handler: (_checked: boolean) => void): L.Control {
+	const checkbox = L.Control.extend({
+		onAdd: function(_map: L.Map): HTMLElement {
+			const id = `leaflet-custom-ctrl-${customCtrlsCounter++}`;
+			var div = L.DomUtil.create('div');
+			div.innerHTML = `
+				<div class="leaflet-control-layers leaflet-control-layers-expanded">
+				<form>
+					<input id="${id}" class="leaflet-control-layers-overlays" id="command" type="checkbox">
+					${_text}
+					</input>
+				</form>
+				</div>`;
+			setTimeout(() => {
+				document.getElementById(id)!.addEventListener("change", _ev => {
+					const element = document.getElementById(id) as HTMLInputElement;
+					if (element !== null)
+						_handler(element.checked);
+				}, false);
+			}, 1000);
+			return div;
+		},
+		onRemove: function(_map: L.Map) {
+
+		}
+	});
+	return new checkbox({ position: 'topleft' });
+}
+

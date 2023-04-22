@@ -1,10 +1,10 @@
 import os
 import shutil
 import zipfile
-import build_common.packages
-import build_common.git as git
+from build_common import utils
+from build_common import packages
+from build_common import git
 import argparse
-from subprocess import call
 
 sourceDirName = "Roadnik"
 
@@ -33,15 +33,15 @@ print(f"Compiling server for platform '{platform}'...", flush=True)
 print(f"Version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
 serverOutputDir = os.path.join(outputDir, "bin")
-build_common.packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
-build_common.packages.callThrowIfError(f"dotnet build {sourceDirName} -c release -r {platform} --self-contained -o \"{serverOutputDir}\"")
+packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
+utils.callThrowIfError(f"dotnet build {sourceDirName} -c release -r {platform} --self-contained -o \"{serverOutputDir}\"")
 
 print(f"===========================================", flush=True)
 print(f"Compiling web...", flush=True)
 print(f"===========================================", flush=True)
 webSrcDir = os.path.join(os.getcwd(), "www")
 webOutputDir = os.path.join(outputDir, "www")
-build_common.packages.create_webpack(webSrcDir, webOutputDir)
+packages.create_webpack(webSrcDir, webOutputDir)
 
 print(f"===========================================", flush=True)
 print(f"Copying sample settings...", flush=True)

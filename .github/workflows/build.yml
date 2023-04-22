@@ -33,14 +33,6 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: GitHub Integration
-      run: python build_common/github_integration.py
-
-    - name: "🏷️ Push tag"
-      uses: EndBug/latest-tag@latest
-      with:
-        tag-name: "${{ env.tag }}"
-
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
 
@@ -51,6 +43,11 @@ jobs:
       run: python build-client.py --framework net6.0-android
       env:
         ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
+
+    - name: "🏷️ Push tag"
+      uses: EndBug/latest-tag@latest
+      with:
+        tag-name: "${{ env.tag }}"
 
     - name: Create Github Release
       uses: softprops/action-gh-release@v1

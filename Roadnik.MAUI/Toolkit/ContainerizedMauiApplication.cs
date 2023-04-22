@@ -4,7 +4,6 @@ using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
-using System.ComponentModel;
 using System.Text.RegularExpressions;
 
 namespace Roadnik.MAUI.Toolkit;
@@ -14,6 +13,8 @@ public abstract class ContainerizedMauiApplication : Application, IMauiApp
   protected ContainerizedMauiApplication() : base()
   {
     var lifetime = new Lifetime();
+    lifetime.DoOnCompleted(Quit);
+
     var depMgr = new ExportClassMgr(lifetime, GetServices(lifetime));
     Container = depMgr.ServiceProvider;
   }
@@ -36,19 +37,5 @@ public abstract class ContainerizedMauiApplication : Application, IMauiApp
       { typeof(ILogger), _scope => logger },
     };
   }
-
-}
-
-public abstract class ContainerizedContentPage : ContentPage
-{
-  protected ContainerizedContentPage()
-  {
-    if (Application.Current is not IMauiApp app)
-      throw new ApplicationException($"Application is not {nameof(ContainerizedMauiApplication)}");
-
-    Container = app.Container;
-  }
-
-  public IInjectionScope Container { get; }
 
 }

@@ -30,13 +30,17 @@ internal class LocationReporterImpl : ILocationReporter
   {
     p_log = _log["location-reporter"];
 
+    var reportInterval = TimeSpan.FromSeconds(10);
+
+    p_httpClient.Timeout = reportInterval;
+
     _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     var forceReqFlow = p_forceReload
       .Scan(new ForceReqData(DateTimeOffset.MinValue, true), (_acc, _entry) =>
       {
         var now = DateTimeOffset.UtcNow;
-        if (now - _acc.DateTime < TimeSpan.FromSeconds(10))
+        if (now - _acc.DateTime < reportInterval)
           return _acc with { Ok = false };
 
         return new ForceReqData(now, true);
@@ -45,7 +49,7 @@ internal class LocationReporterImpl : ILocationReporter
       .ToUnit();
 
     Observable
-      .Interval(TimeSpan.FromSeconds(10))
+      .Interval(reportInterval)
       .Where(_ => p_enabled)
       .ToUnit()
       .Merge(forceReqFlow)
@@ -59,7 +63,7 @@ internal class LocationReporterImpl : ILocationReporter
           if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
             return;
 
-          var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+          var request = new GeolocationRequest(GeolocationAccuracy.Medium, reportInterval);
           var location = await Geolocation.GetLocationAsync(request, _ct);
 
           if (location != null)

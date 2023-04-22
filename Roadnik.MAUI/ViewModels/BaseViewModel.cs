@@ -15,6 +15,8 @@ internal abstract class BaseViewModel : INotifyPropertyChanged
       throw new ApplicationException($"Application is not {nameof(ContainerizedMauiApplication)}");
 
     Container = app.Container;
+
+    Container.Inject(this);
   }
 
   public IInjectionScope Container { get; }

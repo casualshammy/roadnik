@@ -22,6 +22,6 @@ internal class AboutPageViewModel : BaseViewModel
     "Please leave questions, bug reports, or comments on the issue tracker. " +
     "Alternatively, you can reach me via e-mail.";
   public ICommand GoWebCommand { get => p_goWebCommand; set => SetProperty(ref p_goWebCommand, value); }
-  public string AppVersion => $"Version: {AppInfo.Current.VersionString} ({AppInfo.Current.BuildString})";
+  public string AppVersion => $"Version: {AppInfo.Current.VersionString}";
 
 }

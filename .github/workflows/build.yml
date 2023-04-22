@@ -20,8 +20,8 @@ jobs:
     - name: Install Python3   
       uses: actions/setup-python@v2
       with:
-        python-version: '3.11' # Version range or exact version of a Python version to use, using SemVer's version range syntax
-        architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
+        python-version: '3.11'
+        architecture: 'x64'
       
     - name: Install Node
       uses: actions/setup-node@v3
@@ -43,11 +43,6 @@ jobs:
       run: python build-client.py --framework net6.0-android
       env:
         ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
-
-    - name: "🏷️ Push tag"
-      uses: EndBug/latest-tag@latest
-      with:
-        tag-name: "${{ env.tag }}"
 
     - name: Create Github Release
       uses: softprops/action-gh-release@v1

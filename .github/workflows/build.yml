@@ -46,8 +46,8 @@ jobs:
 
     - name: Get tag name
       run: |
-        echo "TAG_NAME=$(git rev-list HEAD --count)"
-        echo "TAG_NAME=$(git rev-list HEAD --count)" >> $GITHUB_OUTPUT
+        echo "$TAG_VERSION"
+        echo "${{ env.TAG_VERSION }}"
       id: tag_name
 
     # - name: Create Github Release
@@ -70,9 +70,8 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
         prerelease: false
-        title: "Release ${{ steps.tag_name.outputs.TAG_NAME }}"
+        title: "Release ${{ env.TAG_VERSION }}"
         files: |
           *.zip
           *.apk

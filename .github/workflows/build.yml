@@ -33,8 +33,10 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: GitHub Integration
+      run: python build_common/github_integration.py
+
     - name: Build Server Windows x64
-      id: build_server_windows
       run: python build-server.py --platform win-x64
 
     # - name: Build Server Ubuntu 18.04 x64
@@ -49,7 +51,8 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false # automatic_release_tag: "${{ env.tag }}"
+        prerelease: false
+        automatic_release_tag: "latest-release"
         title: "Release ${{ env.tag }}"
         files: |
           *.zip

@@ -1,10 +1,8 @@
 import os
 import shutil
-import zipfile
 import build_common.packages
 import build_common.git as git
 import argparse
-from subprocess import call
 
 signingPassword = os.environ['ANDROID_SIGNING_KEY_PASSWORD']
 
@@ -64,3 +62,5 @@ for entry in os.listdir(outputDir):
 print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
+
+git.create_tag_and_push(version)

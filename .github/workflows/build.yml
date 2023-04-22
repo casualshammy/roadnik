@@ -46,25 +46,36 @@ jobs:
 
     - name: Get tag name
       run: |
+        echo "TAG_NAME=$(git rev-list HEAD --count)"
         echo "TAG_NAME=$(git rev-list HEAD --count)" >> $GITHUB_OUTPUT
       id: tag_name
 
-    - name: Create Github Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        artifactErrorsFailBuild: true
-        artifacts: "*.zip,*.apk"
-        artifactContentType: ""
-        commit: ${{ github.ref_name }}
-        draft: false
-        makeLatest: true
-        name: "Release: ${{ steps.tag_name.outputs.TAG_NAME }}"
-        prerelease: false
-        tag: ${{ steps.tag_name.outputs.TAG_NAME }}
+    # - name: Create Github Release
+    #   id: create_release
+    #   uses: actions/create-release@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     artifactErrorsFailBuild: true
+    #     artifacts: "*.zip,*.apk"
+    #     artifactContentType: ""
+    #     commit: ${{ github.ref_name }}
+    #     draft: false
+    #     makeLatest: true
+    #     name: "Release: ${{ steps.tag_name.outputs.TAG_NAME }}"
+    #     prerelease: false
+    #     tag: ${{ steps.tag_name.outputs.TAG_NAME }}
         
+    - name: Create Github Release
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: false
+        title: "Release ${{ steps.tag_name.outputs.TAG_NAME }}"
+        files: |
+          *.zip
+          *.apk
 
     # - name: Upload Release Windows x64
     #   uses: actions/upload-release-asset@v1.0.1

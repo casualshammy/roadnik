@@ -5,3 +5,8 @@
 /www/node_modules
 /data
 /www/dist/bundle.js
+/Roadnik.MAUI/bin
+/Roadnik.MAUI/obj
+/output
+/*.apk
+/*.zip

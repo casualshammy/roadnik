@@ -10,7 +10,7 @@ public partial class App : ContainerizedMauiApplication
     InitializeComponent();
     SetupDefaultPreferences();
 
-    MainPage = new AppShell();
+    MainPage = new NavigationAppShell();
   }
 
   private void SetupDefaultPreferences()

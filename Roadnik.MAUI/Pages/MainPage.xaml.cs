@@ -1,30 +1,33 @@
-﻿using Roadnik.MAUI.ViewModels;
-using System.Reactive.Linq;
-using System.Reactive;
-using Ax.Fw.Extensions;
-using Roadnik.MAUI.Toolkit;
+﻿using Ax.Fw.Extensions;
+using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Toolkit;
+using Roadnik.MAUI.ViewModels;
+using System.Reactive;
+using System.Reactive.Linq;
 
 namespace Roadnik.MAUI.Pages;
 
 public partial class MainPage : ContainerizedContentPage
 {
   private readonly IPreferencesStorage p_storage;
+  private readonly IReadOnlyLifetime p_lifetime;
 
   public MainPage()
   {
     InitializeComponent();
     p_storage = Container.Locate<IPreferencesStorage>();
+    p_lifetime = Container.Locate<IReadOnlyLifetime>();
 
     Observable
       .Return(Unit.Default)
       .SelectAsync(async (_, _ct) =>
       {
-        var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+        var permission = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
         if (permission != PermissionStatus.Granted)
-          await Permissions.RequestAsync<Permissions.LocationAlways>();
+          await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
       })
-      .Subscribe();
+      .Subscribe(p_lifetime);
   }
 
   protected override void OnAppearing()
@@ -48,19 +51,30 @@ public partial class MainPage : ContainerizedContentPage
     bindingCtx.WebViewUrl = url;
   }
 
+  protected override bool OnBackButtonPressed()
+  {
+    return base.OnBackButtonPressed();
+  }
+
   private void FAB_Clicked(object _sender, EventArgs _e)
   {
-    if (_sender is not Button button)
-      return;
+    var ctx = (MainPageViewModel)BindingContext;
 
     var locationReporter = Container.Locate<ILocationReporter>();
+    var locationReporterService = Container.Locate<IAndroidService>();
     if (locationReporter != null)
     {
       locationReporter.SetState(!locationReporter.Enabled);
       if (locationReporter.Enabled)
-        button.BackgroundColor = Color.Parse("OrangeRed");
+      {
+        ctx.StartRecordButtonColor = Color.Parse("OrangeRed");
+        locationReporterService.Start();
+      }
       else
-        button.BackgroundColor = Color.Parse("CornflowerBlue");
+      {
+        ctx.StartRecordButtonColor = Color.Parse("CornflowerBlue");
+        locationReporterService.Stop();
+      }
     }
     
   }

@@ -44,11 +44,11 @@ shutil.move(settingsFileSrc, settingsFileDst)
 print(f"===========================================", flush=True)
 print(f"Creating pkg...", flush=True)
 print(f"===========================================", flush=True)
-with zipfile.ZipFile(pkgFile, 'w', zipfile.ZIP_DEFLATED) as pkgFile:
+with zipfile.ZipFile(pkgFile, 'w', zipfile.ZIP_DEFLATED) as pkgZipFile:
     for root, _, files in os.walk(outputDir):
         for file in files:
             filePath = os.path.join(root, file)
-            pkgFile.write(filePath, os.path.relpath(filePath, outputDir))
+            pkgZipFile.write(filePath, os.path.relpath(filePath, outputDir))
 
 print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)

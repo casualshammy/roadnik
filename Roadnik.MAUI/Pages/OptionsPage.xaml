@@ -11,7 +11,8 @@
 
     <TableView Intent="Settings">
         <TableRoot>
-            <TableSection Title="Server settings">
+            <TableSection Title="Server settings"
+                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
                 <TextCell
                     Text="Server address"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
@@ -23,7 +24,8 @@
                     Tapped="ServerKey_Tapped"
                     Detail="{Binding ServerKey}"/>
             </TableSection>
-            <TableSection Title="Reporting settings">
+            <TableSection Title="Reporting settings"
+                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
                 <TextCell
                     Text="Minimum interval between reports"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"

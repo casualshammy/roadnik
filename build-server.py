@@ -63,4 +63,7 @@ print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
 
-print(f"::set-output name=tag::{version}", flush=True)
+github_env = os.getenv('GITHUB_ENV')
+if (github_env != None):
+    with open(github_env, "a") as github_env_file:
+        github_env_file.write(f"tag={version}")

@@ -41,33 +41,16 @@ jobs:
       with:
         tag-name: "${{ env.tag }}"
 
-    # - name: Push tag
-    #   uses: laputansoft/github-tag-action@v4.6
-    #   with:
-    #     github_token: ${{ secrets.GITHUB_TOKEN }}
-    #     tag: ${{ env.tag }}
-
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
 
-    # - name: Build Server Ubuntu 18.04 x64
-    #   run: python build-server.py --platform ubuntu.18.04-x64
+    - name: Build Server Ubuntu 18.04 x64
+      run: python build-server.py --platform ubuntu.18.04-x64
 
-    # - name: Build Client Android
-    #   run: python build-client.py --framework net6.0-android
-    #   env:
-    #     ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
-        
-    # - name: Create Github Release
-    #   uses: "marvinpinto/action-automatic-releases@latest"
-    #   with:
-    #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
-    #     prerelease: false
-    #     automatic_release_tag: "latest-release"
-    #     title: "Release ${{ env.tag }}"
-    #     files: |
-    #       *.zip
-    #       *.apk
+    - name: Build Client Android
+      run: python build-client.py --framework net6.0-android
+      env:
+        ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
 
     - name: Create Github Release
       uses: softprops/action-gh-release@v1

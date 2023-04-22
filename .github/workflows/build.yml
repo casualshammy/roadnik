@@ -36,11 +36,11 @@ jobs:
     - name: GitHub Integration
       run: python build_common/github_integration.py
 
-    - name: Push tag
-      uses: laputansoft/github-tag-action@v4.6
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ env.tag }}
+    # - name: Push tag
+    #   uses: laputansoft/github-tag-action@v4.6
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     tag: ${{ env.tag }}
 
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
@@ -53,14 +53,27 @@ jobs:
     #   env:
     #     ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
         
+    # - name: Create Github Release
+    #   uses: "marvinpinto/action-automatic-releases@latest"
+    #   with:
+    #     repo_token: "${{ secrets.GITHUB_TOKEN }}"
+    #     prerelease: false
+    #     automatic_release_tag: "latest-release"
+    #     title: "Release ${{ env.tag }}"
+    #     files: |
+    #       *.zip
+    #       *.apk
+
     - name: Create Github Release
-      uses: "marvinpinto/action-automatic-releases@latest"
+      uses: softprops/action-gh-release@v1
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        draft: false
         prerelease: false
-        automatic_release_tag: "latest-release"
-        title: "Release ${{ env.tag }}"
         files: |
           *.zip
           *.apk
-
+        name: "Release ${{ env.tag }}"
+        tag_name: "${{ env.tag }}"
+        fail_on_unmatched_files: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generate_release_notes: false

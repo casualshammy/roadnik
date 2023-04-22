@@ -9,6 +9,8 @@ jobs:
   build:
 
     runs-on: windows-latest
+    permissions:
+      contents: write
       
     steps:
     - name: Get dotnet
@@ -34,13 +36,18 @@ jobs:
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
 
-    - name: Build Server Ubuntu 18.04 x64
-      run: python build-server.py --platform ubuntu.18.04-x64
+    # - name: Build Server Ubuntu 18.04 x64
+    #   run: python build-server.py --platform ubuntu.18.04-x64
 
-    - name: Build Client Android
-      run: python build-client.py --framework net6.0-android
-      env:
-        ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
+    # - name: Build Client Android
+    #   run: python build-client.py --framework net6.0-android
+    #   env:
+    #     ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
+
+    - name: Get tag name
+      run: |
+        echo "TAG_NAME=$(git rev-list HEAD --count)" >> $GITHUB_OUTPUT
+      id: tag_name
 
     - name: Create Github Release
       id: create_release
@@ -51,10 +58,12 @@ jobs:
         artifactErrorsFailBuild: true
         artifacts: "*.zip,*.apk"
         artifactContentType: ""
+        commit: ${{ github.ref_name }}
         draft: false
         makeLatest: true
-        name: "Release: ${{ github.tag }}"
+        name: "Release: ${{ steps.tag_name.outputs.TAG_NAME }}"
         prerelease: false
+        tag: ${{ steps.tag_name.outputs.TAG_NAME }}
         
 
     # - name: Upload Release Windows x64

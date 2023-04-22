@@ -63,4 +63,4 @@ print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
 
-os.environ["TAG_VERSION"] = version
+print(f"::set-output name=tag::{version}", flush=True)

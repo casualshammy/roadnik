@@ -34,6 +34,7 @@ jobs:
         fetch-depth: 0
 
     - name: Build Server Windows x64
+      id: build_server_windows
       run: python build-server.py --platform win-x64
 
     # - name: Build Server Ubuntu 18.04 x64
@@ -46,10 +47,7 @@ jobs:
 
     - name: Get tag name
       run: |
-        echo "$TAG_VERSION"
-      id: tag_name
-      env:
-        TAG_VERSION: ${{ env.TAG_VERSION }}
+        echo "${{ steps.build_server_windows.outputs.tag }}"
 
     # - name: Create Github Release
     #   id: create_release
@@ -69,13 +67,11 @@ jobs:
         
     - name: Create Github Release
       uses: "marvinpinto/action-automatic-releases@latest"
-      env:
-        TAG_VERSION: ${{ env.TAG_VERSION }}
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
-        automatic_release_tag: "latest-release"
-        title: "Release $TAG_VERSION"
+        automatic_release_tag: "${{ steps.build_server_windows.outputs.tag }}"
+        title: "Release ${{ steps.build_server_windows.outputs.tag }}"
         files: |
           *.zip
           *.apk

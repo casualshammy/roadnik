@@ -44,61 +44,13 @@ jobs:
     #   run: python build-client.py --framework net6.0-android
     #   env:
     #     ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
-
-    - name: Get tag name
-      run: |
-        echo "${{ env.tag }}"
-
-    # - name: Create Github Release
-    #   id: create_release
-    #   uses: actions/create-release@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     artifactErrorsFailBuild: true
-    #     artifacts: "*.zip,*.apk"
-    #     artifactContentType: ""
-    #     commit: ${{ github.ref_name }}
-    #     draft: false
-    #     makeLatest: true
-    #     name: "Release: ${{ steps.tag_name.outputs.TAG_NAME }}"
-    #     prerelease: false
-    #     tag: ${{ steps.tag_name.outputs.TAG_NAME }}
         
     - name: Create Github Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        prerelease: false
-        automatic_release_tag: "${{ env.tag }}"
+        prerelease: false # automatic_release_tag: "${{ env.tag }}"
         title: "Release ${{ env.tag }}"
         files: |
           *.zip
           *.apk
-
-    # - name: Upload Release Windows x64
-    #   uses: actions/upload-release-asset@v1.0.1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-    #     asset_path: ./package.zip
-    #     asset_name: package.zip
-    #     asset_content_type: application/zip
-    
-    # - name: Upload Release Ubuntu 18.04 x64
-    #   uses: actions/upload-release-asset@v1.0.1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-    #     asset_path: ./package.zip
-    #     asset_name: package.zip
-    #     asset_content_type: application/zip
-
-    # - name: Publish Release
-    #   uses: eregon/publish-release@v1
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   with:
-    #     release_id: ${{ steps.create_release.outputs.id }}

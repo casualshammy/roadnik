@@ -47,8 +47,9 @@ jobs:
     - name: Get tag name
       run: |
         echo "$TAG_VERSION"
-        echo "${{ env.TAG_VERSION }}"
       id: tag_name
+      env:
+        TAG_VERSION: ${{ env.TAG_VERSION }}
 
     # - name: Create Github Release
     #   id: create_release
@@ -68,10 +69,13 @@ jobs:
         
     - name: Create Github Release
       uses: "marvinpinto/action-automatic-releases@latest"
+      env:
+        TAG_VERSION: ${{ env.TAG_VERSION }}
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: false
-        title: "Release ${{ env.TAG_VERSION }}"
+        automatic_release_tag: "latest-release"
+        title: "Release $TAG_VERSION"
         files: |
           *.zip
           *.apk

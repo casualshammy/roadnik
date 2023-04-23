@@ -5,14 +5,14 @@ using Android.Runtime;
 using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.SharedTypes.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Toolkit;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
 [Service]
-[ExportClass(typeof(IAndroidService), Singleton: true)]
-public class LocationReporterService : Service, IAndroidService
+[ExportClass(typeof(ILocationReporterService), Singleton: true)]
+public class LocationReporterService : CAndroidService, ILocationReporterService
 {
   private ILifetime? p_serviceLifetime;
 
@@ -26,7 +26,7 @@ public class LocationReporterService : Service, IAndroidService
     throw new NotImplementedException();
   }
 
-  [return: GeneratedEnum]//we catch the actions intents to know the state of the foreground service
+  [return: GeneratedEnum]
   public override StartCommandResult OnStartCommand(
     Intent? _intent, 
     [GeneratedEnum] StartCommandFlags _flags, 

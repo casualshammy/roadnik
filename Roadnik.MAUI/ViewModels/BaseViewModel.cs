@@ -11,8 +11,8 @@ internal abstract class BaseViewModel : INotifyPropertyChanged
 
   public BaseViewModel()
   {
-    if (Application.Current is not ContainerizedMauiApplication app)
-      throw new ApplicationException($"Application is not {nameof(ContainerizedMauiApplication)}");
+    if (Application.Current is not CMauiApplication app)
+      throw new ApplicationException($"Application is not {nameof(CMauiApplication)}");
 
     Container = app.Container;
 

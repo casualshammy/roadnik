@@ -1,7 +1,9 @@
 ﻿using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Roadnik.Attributes;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
@@ -14,23 +16,30 @@ namespace Roadnik.Modules.Controllers;
 [Route("/")]
 public class ApiControllerV0 : JsonNetController
 {
+  record DeleteUserReq(string Key);
+
   private static long p_wsSessionsCount = 0;
+  private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
+  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
   private static readonly HttpClient p_httpClient = new();
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
+  private readonly IUsersController p_usersController;
   private readonly ILogger p_logger;
 
   public ApiControllerV0(
     ISettings _settings,
     IDocumentStorage _documentStorage,
     ILogger _logger,
-    IWebSocketCtrl _webSocketCtrl)
+    IWebSocketCtrl _webSocketCtrl,
+    IUsersController _usersController)
   {
     p_settings = _settings;
     p_documentStorage = _documentStorage;
     p_webSocketCtrl = _webSocketCtrl;
+    p_usersController = _usersController;
     p_logger = _logger["api-v0"];
   }
 
@@ -114,14 +123,16 @@ public class ApiControllerV0 : JsonNetController
 
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
+    var user = await p_usersController.GetUserAsync(_key, _ct);
+    var timeLimit = user != null ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(11);
     var now = DateTimeOffset.UtcNow;
-    if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < TimeSpan.FromSeconds(5))
+    if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
-      p_logger.Warn($"Too many requests for storing geo data, key '{_key}'");
+      p_logger.Warn($"Too many requests for storing geo data, key '{_key}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    var record = new StorageEntry(_lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
+    var record = new StorageEntry(_key, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
     await p_documentStorage.WriteSimpleDocumentAsync($"{_key}.{now.ToUnixTimeMilliseconds()}", record, _ct);
     p_storeLimiter[_key] = now;
     await p_webSocketCtrl.SendMsgByKeyAsync(_key, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
@@ -138,9 +149,21 @@ public class ApiControllerV0 : JsonNetController
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
 
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (ip == null)
+    {
+      p_logger.Error($"Ip is null, key: '{_key}'");
+      return BadRequest("Ip is null!");
+    }
+    var now = DateTimeOffset.UtcNow;
+    if (p_getLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_getTooFastLimitTime)
+    {
+      p_logger.Warn($"Too many requests from ip '{ip}', key: '{_key}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+
     p_logger.Info($"Requested to get geo data, key: '{_key}'");
 
-    var now = DateTimeOffset.UtcNow;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}%"), _ct: _ct)
       .OrderByDescending(_ => _.Created)
@@ -156,10 +179,10 @@ public class ApiControllerV0 : JsonNetController
     {
       var list = new List<StorageEntry>(documents.Count);
       var lastEntryTime = DateTimeOffset.MinValue;
-      StorageEntry? lastEntry = null; ;
+      StorageEntry? lastEntry = null;
       foreach (var doc in documents)
       {
-        list.Add(new StorageEntry(doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
+        list.Add(new StorageEntry(_key, doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
         if (doc.Created > lastEntryTime)
         {
           lastEntryTime = doc.Created;
@@ -170,6 +193,7 @@ public class ApiControllerV0 : JsonNetController
       result = new GetResData(true, lastEntryTime.ToUnixTimeMilliseconds(), lastEntry!, list);
     }
 
+    p_getLimiter[ip] = now;
     return Json(result);
   }
 
@@ -192,6 +216,38 @@ public class ApiControllerV0 : JsonNetController
     p_logger.Info($"WS connection '{sessionIndex}' for key '{_key}' is closed");
 
     return new EmptyResult();
+  }
+
+  [ApiKeyRequired]
+  [HttpPost("add-user")]
+  public async Task<IActionResult> AddUserAsync(CancellationToken _ct)
+  {
+    var req = await GetJsonRequest<User>();
+    if (req == null)
+      return BadRequest("User is null");
+
+    await p_usersController.AddUserAsync(req.Key, req.Email, _ct);
+    return Ok();
+  }
+
+  [ApiKeyRequired]
+  [HttpPost("delete-user")]
+  public async Task<IActionResult> DeleteUserAsync(CancellationToken _ct)
+  {
+    var req = await GetJsonRequest<DeleteUserReq>();
+    if (req == null || req.Key == null)
+      return BadRequest("Key is null");
+
+    await p_usersController.DeleteUserAsync(req.Key, _ct);
+    return Ok();
+  }
+
+  [ApiKeyRequired]
+  [HttpGet("list-users")]
+  public async Task<IActionResult> ListUsersAsync(CancellationToken _ct)
+  {
+    var users = await p_usersController.ListUsersAsync(_ct);
+    return Json(users, true);
   }
 
 }

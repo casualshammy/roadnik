@@ -3,7 +3,7 @@ using Roadnik.MAUI.Toolkit;
 
 namespace Roadnik.MAUI;
 
-public partial class App : ContainerizedMauiApplication
+public partial class App : CMauiApplication
 {
   public App()
   {

@@ -8,7 +8,7 @@ using System.Reactive.Linq;
 
 namespace Roadnik.MAUI.Pages;
 
-public partial class MainPage : ContainerizedContentPage
+public partial class MainPage : CContentPage
 {
   private readonly IPreferencesStorage p_storage;
   private readonly IReadOnlyLifetime p_lifetime;
@@ -51,17 +51,12 @@ public partial class MainPage : ContainerizedContentPage
     bindingCtx.WebViewUrl = url;
   }
 
-  protected override bool OnBackButtonPressed()
-  {
-    return base.OnBackButtonPressed();
-  }
-
   private void FAB_Clicked(object _sender, EventArgs _e)
   {
     var ctx = (MainPageViewModel)BindingContext;
 
     var locationReporter = Container.Locate<ILocationReporter>();
-    var locationReporterService = Container.Locate<IAndroidService>();
+    var locationReporterService = Container.Locate<ILocationReporterService>();
     if (locationReporter != null)
     {
       locationReporter.SetState(!locationReporter.Enabled);

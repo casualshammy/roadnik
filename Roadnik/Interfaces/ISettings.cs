@@ -8,4 +8,5 @@ public interface ISettings
   int PortBind { get; }
   string IpBind { get; }
   string? TrunderforestApikey { get; }
+  string? AdminApiKey { get; }
 }

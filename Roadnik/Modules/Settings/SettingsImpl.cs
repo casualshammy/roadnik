@@ -11,7 +11,8 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(DataDirPath))] string? _dataDirPath,
     [JsonProperty(nameof(TrunderforestApikey))] string? _trunderforestApikey,
     [JsonProperty(nameof(PortBind))] int? _portBind,
-    [JsonProperty(nameof(IpBind))] string? _ipBind)
+    [JsonProperty(nameof(IpBind))] string? _ipBind,
+    [JsonProperty(nameof(AdminApiKey))] string? _adminApiKey)
   {
     WebrootDirPath = _webrootDirPath ?? "web-root";
     LogDirPath = _logDirPath ?? "logs";
@@ -19,6 +20,7 @@ internal class SettingsImpl : ISettings
     TrunderforestApikey = _trunderforestApikey;
     PortBind = _portBind ?? 5544;
     IpBind = _ipBind ?? "0.0.0.0";
+    AdminApiKey = _adminApiKey;
   }
 
   public string WebrootDirPath { get; }
@@ -32,4 +34,7 @@ internal class SettingsImpl : ISettings
   public int PortBind { get; }
 
   public string IpBind { get; }
+
+  public string? AdminApiKey { get; }
+
 }

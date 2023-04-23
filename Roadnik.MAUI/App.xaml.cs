@@ -1,4 +1,5 @@
-﻿using Roadnik.MAUI.Interfaces;
+﻿using Ax.Fw;
+using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 
 namespace Roadnik.MAUI;
@@ -20,7 +21,7 @@ public partial class App : CMauiApplication
     {
       storage.SetValue(storage.INITIALIZED, true);
       storage.SetValue(storage.SERVER_ADDRESS, "https://example.com:5544");
-      storage.SetValue(storage.SERVER_KEY, "example-key");
+      storage.SetValue(storage.SERVER_KEY, Utilities.GetRandomString(8, false));
       storage.SetValue(storage.TIME_INTERVAL, 15);
       storage.SetValue(storage.DISTANCE_INTERVAL, 100);
     }

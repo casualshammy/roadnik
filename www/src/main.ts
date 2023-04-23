@@ -103,3 +103,9 @@ if (key !== null) {
             refreshPosition(key);
     });
 }
+
+// exports for C#
+function setLocation(_x: number, _y: number) {
+    map.flyTo([_x, _y]);
+}
+(window as any).setLocation = setLocation;

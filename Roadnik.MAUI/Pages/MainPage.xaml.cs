@@ -3,6 +3,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
+using System.Globalization;
 using System.Reactive;
 using System.Reactive.Linq;
 
@@ -71,7 +72,7 @@ public partial class MainPage : CContentPage
         locationReporterService.Stop();
       }
     }
-    
+
   }
 
   private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e)
@@ -88,5 +89,13 @@ public partial class MainPage : CContentPage
       return;
 
     bindingCtx.IsSpinnerRequired = false;
+  }
+
+  private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
+  {
+    var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
+    var location = await Geolocation.GetLocationAsync(request);
+    if (location != null)
+      await p_webView.EvaluateJavaScriptAsync($"setLocation({location.Latitude.ToString(CultureInfo.InvariantCulture)},{location.Longitude.ToString(CultureInfo.InvariantCulture)})");
   }
 }

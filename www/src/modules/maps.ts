@@ -75,4 +75,3 @@ export function GetCheckBox(_text: string, _position: string, _handler: (_checke
 	});
 	return new checkbox({ position: 'topleft' });
 }
-

@@ -12,6 +12,7 @@
 
     <AbsoluteLayout>
         <WebView
+            x:Name="p_webView"
             Source="{Binding WebViewUrl}"
             AbsoluteLayout.LayoutFlags="All"  
             AbsoluteLayout.LayoutBounds="0,0,1,1"
@@ -23,18 +24,51 @@
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
             IsRunning="{Binding IsSpinnerRequired}" />
-        <Button
-            AbsoluteLayout.LayoutFlags="PositionProportional"  
-            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
-            CornerRadius="45"
-            BackgroundColor="{Binding StartRecordButtonColor}"
-            Clicked="FAB_Clicked">
-        </Button>
-        <ImageButton 
-            Source="record_rec.svg"
-            AbsoluteLayout.LayoutFlags="PositionProportional"  
-            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
-            InputTransparent="True"/>
+
+        <Grid AbsoluteLayout.LayoutFlags="PositionProportional"
+              AbsoluteLayout.LayoutBounds="0.95, 0.95, 70, 130">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Button
+                    WidthRequest="50"
+                    HeightRequest="50"
+                    CornerRadius="45"
+                    HorizontalOptions="Center"
+                    BackgroundColor="{Binding StartRecordButtonColor}"
+                    Clicked="GoToMyLocation_Clicked">
+                </Button>
+                <ImageButton 
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    Source="my_location.svg"
+                    InputTransparent="True"/>
+            </Grid>
+
+            <Grid Grid.Row="2">
+                <Button
+                    WidthRequest="70"
+                    HeightRequest="70"
+                    CornerRadius="45"
+                    BackgroundColor="{Binding StartRecordButtonColor}"
+                    Clicked="FAB_Clicked">
+                </Button>
+                <ImageButton 
+                    WidthRequest="70"
+                    HeightRequest="70"
+                    Source="record_rec.svg"
+                    InputTransparent="True"/>
+            </Grid>
+
+        </Grid>
+
     </AbsoluteLayout>
 
 

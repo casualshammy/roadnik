@@ -12,6 +12,7 @@
 
     <AbsoluteLayout>
         <WebView
+            IsVisible="{Binding CanShowRegilarInterface}"
             x:Name="p_webView"
             Source="{Binding WebViewUrl}"
             AbsoluteLayout.LayoutFlags="All"  
@@ -20,13 +21,16 @@
             Navigated="MainWebView_Navigated">
         </WebView>
         <ActivityIndicator 
+            IsVisible="{Binding CanShowRegilarInterface}"
             Color="{Binding StartRecordButtonColor}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
             IsRunning="{Binding IsSpinnerRequired}" />
 
-        <Grid AbsoluteLayout.LayoutFlags="PositionProportional"
-              AbsoluteLayout.LayoutBounds="0.95, 0.95, 70, 130">
+        <Grid
+            IsVisible="{Binding CanShowRegilarInterface}"
+            AbsoluteLayout.LayoutFlags="PositionProportional"
+            AbsoluteLayout.LayoutBounds="0.95, 0.95, 70, 130">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
@@ -67,6 +71,99 @@
                     InputTransparent="True"/>
             </Grid>
 
+        </Grid>
+
+        <Grid
+            IsVisible="{Binding IsPermissionWindowShowing}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="50" />
+            </Grid.RowDefinitions>
+
+            <Image 
+                Grid.Row="0"
+                Grid.ColumnSpan="2"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=White}"
+                Source="map.svg"
+                HorizontalOptions="FillAndExpand" />
+
+            <Label 
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="10, 20"
+                HorizontalTextAlignment="Center"
+                Text="{Binding LocationPermissionDescription}" />
+            <Button 
+                Grid.Row="2"
+                Grid.Column="0"
+                BackgroundColor="GreenYellow"
+                HorizontalOptions="FillAndExpand"
+                Margin="20, 0"
+                Text="Okay"
+                TextColor="Black" 
+                FontSize="Medium"
+                Clicked="LocationPermissionYes_Clicked"/>
+            <Button 
+                Grid.Row="2"
+                Grid.Column="1"
+                BackgroundColor="{StaticResource DangerLow}"
+                HorizontalOptions="FillAndExpand"
+                Margin="20, 0"
+                Text="No" 
+                TextColor="Black" 
+                FontSize="Medium"
+                Clicked="LocationPermissionNo_Clicked"/>
+        </Grid>
+
+        <Grid
+            IsVisible="{Binding IsRemoteServerNotResponding}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Image 
+                Grid.Row="0"
+                Grid.ColumnSpan="2"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=White}"
+                Source="cog_box.svg"
+                HorizontalOptions="FillAndExpand" />
+
+            <VerticalStackLayout 
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="10, 20">
+                <Label 
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Margin="10, 20"
+                    HorizontalTextAlignment="Center"
+                    Text="{Binding ServerIsNotRespondingDescription}" />
+                <Button 
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    BackgroundColor="{StaticResource DangerLow}"
+                    HorizontalOptions="FillAndExpand"
+                    Margin="20, 0"
+                    Text="Reload"
+                    TextColor="Black" 
+                    FontSize="Medium"
+                    Clicked="Reload_Clicked"/>
+            </VerticalStackLayout>
+            
         </Grid>
 
     </AbsoluteLayout>

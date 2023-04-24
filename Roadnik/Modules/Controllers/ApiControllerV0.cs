@@ -46,6 +46,9 @@ public class ApiControllerV0 : JsonNetController
   [HttpGet("/")]
   public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
 
+  [HttpHead("/")]
+  public async Task<IActionResult> GetIndexFileHeadAsync() => Ok();
+
   [HttpGet("{**path}")]
   public async Task<IActionResult> GetStaticFileAsync(
     [FromRoute(Name = "path")] string _path)
@@ -165,7 +168,7 @@ public class ApiControllerV0 : JsonNetController
 
     p_logger.Info($"Requested to get geo data, key: '{_key}'");
 
-    var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value) : (DateTimeOffset?)null;
+    var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}%"), _ct: _ct)
       .Where(_ => offset == null || _.Created > offset)

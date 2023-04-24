@@ -1,11 +1,15 @@
-﻿using Ax.Fw.Extensions;
+﻿using Ax.Fw;
+using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reactive;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Pages;
 
@@ -13,43 +17,82 @@ public partial class MainPage : CContentPage
 {
   private readonly IPreferencesStorage p_storage;
   private readonly IReadOnlyLifetime p_lifetime;
+  private readonly IHttpClientProvider p_httpClient;
+  private readonly Subject<Unit> p_pageStatusChangeFlow = new();
+  private volatile bool p_pageShown = false;
 
   public MainPage()
   {
     InitializeComponent();
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
+    p_httpClient = Container.Locate<IHttpClientProvider>();
 
     Observable
       .Return(Unit.Default)
+      .SelectAsync(async (_, _ct) => await RequestLocationPermissionAsync())
+      .Subscribe(p_lifetime);
+
+    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
+
+    p_storage.PreferencesChanged
+      .Merge(p_pageStatusChangeFlow)
+      .Sample(TimeSpan.FromSeconds(1), scheduler)
+      .ObserveOn(scheduler)
       .SelectAsync(async (_, _ct) =>
       {
-        var permission = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
-        if (permission != PermissionStatus.Granted)
-          await Permissions.RequestAsync<Permissions.LocationWhenInUse>();
-      })
+        if (BindingContext is not MainPageViewModel bindingCtx)
+          return;
+
+        if (!p_pageShown)
+        {
+          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.IsRemoteServerNotResponding = true;
+          return;
+        }
+
+        var serverAddress = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
+        var serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
+        if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
+        {
+          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.IsRemoteServerNotResponding = true;
+          return;
+        }
+
+        var url = $"{serverAddress.TrimEnd('/')}?key={serverKey}";
+        try
+        {
+          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+          using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
+          using var req = new HttpRequestMessage(HttpMethod.Head, url);
+          var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
+          res.EnsureSuccessStatusCode();
+          bindingCtx.WebViewUrl = url;
+          bindingCtx.IsRemoteServerNotResponding = false;
+        }
+        catch (Exception ex)
+        {
+          Debug.WriteLine(ex);
+          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.IsRemoteServerNotResponding = true;
+        }
+      }, scheduler)
       .Subscribe(p_lifetime);
   }
 
   protected override void OnAppearing()
   {
     base.OnAppearing();
+    p_pageShown = true;
+    p_pageStatusChangeFlow.OnNext();
+  }
 
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
-    var serverAddress = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
-    var serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
-
-    string url;
-    if (string.IsNullOrWhiteSpace(serverAddress))
-      url = "https://github.com/casualshammy";
-    else if (string.IsNullOrWhiteSpace(serverKey))
-      url = serverAddress;
-    else
-      url = $"{serverAddress}?key={serverKey}";
-
-    bindingCtx.WebViewUrl = url;
+  protected override void OnDisappearing()
+  {
+    base.OnDisappearing();
+    p_pageShown = false;
+    p_pageStatusChangeFlow.OnNext();
   }
 
   private void FAB_Clicked(object _sender, EventArgs _e)
@@ -79,7 +122,7 @@ public partial class MainPage : CContentPage
   {
     if (BindingContext is not MainPageViewModel bindingCtx)
       return;
-
+        
     bindingCtx.IsSpinnerRequired = true;
   }
 
@@ -102,4 +145,47 @@ public partial class MainPage : CContentPage
       await p_webView.EvaluateJavaScriptAsync($"setLocation({lat},{lng})");
     }
   }
+
+  private void LocationPermissionNo_Clicked(object _sender, EventArgs _e)
+  {
+    if (BindingContext is not MainPageViewModel bindingCtx)
+      return;
+
+    bindingCtx.IsPermissionWindowShowing = false;
+  }
+
+  private void LocationPermissionYes_Clicked(object sender, EventArgs e)
+  {
+    if (BindingContext is not MainPageViewModel bindingCtx)
+      return;
+
+    bindingCtx.IsPermissionWindowShowing = false;
+    AppInfo.Current.ShowSettingsUI();
+  }
+
+  private void Reload_Clicked(object _sender, EventArgs _e)
+  {
+    p_pageStatusChangeFlow.OnNext();
+  }
+
+  private async Task RequestLocationPermissionAsync()
+  {
+    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+    if (permission == PermissionStatus.Granted)
+      return;
+
+    if (BindingContext is not MainPageViewModel bindingCtx)
+      return;
+
+    var platform = DeviceInfo.Platform;
+    var osVersion = DeviceInfo.Current.Version;
+    if (platform == DevicePlatform.Android)
+    {
+      if (osVersion.Major < 11)
+        await Permissions.RequestAsync<Permissions.LocationAlways>();
+      else if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
+        bindingCtx.IsPermissionWindowShowing = true;
+    }
+  }
+
 }

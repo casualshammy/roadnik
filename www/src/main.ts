@@ -5,10 +5,13 @@ import { TimeSpan } from "./modules/timespan";
 
 const p_storageApi = new Api.StorageApi();
 
-async function refreshPosition(_key: string) {
-    const data = await p_storageApi.getDataAsync(_key);
+async function refreshPositionFullAsync(_key: string, _offset: number | undefined = undefined) {
+    const data = await p_storageApi.getDataAsync(_key, undefined, _offset);
     if (data === null || !data.Success)
         return;
+
+    if (data.LastUpdateUnixMs !== null && data.LastUpdateUnixMs !== undefined)
+        p_lastOffset = data.LastUpdateUnixMs;
 
     const latLng = new L.LatLng(data.LastEntry!.Latitude, data.LastEntry!.Longitude, data.LastEntry!.Altitude);
     marker.setLatLng(latLng);
@@ -60,7 +63,10 @@ async function refreshPosition(_key: string) {
         map.flyTo(latLng);
     
     const points = data.Entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-    path.setLatLngs(points);
+    if (_offset === undefined)
+        path.setLatLngs(points);
+    else
+        path.addLatLng(points);
 }
 
 const queryString = window.location.search;
@@ -70,6 +76,7 @@ const key = urlParams.get('key');
 let p_lastAlt = 0;
 let p_firstCentered = false;
 let p_autoPan = false;
+let p_lastOffset = 0;
 
 const maps = Maps.GetMapLayers();
 const overlays = Maps.GetMapOverlayLayers();
@@ -99,8 +106,11 @@ const autoPanCheckbox = Maps.GetCheckBox("Auto pan", 'topleft', _checked => p_au
 
 if (key !== null) {
     const ws = p_storageApi.setupWs(key, (_ws, _data) => {
-        if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED || _data.Type === Api.WS_MSG_TYPE_HELLO)
-            refreshPosition(key);
+        if (_data.Type === Api.WS_MSG_TYPE_HELLO)
+            refreshPositionFullAsync(key);
+
+        if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
+            refreshPositionFullAsync(key, p_lastOffset);
     });
 }
 

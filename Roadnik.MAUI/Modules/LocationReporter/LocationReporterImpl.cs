@@ -3,8 +3,8 @@ using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.ViewModels;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -16,8 +16,8 @@ namespace Roadnik.MAUI.Modules.LocationReporter;
 internal class LocationReporterImpl : ILocationReporter
 {
   record ForceReqData(DateTimeOffset DateTime, bool Ok);
+  record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
-  private readonly HttpClient p_httpClient = new();
   private readonly ReplaySubject<Location> p_locationFlow = new(1);
   private readonly Subject<Unit> p_forceReload = new();
   private readonly ILogger p_log;
@@ -26,13 +26,23 @@ internal class LocationReporterImpl : ILocationReporter
   public LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
     ILogger _log,
-    IPreferencesStorage _storage)
+    IPreferencesStorage _storage,
+    IHttpClientProvider _httpClientProvider)
   {
     p_log = _log["location-reporter"];
 
-    var reportInterval = TimeSpan.FromSeconds(10);
+    var prefsProp = _storage.PreferencesChanged
+      .Select(_ => new
+      {
+        ServerAddress = _storage.GetValueOrDefault<string>(_storage.SERVER_ADDRESS),
+        ServerKey = _storage.GetValueOrDefault<string>(_storage.SERVER_KEY),
+        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(_storage.TIME_INTERVAL)),
+        DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
+        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION)
+      })
+      .ToProperty(_lifetime);
 
-    p_httpClient.Timeout = reportInterval;
+    var reportInterval = TimeSpan.FromSeconds(10);
 
     _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
@@ -48,40 +58,67 @@ internal class LocationReporterImpl : ILocationReporter
       .Where(_ => _.Ok)
       .ToUnit();
 
+    var counter = 0L;
+
     Observable
-      .Interval(reportInterval)
+      .Interval(TimeSpan.FromSeconds(1.01), scheduler)
       .Where(_ => p_enabled)
       .ToUnit()
       .Merge(forceReqFlow)
-      .ObserveOn(scheduler)
-      .SelectAsync(async (_, _ct) =>
+      .Do(_ => Interlocked.Increment(ref counter))
+      .Where(_ =>
       {
+        var queue = Interlocked.Read(ref counter);
+        if (queue <= 1)
+          return true;
+
+        Interlocked.Decrement(ref counter);
+        return false;
+      })
+      .ObserveOn(scheduler)
+      .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
+      {
+        var now = DateTimeOffset.UtcNow;
         try
         {
-          var serverAddress = _storage.GetValueOrDefault<string>(_storage.SERVER_ADDRESS);
-          var serverKey = _storage.GetValueOrDefault<string>(_storage.SERVER_KEY);
-          if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
-            return;
+          var prefs = prefsProp.Value;
+          if (string.IsNullOrWhiteSpace(prefs?.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
+            return _acc;
 
-          var request = new GeolocationRequest(GeolocationAccuracy.Medium, reportInterval);
-          var location = await Geolocation.GetLocationAsync(request, _ct);
+          var location = await GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), _lifetime.Token);
+          if (location == null)
+            return _acc;
 
-          if (location != null)
+          p_locationFlow.OnNext(location);
+
+          var distance = _acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
+
+          if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
           {
-            p_locationFlow.OnNext(location);
-
-            var url =
-              $"{serverAddress.TrimEnd('/')}/store?" +
-              $"key={serverKey}&" +
-              $"lat={location.Latitude}&" +
-              $"lon={location.Longitude}&" +
-              $"alt={location.Altitude ?? 0}&" +
-              $"speed={location.Speed ?? 0}&" +
-              $"acc={location.Accuracy ?? 100}&" +
-              $"bearing={location.Course ?? 0}";
-
-            await p_httpClient.GetAsync(url, _ct);
+            if (distance != null && distance < prefs.DistanceInterval)
+              return _acc;
+            if (_acc.LastTimeReported != null && now - _acc.LastTimeReported < prefs.TimeInterval)
+              return _acc;
           }
+          else if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
+          {
+            if (distance != null && _acc.LastTimeReported != null && distance < prefs.DistanceInterval && now - _acc.LastTimeReported < prefs.TimeInterval)
+              return _acc;
+          }
+
+          var url =
+            $"{prefs.ServerAddress.TrimEnd('/')}/store?" +
+            $"key={prefs.ServerKey}&" +
+            $"lat={location.Latitude}&" +
+            $"lon={location.Longitude}&" +
+            $"alt={location.Altitude ?? 0}&" +
+            $"speed={location.Speed ?? 0}&" +
+            $"acc={location.Accuracy ?? 100}&" +
+            $"bearing={location.Course ?? 0}";
+
+          var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
+          res.EnsureSuccessStatusCode();
+          return new ReportingCtx(location, now);
         }
         catch (FeatureNotSupportedException fnsEx)
         {
@@ -99,9 +136,11 @@ internal class LocationReporterImpl : ILocationReporter
         {
           p_log.Error($"Geo location generic error", ex);
         }
-      }, scheduler)
+        return _acc with { LastTimeReported = now };
+      })
+      .Do(_ => Interlocked.Decrement(ref counter))
       .Subscribe(_lifetime);
-    
+
   }
 
   public IObservable<Location> Location => p_locationFlow;
@@ -112,5 +151,52 @@ internal class LocationReporterImpl : ILocationReporter
     p_enabled = _enabled;
     if (_enabled)
       p_forceReload.OnNext();
+
+    p_log.Info($"Location reporter {(_enabled ? "enabled" : "disable")}");
   }
+
+  public async Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  {
+    try
+    {
+      var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
+      var location = await Geolocation.GetLocationAsync(request, _ct);
+      return location;
+    }
+    catch (FeatureNotSupportedException)
+    {
+      return null;
+    }
+    catch (FeatureNotEnabledException)
+    {
+      return null;
+    }
+    catch (PermissionException)
+    {
+      return null;
+    }
+  }
+
+  public async Task<Location?> GetCurrentAnyLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  {
+    try
+    {
+      var request = new GeolocationRequest(GeolocationAccuracy.Medium, _timeout);
+      var location = await Geolocation.GetLocationAsync(request, _ct);
+      return location;
+    }
+    catch (FeatureNotSupportedException)
+    {
+      return null;
+    }
+    catch (FeatureNotEnabledException)
+    {
+      return null;
+    }
+    catch (PermissionException)
+    {
+      return null;
+    }
+  }
+
 }

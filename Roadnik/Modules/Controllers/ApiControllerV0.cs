@@ -124,7 +124,7 @@ public class ApiControllerV0 : JsonNetController
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
     var user = await p_usersController.GetUserAsync(_key, _ct);
-    var timeLimit = user != null ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(11);
+    var timeLimit = user != null ? TimeSpan.FromSeconds(0.9) : TimeSpan.FromSeconds(9);
     var now = DateTimeOffset.UtcNow;
     if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
@@ -144,6 +144,7 @@ public class ApiControllerV0 : JsonNetController
   public async Task<IActionResult> GetAsync(
     [FromQuery(Name = "key")] string? _key = null,
     [FromQuery(Name = "limit")] int? _limit = null,
+    [FromQuery(Name = "offset")] long? _offsetUnixTimeMs = null,
     CancellationToken _ct = default)
   {
     if (string.IsNullOrWhiteSpace(_key))
@@ -164,8 +165,10 @@ public class ApiControllerV0 : JsonNetController
 
     p_logger.Info($"Requested to get geo data, key: '{_key}'");
 
+    var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}%"), _ct: _ct)
+      .Where(_ => offset == null || _.Created > offset)
       .OrderByDescending(_ => _.Created)
       .Take(_limit != null ? Math.Min(_limit.Value, 1000) : 1000)
       .ToListAsync(_ct);

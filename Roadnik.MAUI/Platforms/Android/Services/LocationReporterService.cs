@@ -5,8 +5,10 @@ using Android.Runtime;
 using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.SharedTypes.Interfaces;
+using Grace.DependencyInjection.Attributes;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
+using System.Reactive.Linq;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
@@ -14,12 +16,8 @@ namespace Roadnik.MAUI.Platforms.Android.Services;
 [ExportClass(typeof(ILocationReporterService), Singleton: true)]
 public class LocationReporterService : CAndroidService, ILocationReporterService
 {
-  private ILifetime? p_serviceLifetime;
-
-  public LocationReporterService()
-  {
-
-  }
+  [Import]
+  public ILocationReporter LocationReporter { get; init; }
 
   public override IBinder OnBind(Intent? _intent)
   {
@@ -35,18 +33,13 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
     if (_intent?.Action == "START_SERVICE")
     {
       RegisterNotification();
-
-      p_serviceLifetime = new Lifetime();
-      if (p_serviceLifetime == null)
-        return StartCommandResult.NotSticky;
-
-
+      LocationReporter.SetState(true);
     }
     else if (_intent?.Action == "STOP_SERVICE")
     {
-      p_serviceLifetime?.Complete();
       StopForeground(true);
       StopSelfResult(_startId);
+      LocationReporter.SetState(false);
     }
 
     return StartCommandResult.NotSticky;

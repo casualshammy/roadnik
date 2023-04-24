@@ -42,7 +42,7 @@
                     HeightRequest="50"
                     CornerRadius="45"
                     HorizontalOptions="Center"
-                    BackgroundColor="{Binding StartRecordButtonColor}"
+                    BackgroundColor="{StaticResource Primary}"
                     Clicked="GoToMyLocation_Clicked">
                 </Button>
                 <ImageButton 

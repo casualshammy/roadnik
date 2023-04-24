@@ -58,21 +58,21 @@ public partial class MainPage : CContentPage
 
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
-    if (locationReporter != null)
-    {
-      locationReporter.SetState(!locationReporter.Enabled);
-      if (locationReporter.Enabled)
-      {
-        ctx.StartRecordButtonColor = Color.Parse("OrangeRed");
-        locationReporterService.Start();
-      }
-      else
-      {
-        ctx.StartRecordButtonColor = Color.Parse("CornflowerBlue");
-        locationReporterService.Stop();
-      }
-    }
 
+    if (locationReporter.Enabled)
+    {
+      if (Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true && rawColor is Color color)
+        ctx.StartRecordButtonColor = color;
+
+      locationReporterService.Stop();
+    }
+    else
+    {
+      if (Application.Current?.Resources.TryGetValue("DangerLow", out var rawColor) == true && rawColor is Color color)
+        ctx.StartRecordButtonColor = color;
+
+      locationReporterService.Start();
+    }
   }
 
   private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e)
@@ -93,9 +93,13 @@ public partial class MainPage : CContentPage
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
   {
-    var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
-    var location = await Geolocation.GetLocationAsync(request);
+    var locationReporter = Container.Locate<ILocationReporter>();
+    var location = await locationReporter.GetCurrentAnyLocationAsync(TimeSpan.FromSeconds(3), default);
     if (location != null)
-      await p_webView.EvaluateJavaScriptAsync($"setLocation({location.Latitude.ToString(CultureInfo.InvariantCulture)},{location.Longitude.ToString(CultureInfo.InvariantCulture)})");
+    {
+      var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
+      var lng = location.Longitude.ToString(CultureInfo.InvariantCulture);
+      await p_webView.EvaluateJavaScriptAsync($"setLocation({lat},{lng})");
+    }
   }
 }

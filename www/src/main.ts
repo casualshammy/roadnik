@@ -13,13 +13,14 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     if (data.LastUpdateUnixMs !== null && data.LastUpdateUnixMs !== undefined)
         p_lastOffset = data.LastUpdateUnixMs;
 
-    const latLng = new L.LatLng(data.LastEntry!.Latitude, data.LastEntry!.Longitude, data.LastEntry!.Altitude);
-    marker.setLatLng(latLng);
-    circle.setLatLng(latLng);
+    const lastLocation = new L.LatLng(data.LastEntry!.Latitude, data.LastEntry!.Longitude, data.LastEntry!.Altitude);
+    marker.setLatLng(lastLocation);
+    circle.setLatLng(lastLocation);
     circle.setRadius(data.LastEntry!.Accuracy ?? 100);
+    circle.bringToFront();
 
     if (!p_firstCentered) {
-        map.setView(latLng, 15);
+        map.setView(lastLocation, 15);
         p_firstCentered = true;
     }
 
@@ -60,13 +61,14 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     marker.setPopupContent(popUpText);
 
     if (p_autoPan === true)
-        map.flyTo(latLng);
+        map.flyTo(lastLocation);
     
     const points = data.Entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
     if (_offset === undefined)
         path.setLatLngs(points);
     else
-        path.addLatLng(points);
+        for (let point of points)
+            path.addLatLng(point);
 }
 
 const queryString = window.location.search;
@@ -92,7 +94,7 @@ map.addControl(layersControl);
 
 const marker = L.marker([51.4768, 0.0006])
     .addTo(map)
-    .bindPopup("<b>Connection lost!</b>")
+    .bindPopup("<b>Unknown track!</b>")
     .openPopup();
 
 const circle = L.circle([51.4768, 0.0006], 100, { color: 'blue', fillColor: '#f03', fillOpacity: 0.5 })

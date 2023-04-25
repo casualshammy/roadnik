@@ -7,6 +7,7 @@ internal class MainPageViewModel : BaseViewModel
   private string? p_webViewUrl;
   private bool p_isPermissionWindowShowing;
   private bool p_remoteServerIsNotResponding;
+  private bool p_isInBackground;
 
   public MainPageViewModel()
   {
@@ -15,6 +16,7 @@ internal class MainPageViewModel : BaseViewModel
     p_webViewUrl = null;
     p_isPermissionWindowShowing = false;
     p_remoteServerIsNotResponding = false;
+    p_isInBackground = false;
   }
 
   public string Title { get; } = "Roadnik";
@@ -39,8 +41,17 @@ internal class MainPageViewModel : BaseViewModel
       OnPropertyChanged(nameof(CanShowRegilarInterface));
     }
   }
+  public bool IsInBackground
+  {
+    get => p_isInBackground;
+    set
+    {
+      SetProperty(ref p_isInBackground, value);
+      OnPropertyChanged(nameof(CanShowRegilarInterface));
+    }
+  }
 
-  public bool CanShowRegilarInterface => !p_isPermissionWindowShowing && !p_remoteServerIsNotResponding;
+  public bool CanShowRegilarInterface => !p_isPermissionWindowShowing && !p_remoteServerIsNotResponding && !p_isInBackground;
 
   public string LocationPermissionDescription { get; } =
     "Our app requires access to your device's background location in order to provide you with accurate and up-to-date location tracking. " +
@@ -56,5 +67,9 @@ internal class MainPageViewModel : BaseViewModel
     "It seems like server is not responding.\n" +
     "Maybe internet connection is very unstable, or server address is invalid.\n\n" +
     "Please open the settings dialog and check if server address is typed correctly";
+
+  public string IsInBackgroundDescription { get; } =
+    "It seems like the app is in the background.\n" +
+    "The map is not being shown in the background to prevent battery draining.";
 
 }

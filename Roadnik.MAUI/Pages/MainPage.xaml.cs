@@ -44,23 +44,21 @@ public partial class MainPage : CContentPage
         if (BindingContext is not MainPageViewModel bindingCtx)
           return;
 
+        bindingCtx.IsInBackground = !p_pageShown;
         if (!p_pageShown)
         {
           bindingCtx.WebViewUrl = "__blank";
-          bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
 
-        var serverAddress = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
-        var serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
-        if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
+        var url = GetFullServerUrl();
+        if (url == null)
         {
           bindingCtx.WebViewUrl = "__blank";
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
 
-        var url = $"{serverAddress.TrimEnd('/')}?key={serverKey}";
         try
         {
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
@@ -93,6 +91,37 @@ public partial class MainPage : CContentPage
     base.OnDisappearing();
     p_pageShown = false;
     p_pageStatusChangeFlow.OnNext();
+  }
+
+  private async Task RequestLocationPermissionAsync()
+  {
+    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+    if (permission == PermissionStatus.Granted)
+      return;
+
+    if (BindingContext is not MainPageViewModel bindingCtx)
+      return;
+
+    var platform = DeviceInfo.Platform;
+    var osVersion = DeviceInfo.Current.Version;
+    if (platform == DevicePlatform.Android)
+    {
+      if (osVersion.Major < 11)
+        await Permissions.RequestAsync<Permissions.LocationAlways>();
+      else if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
+        bindingCtx.IsPermissionWindowShowing = true;
+    }
+  }
+
+  private string? GetFullServerUrl()
+  {
+    var serverAddress = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
+    var serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
+    if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
+      return null;
+
+    var url = $"{serverAddress.TrimEnd('/')}?key={serverKey}";
+    return url;
   }
 
   private void FAB_Clicked(object _sender, EventArgs _e)
@@ -168,24 +197,17 @@ public partial class MainPage : CContentPage
     p_pageStatusChangeFlow.OnNext();
   }
 
-  private async Task RequestLocationPermissionAsync()
+  private async void Share_Clicked(object _sender, EventArgs _e)
   {
-    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-    if (permission == PermissionStatus.Granted)
-      return;
-
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
-    var platform = DeviceInfo.Platform;
-    var osVersion = DeviceInfo.Current.Version;
-    if (platform == DevicePlatform.Android)
+    var url = GetFullServerUrl();
+    if (url == null)
     {
-      if (osVersion.Major < 11)
-        await Permissions.RequestAsync<Permissions.LocationAlways>();
-      else if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
-        bindingCtx.IsPermissionWindowShowing = true;
+      await DisplayAlert("Server address or server key is invalid", null, "Ok");
+      return;
     }
+
+    var req = new ShareTextRequest(url, "Url");
+    await Share.Default.RequestAsync(req);
   }
 
 }

@@ -170,7 +170,7 @@ public class ApiControllerV0 : JsonNetController
 
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
-      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}%"), _ct: _ct)
+      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}.%"), _ct: _ct)
       .Where(_ => offset == null || _.Created > offset)
       .OrderByDescending(_ => _.Created)
       .Take(_limit != null ? Math.Min(_limit.Value, 1000) : 1000)
@@ -186,7 +186,7 @@ public class ApiControllerV0 : JsonNetController
       var list = new List<StorageEntry>(documents.Count);
       var lastEntryTime = DateTimeOffset.MinValue;
       StorageEntry? lastEntry = null;
-      foreach (var doc in documents)
+      foreach (var doc in Enumerable.Reverse(documents))
       {
         list.Add(new StorageEntry(_key, doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
         if (doc.Created > lastEntryTime)

@@ -13,7 +13,13 @@ public partial class OptionsPage : ContentPage
   private async void ServerAddress_Tapped(object _sender, EventArgs _e)
   {
     var bindingCtx = (OptionsPageViewModel)BindingContext;
-    var serverName = await DisplayPromptAsync("Server address:", "", "Save", placeholder: "http://example.com:5544/", initialValue: bindingCtx.ServerName);
+    var serverName = await DisplayPromptAsync(
+      "Server address:", 
+      null, 
+      "Save", 
+      placeholder: "http://example.com:5544/", 
+      initialValue: bindingCtx.ServerName);
+
     if (serverName == null)
       return;
 
@@ -23,7 +29,12 @@ public partial class OptionsPage : ContentPage
   private async void ServerKey_Tapped(object _sender, EventArgs _e)
   {
     var bindingCtx = (OptionsPageViewModel)BindingContext;
-    var serverKey = await DisplayPromptAsync("Server key:", "");
+    var serverKey = await DisplayPromptAsync(
+      "Server key:", 
+      null, 
+      "Save", 
+      initialValue: bindingCtx.ServerKey);
+
     if (serverKey == null)
       return;
 

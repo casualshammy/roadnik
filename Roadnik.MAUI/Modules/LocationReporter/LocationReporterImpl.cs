@@ -1,14 +1,22 @@
-﻿using Ax.Fw;
+﻿#if ANDROID
+using global::Android.Telephony;
+#endif
+using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Devices;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text;
+using Microsoft.Extensions.Primitives;
+using System.Globalization;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -20,8 +28,8 @@ internal class LocationReporterImpl : ILocationReporter
 
   private readonly ReplaySubject<Location> p_locationFlow = new(1);
   private readonly Subject<Unit> p_forceReload = new();
+  private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
-  private volatile bool p_enabled = false;
 
   public LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
@@ -31,7 +39,7 @@ internal class LocationReporterImpl : ILocationReporter
   {
     p_log = _log["location-reporter"];
 
-    var prefsProp = _storage.PreferencesChanged
+    var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
       {
         ServerAddress = _storage.GetValueOrDefault<string>(_storage.SERVER_ADDRESS),
@@ -39,8 +47,17 @@ internal class LocationReporterImpl : ILocationReporter
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(_storage.TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION)
-      })
-      .ToProperty(_lifetime);
+      });
+
+    var batteryStatsFlow = Observable
+      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
+      .Select(_ => _.EventArgs)
+      .StartWith(new BatteryInfoChangedEventArgs(Battery.Default.ChargeLevel, Battery.Default.State, Battery.Default.PowerSource));
+
+    var signalStrengthFlow = Observable
+      .Interval(TimeSpan.FromMinutes(1))
+      .StartWithDefault()
+      .Select(_ => GetSignalStrength());
 
     var reportInterval = TimeSpan.FromSeconds(10);
 
@@ -60,11 +77,12 @@ internal class LocationReporterImpl : ILocationReporter
 
     var counter = 0L;
 
-    Observable
+    var reportFlow = Observable
       .Interval(TimeSpan.FromSeconds(1.01), scheduler)
-      .Where(_ => p_enabled)
       .ToUnit()
       .Merge(forceReqFlow)
+      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow)
+      .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
       {
@@ -78,11 +96,11 @@ internal class LocationReporterImpl : ILocationReporter
       .ObserveOn(scheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
+        var (_, batteryStat, signalStrength, prefs) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
-          var prefs = prefsProp.Value;
-          if (string.IsNullOrWhiteSpace(prefs?.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
+          if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
             return _acc;
 
           var location = await GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), _lifetime.Token);
@@ -106,16 +124,7 @@ internal class LocationReporterImpl : ILocationReporter
               return _acc;
           }
 
-          var url =
-            $"{prefs.ServerAddress.TrimEnd('/')}/store?" +
-            $"key={prefs.ServerKey}&" +
-            $"lat={location.Latitude}&" +
-            $"lon={location.Longitude}&" +
-            $"alt={location.Altitude ?? 0}&" +
-            $"speed={location.Speed ?? 0}&" +
-            $"acc={location.Accuracy ?? 100}&" +
-            $"bearing={location.Course ?? 0}";
-
+          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
           return new ReportingCtx(location, now);
@@ -138,17 +147,43 @@ internal class LocationReporterImpl : ILocationReporter
         }
         return _acc with { LastTimeReported = now };
       })
-      .Do(_ => Interlocked.Decrement(ref counter))
+      .Do(_ => Interlocked.Decrement(ref counter));
+
+    p_enableFlow
+      .Scan((ILifetime?)null, (_acc, _enable) =>
+      {
+        if (_enable)
+        {
+          if (_acc != null)
+            return _acc;
+
+          var life = _lifetime.GetChildLifetime();
+          if (life == null)
+            return _acc;
+
+          reportFlow.Subscribe(life);
+          return life;
+        }
+        else
+        {
+          if (_acc == null)
+            return _acc;
+
+          _acc.Complete();
+          return null;
+        }
+      })
       .Subscribe(_lifetime);
 
+    p_enableFlow.OnNext(false);
   }
 
   public IObservable<Location> Location => p_locationFlow;
-  public bool Enabled => p_enabled;
+  public async Task<bool> IsEnabled() => await p_enableFlow.FirstOrDefaultAsync();
 
   public void SetState(bool _enabled)
   {
-    p_enabled = _enabled;
+    p_enableFlow.OnNext(_enabled);
     if (_enabled)
       p_forceReload.OnNext();
 
@@ -197,6 +232,75 @@ internal class LocationReporterImpl : ILocationReporter
     {
       return null;
     }
+  }
+
+  private static double? GetSignalStrength()
+  {
+#if ANDROID
+    var service = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
+    if (service == null || service.AllCellInfo == null)
+      return null;
+
+    static double normalize(int _level)
+    {
+      if (_level == 0)
+        return 0.01;
+
+      return (_level + 1) * 20 / 100d;
+    }
+
+    var signalStrength = 0d;
+    foreach (var info in service.AllCellInfo)
+    {
+      // we cast to specific type because getting value of abstract field `CellSignalStrength` raises exception
+      if (info is CellInfoWcdma wcdma && wcdma.CellSignalStrength != null)
+        signalStrength = Math.Max(signalStrength, normalize(wcdma.CellSignalStrength.Level));
+      else if (info is CellInfoGsm gsm && gsm.CellSignalStrength != null)
+        signalStrength = Math.Max(signalStrength, normalize(gsm.CellSignalStrength.Level));
+      else if (info is CellInfoLte lte && lte.CellSignalStrength != null)
+        signalStrength = Math.Max(signalStrength, normalize(lte.CellSignalStrength.Level));
+      else if (info is CellInfoCdma cdma && cdma.CellSignalStrength != null)
+        signalStrength = Math.Max(signalStrength, normalize(cdma.CellSignalStrength.Level));
+    }
+    return signalStrength;
+#else
+    return null;
+#endif
+  }
+
+  private static string GetUrl(
+    string _serverAddress,
+    string _serverKey,
+    Location _location,
+    BatteryInfoChangedEventArgs _batteryInfo,
+    double? _signalStrength)
+  {
+    var culture = CultureInfo.InvariantCulture;
+    var sb = new StringBuilder();
+    sb.Append(_serverAddress.TrimEnd('/'));
+    sb.Append("/store?key=");
+    sb.Append(_serverKey);
+    sb.Append("&lat=");
+    sb.Append(_location.Latitude.ToString(culture));
+    sb.Append("&lon=");
+    sb.Append(_location.Longitude.ToString(culture));
+    sb.Append("&alt=");
+    sb.Append(_location.Altitude?.ToString(culture) ?? "0");
+    sb.Append("&speed=");
+    sb.Append(_location.Speed?.ToString(culture) ?? "0");
+    sb.Append("&acc=");
+    sb.Append(_location.Accuracy?.ToString(culture) ?? "100");
+    sb.Append("&bearing=");
+    sb.Append(_location.Course?.ToString(culture) ?? "0");
+    sb.Append("&battery=");
+    sb.Append((_batteryInfo.ChargeLevel * 100).ToString(culture));
+    if (_signalStrength != null)
+    {
+      sb.Append("&gsm_signal=");
+      sb.Append((_signalStrength.Value * 100).ToString(culture));
+    }
+
+    return sb.ToString();
   }
 
 }

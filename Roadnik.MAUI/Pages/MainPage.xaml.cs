@@ -124,14 +124,14 @@ public partial class MainPage : CContentPage
     return url;
   }
 
-  private void FAB_Clicked(object _sender, EventArgs _e)
+  private async void FAB_Clicked(object _sender, EventArgs _e)
   {
     var ctx = (MainPageViewModel)BindingContext;
 
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
 
-    if (locationReporter.Enabled)
+    if (await locationReporter.IsEnabled())
     {
       if (Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true && rawColor is Color color)
         ctx.StartRecordButtonColor = color;

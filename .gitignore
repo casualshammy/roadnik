@@ -11,3 +11,5 @@
 /*.apk
 /*.zip
 /Roadnik.MAUI/Roadnik.MAUI.csproj.user
+/Roadnik.Common/bin
+/Roadnik.Common/obj

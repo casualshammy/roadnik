@@ -5,19 +5,22 @@ import { TimeSpan } from "./modules/timespan";
 
 const p_storageApi = new Api.StorageApi();
 
-async function refreshPosition(_key: string) {
-    //debugger;
-    const data = await p_storageApi.getDataAsync(_key);
+async function refreshPositionFullAsync(_key: string, _offset: number | undefined = undefined) {
+    const data = await p_storageApi.getDataAsync(_key, undefined, _offset);
     if (data === null || !data.Success)
         return;
 
-    const latLng = new L.LatLng(data.LastEntry!.Latitude, data.LastEntry!.Longitude, data.LastEntry!.Altitude);
-    marker.setLatLng(latLng);
-    circle.setLatLng(latLng);
+    if (data.LastUpdateUnixMs !== null && data.LastUpdateUnixMs !== undefined)
+        p_lastOffset = data.LastUpdateUnixMs;
+
+    const lastLocation = new L.LatLng(data.LastEntry!.Latitude, data.LastEntry!.Longitude, data.LastEntry!.Altitude);
+    marker.setLatLng(lastLocation);
+    circle.setLatLng(lastLocation);
     circle.setRadius(data.LastEntry!.Accuracy ?? 100);
+    circle.bringToFront();
 
     if (!p_firstCentered) {
-        map.setView(latLng, 15);
+        map.setView(lastLocation, 15);
         p_firstCentered = true;
     }
 
@@ -57,12 +60,15 @@ async function refreshPosition(_key: string) {
         </p>`;
     marker.setPopupContent(popUpText);
 
-    if (p_autoPan === true) {
-        map.panTo(latLng);
-    }
+    if (p_autoPan === true)
+        map.flyTo(lastLocation);
     
     const points = data.Entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-    path.setLatLngs(points);
+    if (_offset === undefined)
+        path.setLatLngs(points);
+    else
+        for (let point of points)
+            path.addLatLng(point);
 }
 
 const queryString = window.location.search;
@@ -72,6 +78,7 @@ const key = urlParams.get('key');
 let p_lastAlt = 0;
 let p_firstCentered = false;
 let p_autoPan = false;
+let p_lastOffset = 0;
 
 const maps = Maps.GetMapLayers();
 const overlays = Maps.GetMapOverlayLayers();
@@ -87,7 +94,7 @@ map.addControl(layersControl);
 
 const marker = L.marker([51.4768, 0.0006])
     .addTo(map)
-    .bindPopup("<b>Connection lost!</b>")
+    .bindPopup("<b>Unknown track!</b>")
     .openPopup();
 
 const circle = L.circle([51.4768, 0.0006], 100, { color: 'blue', fillColor: '#f03', fillOpacity: 0.5 })
@@ -96,9 +103,21 @@ const circle = L.circle([51.4768, 0.0006], 100, { color: 'blue', fillColor: '#f0
 const path = L.polyline([], {color: 'red', smoothFactor: 1, weight: 5})
     .addTo(map);
 
+const autoPanCheckbox = Maps.GetCheckBox("Auto pan", 'topleft', _checked => p_autoPan = _checked)
+    .addTo(map);
+
 if (key !== null) {
     const ws = p_storageApi.setupWs(key, (_ws, _data) => {
-        if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED || _data.Type === Api.WS_MSG_TYPE_HELLO)
-            refreshPosition(key);
+        if (_data.Type === Api.WS_MSG_TYPE_HELLO)
+            refreshPositionFullAsync(key);
+
+        if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
+            refreshPositionFullAsync(key, p_lastOffset);
     });
 }
+
+// exports for C#
+function setLocation(_x: number, _y: number) {
+    map.flyTo([_x, _y]);
+}
+(window as any).setLocation = setLocation;

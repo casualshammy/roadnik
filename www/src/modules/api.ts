@@ -32,8 +32,8 @@ export class StorageApi {
         
     }
 
-    public async getDataAsync(_key: string, _entriesLimit: number = 100): Promise<GetResData> {
-        const response = await fetch(`/get?key=${_key}&limit=${_entriesLimit}`);
+    public async getDataAsync(_key: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
+        const response = await fetch(`/get?key=${_key}&limit=${_entriesLimit}&offset=${_offset}`);
         const data: GetResData = await response.json();
         return data;
     }

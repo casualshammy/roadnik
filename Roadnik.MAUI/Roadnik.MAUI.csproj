@@ -55,12 +55,6 @@
 	  <Compile Update="Pages\MainPage.xaml.cs">
 	    <DependentUpon>MainPage.xaml</DependentUpon>
 	  </Compile>
-	  <Compile Update="Pages\MainFlyoutPage.xaml.cs">
-	    <DependentUpon>MainFlyoutPage.xaml</DependentUpon>
-	  </Compile>
-	  <Compile Update="Pages\MainFlyoutPageContent.xaml.cs">
-	    <DependentUpon>MainFlyoutPageContent.xaml</DependentUpon>
-	  </Compile>
 	  <Compile Update="Pages\OptionsPage.xaml.cs">
 	    <DependentUpon>OptionsPage.xaml</DependentUpon>
 	  </Compile>
@@ -68,12 +62,6 @@
 
 	<ItemGroup>
 	  <MauiXaml Update="Pages\MainPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Pages\MainFlyoutPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Pages\MainFlyoutPageContent.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

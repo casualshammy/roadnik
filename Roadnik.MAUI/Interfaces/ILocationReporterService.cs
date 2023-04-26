@@ -1,6 +1,6 @@
 ﻿namespace Roadnik.MAUI.Interfaces;
 
-public interface IAndroidService
+public interface ILocationReporterService
 {
   void Start();
   void Stop();

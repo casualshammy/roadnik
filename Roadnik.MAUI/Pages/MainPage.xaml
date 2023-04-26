@@ -11,8 +11,9 @@
     </ContentPage.BindingContext>
 
     <AbsoluteLayout>
+        <!--CanShowRegilarView-->
         <WebView
-            IsVisible="{Binding CanShowRegilarInterface}"
+            IsVisible="{Binding CanShowRegilarView}"
             x:Name="p_webView"
             Source="{Binding WebViewUrl}"
             AbsoluteLayout.LayoutFlags="All"  
@@ -21,15 +22,13 @@
             Navigated="MainWebView_Navigated">
         </WebView>
         <ActivityIndicator 
-            IsVisible="{Binding CanShowRegilarInterface}"
+            IsVisible="{Binding CanShowRegilarView}"
             Color="{Binding StartRecordButtonColor}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
             IsRunning="{Binding IsSpinnerRequired}" />
-
-        <!--CanShowRegilarInterface-->
         <Grid
-            IsVisible="{Binding CanShowRegilarInterface}"
+            IsVisible="{Binding CanShowRegilarView}"
             AbsoluteLayout.LayoutFlags="PositionProportional"
             AbsoluteLayout.LayoutBounds="0.95, 0.95, 140, 130">
             <Grid.ColumnDefinitions>
@@ -97,9 +96,9 @@
 
         </Grid>
 
-        <!--IsPermissionWindowShowing-->
+        <!--CanShowPermissionView-->
         <Grid
-            IsVisible="{Binding IsPermissionWindowShowing}"
+            IsVisible="{Binding CanShowPermissionView}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
             <Grid.ColumnDefinitions>
@@ -147,9 +146,9 @@
                 Clicked="LocationPermissionNo_Clicked"/>
         </Grid>
 
-        <!--IsRemoteServerNotResponding-->
+        <!--CanShowConnectionErrorView-->
         <Grid
-            IsVisible="{Binding IsRemoteServerNotResponding}"
+            IsVisible="{Binding CanShowConnectionErrorView}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
             <Grid.ColumnDefinitions>

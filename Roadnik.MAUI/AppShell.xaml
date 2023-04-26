@@ -17,11 +17,6 @@
                        Source="road_f.svg"
                        BackgroundColor="CornflowerBlue"
                        Opacity="0.6" />
-                <!--<Label Text="Animals"
-                       TextColor="White"
-                       FontAttributes="Bold"
-                       HorizontalTextAlignment="Center"
-                       VerticalTextAlignment="Center" />-->
             </Grid>
         </DataTemplate>
     </Shell.FlyoutHeaderTemplate>
@@ -40,16 +35,10 @@
             Icon="cog_box.svg"
             ContentTemplate="{DataTemplate pages:OptionsPage}" />
     </FlyoutItem>
-    
 
     <ShellContent 
         Title="About"
         Icon="info.png"
         ContentTemplate="{DataTemplate pages:AboutPage}" />
-
-    <!--<ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainFlyoutPage}"
-        Route="MainFlyoutPage" />-->
 
 </Shell>

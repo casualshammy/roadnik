@@ -183,7 +183,7 @@ public partial class MainPage : CContentPage
     bindingCtx.IsPermissionWindowShowing = false;
   }
 
-  private void LocationPermissionYes_Clicked(object sender, EventArgs e)
+  private void LocationPermissionYes_Clicked(object _sender, EventArgs _e)
   {
     if (BindingContext is not MainPageViewModel bindingCtx)
       return;

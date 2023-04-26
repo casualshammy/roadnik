@@ -56,8 +56,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       return;
 
     p_enabled = true;
-    foreach (var provider in p_allProviders)
-      p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+      foreach (var provider in p_allProviders)
+        p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
+    });
   }
 
   public void Disable()
@@ -68,7 +71,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_enabled = false;
     try
     {
-      p_locationManager.RemoveUpdates(this);
+      MainThread.BeginInvokeOnMainThread(() => p_locationManager.RemoveUpdates(this));
     }
     catch (Exception ex)
     {

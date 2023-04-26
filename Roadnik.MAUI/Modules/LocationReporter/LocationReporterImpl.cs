@@ -65,8 +65,6 @@ internal class LocationReporterImpl : ILocationReporter
 
     var reportInterval = TimeSpan.FromSeconds(10);
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
-
     var forceReqFlow = p_forceReload
       .Scan(new ForceReqData(DateTimeOffset.MinValue, true), (_acc, _entry) =>
       {
@@ -81,9 +79,12 @@ internal class LocationReporterImpl : ILocationReporter
 
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
+    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
-    var reportFlow = forceReqFlow
-      .StartWithDefault()
+    var reportFlow = Observable
+      .Interval(TimeSpan.FromSeconds(1.01), scheduler)
+      .ToUnit()
+      .Merge(forceReqFlow)
       .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))

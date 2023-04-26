@@ -1,8 +1,10 @@
-﻿namespace Roadnik.MAUI.Interfaces;
+﻿using Roadnik.MAUI.Modules.LocationReporter;
+
+namespace Roadnik.MAUI.Interfaces;
 
 public interface ILocationReporter
 {
-  IObservable<Location> Location { get; }
+  IObservable<LocationReporterSessionStats> Stats { get; }
 
   Task<Location?> GetCurrentAnyLocationAsync(TimeSpan _timeout, CancellationToken _ct);
   Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);

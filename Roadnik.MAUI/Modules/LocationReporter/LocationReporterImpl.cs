@@ -6,19 +6,22 @@ using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
-using Microsoft.Maui.Devices.Sensors;
-using Microsoft.Maui.Devices;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using System.Globalization;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
-using Microsoft.Extensions.Primitives;
-using System.Globalization;
+using Roadnik.MAUI.Modules.LocationProvider;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
+
+public record LocationReporterSessionStats(int Total, int Successful)
+{
+  public static LocationReporterSessionStats Empty { get; } = new LocationReporterSessionStats(0, 0);
+}
 
 [ExportClass(typeof(ILocationReporter), Singleton: true, ActivateOnStart: true)]
 internal class LocationReporterImpl : ILocationReporter
@@ -26,7 +29,7 @@ internal class LocationReporterImpl : ILocationReporter
   record ForceReqData(DateTimeOffset DateTime, bool Ok);
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
-  private readonly ReplaySubject<Location> p_locationFlow = new(1);
+  private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly Subject<Unit> p_forceReload = new();
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
@@ -35,7 +38,8 @@ internal class LocationReporterImpl : ILocationReporter
     IReadOnlyLifetime _lifetime,
     ILogger _log,
     IPreferencesStorage _storage,
-    IHttpClientProvider _httpClientProvider)
+    IHttpClientProvider _httpClientProvider,
+    ILocationProvider _locationProvider)
   {
     p_log = _log["location-reporter"];
 
@@ -76,12 +80,11 @@ internal class LocationReporterImpl : ILocationReporter
       .ToUnit();
 
     var counter = 0L;
+    var stats = LocationReporterSessionStats.Empty;
 
-    var reportFlow = Observable
-      .Interval(TimeSpan.FromSeconds(1.01), scheduler)
-      .ToUnit()
-      .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow)
+    var reportFlow = forceReqFlow
+      .StartWithDefault()
+      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
@@ -96,18 +99,12 @@ internal class LocationReporterImpl : ILocationReporter
       .ObserveOn(scheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
-        var (_, batteryStat, signalStrength, prefs) = _entry;
+        var (_, batteryStat, signalStrength, prefs, location) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
           if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
             return _acc;
-
-          var location = await GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), _lifetime.Token);
-          if (location == null)
-            return _acc;
-
-          p_locationFlow.OnNext(location);
 
           var distance = _acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
 
@@ -124,9 +121,16 @@ internal class LocationReporterImpl : ILocationReporter
               return _acc;
           }
 
+          stats = stats with { Total = stats.Total + 1 };
+          p_statsFlow.OnNext(stats);
+
           var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
+
+          stats = stats with { Successful = stats.Successful + 1 };
+          p_statsFlow.OnNext(stats);
+
           return new ReportingCtx(location, now);
         }
         catch (FeatureNotSupportedException fnsEx)
@@ -141,6 +145,10 @@ internal class LocationReporterImpl : ILocationReporter
         {
           p_log.Error($"Geo location is not permitted", pEx);
         }
+        catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+        {
+          p_log.Warn($"Too many requests (HTTP 429)");
+        }
         catch (Exception ex)
         {
           p_log.Error($"Geo location generic error", ex);
@@ -149,7 +157,10 @@ internal class LocationReporterImpl : ILocationReporter
       })
       .Do(_ => Interlocked.Decrement(ref counter));
 
+    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
+
     p_enableFlow
+      .ObserveOn(locationProviderStateScheduler)
       .Scan((ILifetime?)null, (_acc, _enable) =>
       {
         if (_enable)
@@ -161,6 +172,10 @@ internal class LocationReporterImpl : ILocationReporter
           if (life == null)
             return _acc;
 
+          life.DoOnCompleted(() => stats = LocationReporterSessionStats.Empty);
+          life.DoOnCompleted(_locationProvider.Disable);
+
+          _locationProvider.Enable();
           reportFlow.Subscribe(life);
           return life;
         }
@@ -176,9 +191,20 @@ internal class LocationReporterImpl : ILocationReporter
       .Subscribe(_lifetime);
 
     p_enableFlow.OnNext(false);
+
+    prefsFlow
+      .ObserveOn(locationProviderStateScheduler)
+      .Subscribe(_ =>
+      {
+        if (_.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
+          _locationProvider.ChangeConstrains(_.TimeInterval, _.DistanceInterval);
+        else
+          _locationProvider.ChangeConstrains(_.TimeInterval, 0f);
+      });
   }
 
-  public IObservable<Location> Location => p_locationFlow;
+  public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;
+
   public async Task<bool> IsEnabled() => await p_enableFlow.FirstOrDefaultAsync();
 
   public void SetState(bool _enabled)
@@ -187,7 +213,7 @@ internal class LocationReporterImpl : ILocationReporter
     if (_enabled)
       p_forceReload.OnNext();
 
-    p_log.Info($"Location reporter {(_enabled ? "enabled" : "disable")}");
+    p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
   }
 
   public async Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)

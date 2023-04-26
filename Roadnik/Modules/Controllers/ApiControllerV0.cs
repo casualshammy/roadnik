@@ -4,6 +4,7 @@ using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Attributes;
+using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
@@ -47,7 +48,7 @@ public class ApiControllerV0 : JsonNetController
   public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
 
   [HttpHead("/")]
-  public async Task<IActionResult> GetIndexFileHeadAsync() => Ok();
+  public async Task<IActionResult> GetIndexFileHeadAsync() => await Task.FromResult(Ok());
 
   [HttpGet("{**path}")]
   public async Task<IActionResult> GetStaticFileAsync(
@@ -67,7 +68,7 @@ public class ApiControllerV0 : JsonNetController
 
     if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
     {
-      p_logger.Error($"Tryed to get file not from webroot: '{_path}'");
+      p_logger.Error($"Tried to get file not from webroot: '{_path}'");
       return StatusCode(403);
     }
 
@@ -92,6 +93,8 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Z is null!");
     if (string.IsNullOrWhiteSpace(_type))
       return BadRequest("Type is null!");
+    if (!ReqResUtil.IsKeySafe(_type))
+      return BadRequest("Type is incorrect!");
     if (string.IsNullOrEmpty(p_settings.TrunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
 
@@ -117,12 +120,16 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
     if (_lat == null)
       return BadRequest("Latitude is null!");
     if (_lon == null)
       return BadRequest("Longitude is null!");
     if (_alt == null)
       return BadRequest("Altitude is null!");
+    if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserMessageSafe(_message))
+      return BadRequest("Message is incorrect!");
 
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
@@ -152,6 +159,8 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (ip == null)
@@ -210,6 +219,8 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
 
     if (!HttpContext.WebSockets.IsWebSocketRequest)
       return StatusCode((int)HttpStatusCode.BadRequest, $"Expected web socket request");
@@ -255,5 +266,7 @@ public class ApiControllerV0 : JsonNetController
     var users = await p_usersController.ListUsersAsync(_ct);
     return Json(users, true);
   }
+
+  
 
 }

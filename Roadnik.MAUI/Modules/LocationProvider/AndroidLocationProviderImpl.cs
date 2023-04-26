@@ -1,10 +1,12 @@
-﻿using Android.Content;
+﻿#if ANDROID
+using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
+using Org.Apache.Commons.Logging;
+#endif
 using Ax.Fw.Attributes;
 using JustLogger.Interfaces;
-using Org.Apache.Commons.Logging;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 

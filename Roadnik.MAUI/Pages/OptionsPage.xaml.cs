@@ -14,11 +14,12 @@ public partial class OptionsPage : ContentPage
   {
     var bindingCtx = (OptionsPageViewModel)BindingContext;
     var serverName = await DisplayPromptAsync(
-      "Server address:", 
+      "Server address", 
       null, 
       "Save", 
       placeholder: "http://example.com:5544/", 
-      initialValue: bindingCtx.ServerName);
+      initialValue: bindingCtx.ServerName,
+      keyboard: Keyboard.Url);
 
     if (serverName == null)
       return;
@@ -30,10 +31,11 @@ public partial class OptionsPage : ContentPage
   {
     var bindingCtx = (OptionsPageViewModel)BindingContext;
     var serverKey = await DisplayPromptAsync(
-      "Server key:", 
-      null, 
+      "Server key",
+      "Alphanumeric characters, underscores, hyphens are allowed. Minimal length - 4 characters", 
       "Save", 
-      initialValue: bindingCtx.ServerKey);
+      initialValue: bindingCtx.ServerKey,
+      maxLength: 16);
 
     if (serverKey == null)
       return;
@@ -82,4 +84,5 @@ public partial class OptionsPage : ContentPage
     else if (result == or)
       bindingCtx.TrackpointReportingConditionText = TrackpointReportingConditionType.TimeOrDistance.ToString();
   }
+
 }

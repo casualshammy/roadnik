@@ -5,7 +5,7 @@ internal class MainPageViewModel : BaseViewModel
   private Color p_startRecordButtonColor;
   private bool p_isSpinnerRequired;
   private string? p_webViewUrl;
-  private bool p_isPermissionWindowShowing;
+  private bool p_permissionViewRequired;
   private bool p_remoteServerIsNotResponding;
   private bool p_isInBackground;
 
@@ -14,7 +14,7 @@ internal class MainPageViewModel : BaseViewModel
     p_startRecordButtonColor = Color.Parse("CornflowerBlue");
     p_isSpinnerRequired = true;
     p_webViewUrl = null;
-    p_isPermissionWindowShowing = false;
+    p_permissionViewRequired = false;
     p_remoteServerIsNotResponding = false;
     p_isInBackground = false;
   }
@@ -23,13 +23,16 @@ internal class MainPageViewModel : BaseViewModel
   public Color StartRecordButtonColor { get => p_startRecordButtonColor; set => SetProperty(ref p_startRecordButtonColor, value); }
   public bool IsSpinnerRequired { get => p_isSpinnerRequired; set => SetProperty(ref p_isSpinnerRequired, value); }
   public string? WebViewUrl { get => p_webViewUrl; set => SetProperty(ref p_webViewUrl, value); }
+
   public bool IsPermissionWindowShowing
   {
-    get => p_isPermissionWindowShowing;
+    get => p_permissionViewRequired;
     set
     {
-      SetProperty(ref p_isPermissionWindowShowing, value);
-      OnPropertyChanged(nameof(CanShowRegilarInterface));
+      SetProperty(ref p_permissionViewRequired, value);
+      OnPropertyChanged(nameof(CanShowRegilarView));
+      OnPropertyChanged(nameof(CanShowPermissionView));
+      OnPropertyChanged(nameof(CanShowConnectionErrorView));
     }
   }
   public bool IsRemoteServerNotResponding
@@ -38,7 +41,8 @@ internal class MainPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_remoteServerIsNotResponding, value);
-      OnPropertyChanged(nameof(CanShowRegilarInterface));
+      OnPropertyChanged(nameof(CanShowRegilarView));
+      OnPropertyChanged(nameof(CanShowConnectionErrorView));
     }
   }
   public bool IsInBackground
@@ -47,11 +51,15 @@ internal class MainPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_isInBackground, value);
-      OnPropertyChanged(nameof(CanShowRegilarInterface));
+      OnPropertyChanged(nameof(CanShowRegilarView));
+      OnPropertyChanged(nameof(CanShowPermissionView));
+      OnPropertyChanged(nameof(CanShowConnectionErrorView));
     }
   }
 
-  public bool CanShowRegilarInterface => !p_isPermissionWindowShowing && !p_remoteServerIsNotResponding && !p_isInBackground;
+  public bool CanShowRegilarView => !p_permissionViewRequired && !p_remoteServerIsNotResponding && !p_isInBackground;
+  public bool CanShowPermissionView => p_permissionViewRequired && !p_isInBackground;
+  public bool CanShowConnectionErrorView => p_remoteServerIsNotResponding && !p_permissionViewRequired && !p_isInBackground;
 
   public string LocationPermissionDescription { get; } =
     "Our app requires access to your device's background location in order to provide you with accurate and up-to-date location tracking. " +

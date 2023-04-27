@@ -8,10 +8,10 @@ export function GetMapLayers()
 		osmAttribution = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)',
 		osm = new L.TileLayer(osmUrl, {maxZoom: 18, attribution: osmAttribution});
 	// OpenCycleMap
-	var cyclemapUrl = '/thunderforest?type=cycle&x={x}&y={y}&z={z}',
+	var cyclemapUrl = 'thunderforest?type=cycle&x={x}&y={y}&z={z}',
 		cyclemap = new L.TileLayer(cyclemapUrl, {maxZoom: 18, attribution: undefined});
 	// Spinal Map
-	var spinalmapUrl = '/thunderforest?type=spinal-map&x={x}&y={y}&z={z}',
+	var spinalmapUrl = 'thunderforest?type=spinal-map&x={x}&y={y}&z={z}',
 		spinalmap = new L.TileLayer(spinalmapUrl, {maxZoom: 18, attribution: undefined});
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",

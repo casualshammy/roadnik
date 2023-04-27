@@ -35,13 +35,8 @@
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="CornflowerBlue" />
 		<MauiSplashScreen Include="Resources\Splash\splashscreen.svg" />
 		
-		
 		<MauiImage Include="Resources\Images\*" />
-
-		
 		<MauiFont Include="Resources\Fonts\*" />
-
-		
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 

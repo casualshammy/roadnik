@@ -36,8 +36,8 @@ public partial class MainPage : CContentPage
     p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     p_storage.PreferencesChanged
-      .Merge(p_pageStatusChangeFlow)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
+      .Merge(p_pageStatusChangeFlow)
       .ObserveOn(scheduler)
       .SelectAsync(async (_, _ct) =>
       {

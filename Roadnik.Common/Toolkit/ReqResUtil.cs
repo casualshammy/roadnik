@@ -5,7 +5,7 @@ namespace Roadnik.Common.Toolkit;
 
 public static class ReqResUtil
 {
-  private static readonly Regex p_safeStringRegex = new(@"^[a-zA-Z0-9-_]*$", RegexOptions.Compiled);
+  private static readonly Regex p_safeStringRegex = new(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled);
   private static readonly Regex p_safeUserMessageRegex = new(@"^[\d\w\-_\s\!\,\.\:\?]*$", RegexOptions.Compiled);
 
   public static int MaxUserMsgLength { get; } = 1024;

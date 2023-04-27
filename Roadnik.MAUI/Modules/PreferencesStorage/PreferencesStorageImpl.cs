@@ -11,7 +11,7 @@ namespace Roadnik.MAUI.Modules.PreferencesStorage;
 [ExportClass(typeof(IPreferencesStorage), Singleton: true)]
 internal class PreferencesStorageImpl : IPreferencesStorage
 {
-  private readonly SyncCache<string, object> p_cache = new(new SyncCacheSettings(100, 10, TimeSpan.FromHours(1)));
+  private readonly SyncCache<string, object?> p_cache = new(new SyncCacheSettings(100, 10, TimeSpan.FromHours(1)));
   private readonly ReplaySubject<Unit> p_prefChangedFlow = new(1);
 
   public PreferencesStorageImpl()
@@ -21,7 +21,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage
 
   public IObservable<Unit> PreferencesChanged => p_prefChangedFlow;
 
-  public T? GetValueOrDefault<T>(string _key) where T : notnull
+  public T? GetValueOrDefault<T>(string _key)
   {
     if (p_cache.TryGet(_key, out var obj))
       return (T?)obj;
@@ -35,7 +35,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     return (T?)obj;
   }
 
-  public void SetValue<T>(string _key, T _value) where T : notnull
+  public void SetValue<T>(string _key, T? _value)
   {
     var json = JsonConvert.SerializeObject(_value);
     Preferences.Default.Set(_key, json);
@@ -56,5 +56,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage
   public string TIME_INTERVAL { get; } = "settings.report.time-interval";
   public string DISTANCE_INTERVAL { get; } = "settings.report.distance-interval";
   public string TRACKPOINT_REPORTING_CONDITION { get; } = "settings.report.trackpoint-reporting-condition";
+  public string USER_MSG { get; } = "settings.report.user-msg";
 
 }

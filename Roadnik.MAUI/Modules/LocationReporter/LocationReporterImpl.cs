@@ -50,7 +50,8 @@ internal class LocationReporterImpl : ILocationReporter
         ServerKey = _storage.GetValueOrDefault<string>(_storage.SERVER_KEY),
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(_storage.TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
-        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION)
+        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION),
+        UserMsg = _storage.GetValueOrDefault<string>(_storage.USER_MSG),
       });
 
     var batteryStatsFlow = Observable
@@ -125,7 +126,7 @@ internal class LocationReporterImpl : ILocationReporter
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, location, batteryStat, signalStrength);
+          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.UserMsg, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
@@ -298,6 +299,7 @@ internal class LocationReporterImpl : ILocationReporter
   private static string GetUrl(
     string _serverAddress,
     string _serverKey,
+    string? _userMsg,
     Location _location,
     BatteryInfoChangedEventArgs _batteryInfo,
     double? _signalStrength)
@@ -325,6 +327,11 @@ internal class LocationReporterImpl : ILocationReporter
     {
       sb.Append("&gsm_signal=");
       sb.Append((_signalStrength.Value * 100).ToString(culture));
+    }
+    if (_userMsg?.Length > 0)
+    {
+      sb.Append("&var=");
+      sb.Append(_userMsg);
     }
 
     return sb.ToString();

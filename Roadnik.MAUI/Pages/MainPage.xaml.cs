@@ -1,6 +1,7 @@
 ﻿using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
@@ -47,14 +48,14 @@ public partial class MainPage : CContentPage
         bindingCtx.IsInBackground = !p_pageShown;
         if (!p_pageShown)
         {
-          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.WebViewUrl = "loading.html";
           return;
         }
 
         var url = GetFullServerUrl();
         if (url == null)
         {
-          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.WebViewUrl = "loading.html";
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
@@ -72,7 +73,7 @@ public partial class MainPage : CContentPage
         catch (Exception ex)
         {
           Debug.WriteLine(ex);
-          bindingCtx.WebViewUrl = "__blank";
+          bindingCtx.WebViewUrl = "loading.html";
           bindingCtx.IsRemoteServerNotResponding = true;
         }
       }, scheduler)
@@ -151,7 +152,7 @@ public partial class MainPage : CContentPage
   {
     if (BindingContext is not MainPageViewModel bindingCtx)
       return;
-        
+
     bindingCtx.IsSpinnerRequired = true;
   }
 
@@ -208,6 +209,20 @@ public partial class MainPage : CContentPage
 
     var req = new ShareTextRequest(url, "Url");
     await Share.Default.RequestAsync(req);
+  }
+
+  private async void Message_Clicked(object _sender, EventArgs _e)
+  {
+    var msg = await DisplayPromptAsync(
+      "Message:",
+      "Some special characters are not allowed",
+      maxLength: ReqResUtil.MaxUserMsgLength,
+      initialValue: p_storage.GetValueOrDefault<string>(p_storage.USER_MSG));
+
+    if (msg == null)
+      return;
+
+    p_storage.SetValue(p_storage.USER_MSG, ReqResUtil.ClearUserMsg(msg));
   }
 
 }

@@ -1,4 +1,5 @@
-﻿using Roadnik.MAUI.Data;
+﻿using Roadnik.Common.Toolkit;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.ViewModels;
 
 namespace Roadnik.MAUI.Pages;
@@ -32,10 +33,10 @@ public partial class OptionsPage : ContentPage
     var bindingCtx = (OptionsPageViewModel)BindingContext;
     var serverKey = await DisplayPromptAsync(
       "Server key",
-      "Alphanumeric characters, underscores, hyphens are allowed. Minimal length - 4 characters", 
+      $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters", 
       "Save", 
       initialValue: bindingCtx.ServerKey,
-      maxLength: 16);
+      maxLength: ReqResUtil.MaxKeyKength);
 
     if (serverKey == null)
       return;
@@ -47,12 +48,15 @@ public partial class OptionsPage : ContentPage
   {
     var bindingCtx = (OptionsPageViewModel)BindingContext;
     var mimimalIntervalRaw = await DisplayPromptAsync(
-      "Interval in seconds:", 
-      "Minimal interval for anonymous user is 10 sec, for registered user is 1 sec",
+      "Interval in seconds:",
+      "Minimum interval for anonymous user is 10 sec, for registered user is 1 sec. Maximum interval is 1 hour (3600 sec)",
       initialValue: bindingCtx.MinimumTime.ToString(),
       keyboard: Keyboard.Numeric);
 
-    if (mimimalIntervalRaw != null && int.TryParse(mimimalIntervalRaw, out var mimimalInterval))
+    if (mimimalIntervalRaw != null && 
+      int.TryParse(mimimalIntervalRaw, out var mimimalInterval) && 
+      mimimalInterval >= 1 && 
+      mimimalInterval <= 3600)
       bindingCtx.MinimumTime = mimimalInterval;
   }
 
@@ -61,11 +65,13 @@ public partial class OptionsPage : ContentPage
     var bindingCtx = (OptionsPageViewModel)BindingContext;
     var mimimalDistanceRaw = await DisplayPromptAsync(
       "Distance in metres:", 
-      null,
+      "0 to disable limit. Maximum value - 10 km (10000 metres)",
       initialValue: bindingCtx.MinimumDistance.ToString(),
       keyboard: Keyboard.Numeric);
 
-    if (mimimalDistanceRaw != null && int.TryParse(mimimalDistanceRaw, out var mimimalDistance))
+    if (mimimalDistanceRaw != null && 
+      int.TryParse(mimimalDistanceRaw, out var mimimalDistance) &&
+      mimimalDistance <= 10000)
       bindingCtx.MinimumDistance = mimimalDistance;
   }
 

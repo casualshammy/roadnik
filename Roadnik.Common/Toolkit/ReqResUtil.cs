@@ -10,8 +10,9 @@ public static class ReqResUtil
 
   public static int MaxUserMsgLength { get; } = 1024;
   public static int MaxKeyKength { get; } = 16;
+  public static int MinKeyKength { get; } = 4;
 
-  public static bool IsKeySafe(string _data) => _data.Length > 3 && _data.Length <= MaxKeyKength && p_safeStringRegex.IsMatch(_data);
+  public static bool IsKeySafe(string _data) => _data.Length >= MinKeyKength && _data.Length <= MaxKeyKength && p_safeStringRegex.IsMatch(_data);
   public static bool IsUserMessageSafe(string _data) => _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
   public static string ClearUserMsg(string _data)
   {

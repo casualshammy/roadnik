@@ -95,11 +95,11 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Type is null!");
     if (!ReqResUtil.IsKeySafe(_type))
       return BadRequest("Type is incorrect!");
-    if (string.IsNullOrEmpty(p_settings.TrunderforestApikey))
+    if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
 
     p_logger.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
-    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.TrunderforestApikey}";
+    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.ThunderforestApikey}";
     var stream = await p_httpClient.GetStreamAsync(url, _ct);
     return File(stream, MimeMapping.KnownMimeTypes.Png);
   }

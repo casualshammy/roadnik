@@ -7,6 +7,6 @@ public interface ISettings
   string DataDirPath { get; }
   int PortBind { get; }
   string IpBind { get; }
-  string? TrunderforestApikey { get; }
+  string? ThunderforestApikey { get; }
   string? AdminApiKey { get; }
 }

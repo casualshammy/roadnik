@@ -31,7 +31,7 @@ public class Program
 
     var configFilePath = Parser.Default
       .ParseArguments<Options>(_args)
-      .MapResult(_x => _x.ConfigFilePath, _ => null) ?? Path.Combine(workingDir, "../_settings.json");
+      .MapResult(_x => _x.ConfigFilePath, _ => null) ?? Path.Combine(workingDir, "../_config.json");
 
     if (!File.Exists(configFilePath))
     {

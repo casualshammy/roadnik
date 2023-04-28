@@ -9,17 +9,10 @@ using Ax.Fw.Attributes;
 using JustLogger.Interfaces;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
+using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Toolkit;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
-
-public interface ILocationProvider
-{
-  IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
-
-  void ChangeConstrains(TimeSpan _minTime, float _minDistanceMeters);
-  void Disable();
-  void Enable();
-}
 
 #if ANDROID
 [ExportClass(typeof(ILocationProvider), Singleton: true)]
@@ -28,8 +21,10 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly IReadOnlyList<string> p_allProviders;
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
+  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_filteredLocationFlow = new(1);
   private readonly ILogger p_logger;
   private ImmutableHashSet<string> p_activeProviders;
+  private readonly KalmanLocationFilter p_kalmanFilter;
   private string? p_activeProvider;
   private Android.Locations.Location? p_lastLocation;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
@@ -46,9 +41,12 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = providers
       .Where(_ => p_locationManager.IsProviderEnabled(_))
       .ToImmutableHashSet();
+
+    p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
   }
 
   public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location => p_locationFlow;
+  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation => p_filteredLocationFlow;
 
   public void Enable()
   {
@@ -137,6 +135,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     };
 
     p_locationFlow.OnNext(location);
+    p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, DateTimeOffset.FromUnixTimeMilliseconds(_location.Time)));
   }
 
   public void OnStatusChanged(string? _provider, [GeneratedEnum] Availability _status, Bundle? _extras)

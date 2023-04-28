@@ -14,7 +14,6 @@ using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
-using Roadnik.MAUI.Modules.LocationProvider;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -86,7 +85,7 @@ internal class LocationReporterImpl : ILocationReporter
       .Interval(TimeSpan.FromSeconds(1.01), scheduler)
       .ToUnit()
       .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location)
+      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location, _locationProvider.FilteredLocation)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
@@ -101,7 +100,7 @@ internal class LocationReporterImpl : ILocationReporter
       .ObserveOn(scheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
-        var (_, batteryStat, signalStrength, prefs, location) = _entry;
+        var (_, batteryStat, signalStrength, prefs, location, filteredLocation) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
@@ -129,6 +128,10 @@ internal class LocationReporterImpl : ILocationReporter
           var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.UserMsg, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
+
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, location, batteryStat, signalStrength);
+          var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
+          resFiltered.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1 };
           p_statsFlow.OnNext(stats);

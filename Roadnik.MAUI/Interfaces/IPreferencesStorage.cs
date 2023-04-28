@@ -12,6 +12,7 @@ internal interface IPreferencesStorage
   string TRACKPOINT_REPORTING_CONDITION { get; }
   IObservable<Unit> PreferencesChanged { get; }
   string USER_MSG { get; }
+  string MIN_ACCURACY { get; }
 
   T? GetValueOrDefault<T>(string _key);
   void RemoveValue(string _key);

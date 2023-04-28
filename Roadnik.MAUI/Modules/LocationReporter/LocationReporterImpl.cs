@@ -51,6 +51,7 @@ internal class LocationReporterImpl : ILocationReporter
         DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION),
         UserMsg = _storage.GetValueOrDefault<string>(_storage.USER_MSG),
+        MinAccuracy = _storage.GetValueOrDefault<int>(_storage.MIN_ACCURACY)
       });
 
     var batteryStatsFlow = Observable

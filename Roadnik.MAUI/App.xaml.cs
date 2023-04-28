@@ -21,12 +21,13 @@ public partial class App : CMauiApplication
     if (storage.GetValueOrDefault<bool>(storage.INITIALIZED) != true)
     {
       storage.SetValue(storage.INITIALIZED, true);
-      storage.SetValue(storage.SERVER_ADDRESS, "https://example.com:5544");
-      storage.SetValue(storage.SERVER_KEY, Utilities.GetRandomString(8, false));
+      storage.SetValue(storage.SERVER_ADDRESS, "https://roadnik.axio.name");
+      storage.SetValue(storage.SERVER_KEY, Utilities.GetRandomString(10, false));
       storage.SetValue(storage.TIME_INTERVAL, 15);
       storage.SetValue(storage.DISTANCE_INTERVAL, 100);
       storage.SetValue(storage.TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
       storage.SetValue(storage.USER_MSG, "");
+      storage.SetValue(storage.MIN_ACCURACY, 30);
     }
   }
 

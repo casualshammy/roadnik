@@ -101,20 +101,16 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     {
       if (p_activeProvider != null && p_locationManager.IsProviderEnabled(p_activeProvider))
       {
-        var providerAccuracy = GetProviderAccuracy(_location.Provider);
-        if (providerAccuracy == null)
+        var oldLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(p_lastLocation?.Time ?? 0);
+        var newLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time);
+        if (newLocationTime - oldLocationTime < p_minTimePeriod * 2)
         {
-          _location.Dispose();
-          return;
-        }
-
-        var elapsed = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time) - DateTimeOffset.FromUnixTimeMilliseconds(p_lastLocation?.Time ?? 0);
-        var oldAccuracy = GetProviderAccuracy(p_activeProvider);
-
-        if (oldAccuracy != null && providerAccuracy > oldAccuracy && elapsed < p_minTimePeriod * 2)
-        {
-          _location.Dispose();
-          return;
+          var bestProvider = GetBestProviderByAccuracy(p_activeProvider, _location.Provider);
+          if (bestProvider != _location.Provider)
+          {
+            _location.Dispose();
+            return;
+          }
         }
       }
 
@@ -159,29 +155,48 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = p_activeProviders.Add(_provider);
   }
 
-  private int? GetProviderAccuracy(string _provider)
+#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CS0618 // Type or member is obsolete
+  private string GetBestProviderByAccuracy(string _provider1, string _provider2)
   {
+    // const int ACCURACY_FINE = 1;
+    // const int ACCURACY_COARSE = 2;
+
     if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
     {
-#pragma warning disable CA1416 // Validate platform compatibility
-      using var provider = p_locationManager.GetProviderProperties(_provider);
-      if (provider == null)
-        return null;
+      using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
+      using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
+      if (providerInfo1 == null && providerInfo2 == null)
+        return _provider1;
+      if (providerInfo1 == null)
+        return _provider2;
+      if (providerInfo2 == null)
+        return _provider1;
 
-      return provider.Accuracy;
-#pragma warning restore CA1416 // Validate platform compatibility
+      if (providerInfo1.Accuracy <= providerInfo2.Accuracy)
+        return _provider1;
+
+      return _provider2;
     }
     else
     {
-#pragma warning disable CS0618 // Type or member is obsolete
-      using var provider = p_locationManager.GetProvider(_provider);
-      if (provider == null)
-        return null;
+      using var providerInfo1 = p_locationManager.GetProvider(_provider1);
+      using var providerInfo2 = p_locationManager.GetProvider(_provider2);
+      if (providerInfo1 == null && providerInfo2 == null)
+        return _provider1;
+      if (providerInfo1 == null)
+        return _provider2;
+      if (providerInfo2 == null)
+        return _provider1;
 
-      return 3 - (int)provider.Accuracy;
-#pragma warning restore CS0618 // Type or member is obsolete
+      if ((int)providerInfo1.Accuracy <= (int)providerInfo2.Accuracy)
+        return _provider1;
+
+      return _provider2;
     }
   }
+#pragma warning restore CS0618 // Type or member is obsolete
+#pragma warning restore CA1416 // Validate platform compatibility
 
 }
 #endif

@@ -31,9 +31,7 @@ internal class UsersControllerImpl : IUsersController
       .SelectAsync(async (_, _ct) =>
       {
         var entries = await AsyncEnumerable.ToListAsync(
-          p_storage
-            .ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct),
-          _ct);
+          p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct), _ct);
 
         foreach (var keyGroup in entries.GroupBy(_ => _.Data.Key))
         {

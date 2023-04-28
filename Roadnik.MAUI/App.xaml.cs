@@ -26,6 +26,7 @@ public partial class App : CMauiApplication
       storage.SetValue(storage.TIME_INTERVAL, 15);
       storage.SetValue(storage.DISTANCE_INTERVAL, 100);
       storage.SetValue(storage.TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+      storage.SetValue(storage.USER_MSG, "");
     }
   }
 

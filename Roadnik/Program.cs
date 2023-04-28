@@ -31,7 +31,7 @@ public class Program
 
     var configFilePath = Parser.Default
       .ParseArguments<Options>(_args)
-      .MapResult(_x => _x.ConfigFilePath, _ => null) ?? Path.Combine(workingDir, "../_settings.json");
+      .MapResult(_x => _x.ConfigFilePath, _ => null) ?? Path.Combine(workingDir, "../_config.json");
 
     if (!File.Exists(configFilePath))
     {
@@ -95,8 +95,7 @@ public class Program
     _lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30)));
 
     var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
-      .WithCache(1000, TimeSpan.FromHours(1))
-      .WithRetentionRules(_documentMaxAgeFromCreation: TimeSpan.FromDays(30), _scanInterval: TimeSpan.FromMinutes(60));
+      .WithCache(1000, TimeSpan.FromHours(1));
 
     _lifetime.DisposeOnCompleted(docStorage);
 

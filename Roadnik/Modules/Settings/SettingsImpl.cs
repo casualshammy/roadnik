@@ -9,32 +9,32 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(WebrootDirPath))] string? _webrootDirPath,
     [JsonProperty(nameof(LogDirPath))] string? _logDirPath,
     [JsonProperty(nameof(DataDirPath))] string? _dataDirPath,
-    [JsonProperty(nameof(TrunderforestApikey))] string? _trunderforestApikey,
+    [JsonProperty(nameof(ThunderforestApikey))] string? _trunderforestApikey,
+    [JsonProperty(nameof(ThunderforestCacheSize))] long? _thunderforestCacheSize,
     [JsonProperty(nameof(PortBind))] int? _portBind,
     [JsonProperty(nameof(IpBind))] string? _ipBind,
-    [JsonProperty(nameof(AdminApiKey))] string? _adminApiKey)
+    [JsonProperty(nameof(AdminApiKey))] string? _adminApiKey,
+    [JsonProperty(nameof(AllowAnonymousPublish))] bool? _allowAnonymousPublish)
   {
-    WebrootDirPath = _webrootDirPath ?? "web-root";
+    WebrootDirPath = _webrootDirPath ?? "www";
     LogDirPath = _logDirPath ?? "logs";
     DataDirPath = _dataDirPath ?? "data";
-    TrunderforestApikey = _trunderforestApikey;
+    ThunderforestApikey = _trunderforestApikey;
     PortBind = _portBind ?? 5544;
     IpBind = _ipBind ?? "0.0.0.0";
     AdminApiKey = _adminApiKey;
+    ThunderforestCacheSize = _thunderforestCacheSize ?? 0;
+    AllowAnonymousPublish = _allowAnonymousPublish ?? true;
   }
 
   public string WebrootDirPath { get; }
-
   public string LogDirPath { get; }
-
   public string DataDirPath { get; }
-
-  public string? TrunderforestApikey { get; }
-
+  public string? ThunderforestApikey { get; }
+  public long ThunderforestCacheSize { get; }
   public int PortBind { get; }
-
   public string IpBind { get; }
-
   public string? AdminApiKey { get; }
+  public bool AllowAnonymousPublish { get; }
 
 }

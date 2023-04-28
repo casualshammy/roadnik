@@ -31,8 +31,8 @@ public class JsonNetController : Controller
     return StatusCode(403, _data);
   }
 
-  public ActionResult Forbidden()
+  public ActionResult Forbidden(string? _reason = null)
   {
-    return StatusCode(403);
+    return StatusCode(403, _reason);
   }
 }

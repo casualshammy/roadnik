@@ -27,20 +27,28 @@ export interface WsBaseMsg {
     Payload: any;
 }
 
+export interface WebAppState {
+    location: L.LatLng;
+    zoom: number;
+    mapLayer?: string | undefined;
+    autoPan: boolean;
+}
+
 export class StorageApi {
     constructor() {
         
     }
 
-    public async getDataAsync(_key: string, _entriesLimit: number = 100): Promise<GetResData> {
-        const response = await fetch(`/get?key=${_key}&limit=${_entriesLimit}`);
+    public async getDataAsync(_key: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
+        const response = await fetch(`get?key=${_key}&limit=${_entriesLimit}&offset=${_offset}`);
         const data: GetResData = await response.json();
         return data;
     }
 
     public setupWs(_key: string, _listener: (ws: Websocket, msg: WsBaseMsg) => any): Websocket {
-        const host = window.document.location.host;
-        const ws = new WebsocketBuilder(`ws://${host}/ws?key=${_key}`)
+        const host = window.document.location.host.replace(/\/+$/, "");
+        const path = window.document.location.pathname.replace(/\/+$/, "");
+        const ws = new WebsocketBuilder(`ws://${host}${path}/ws?key=${_key}`)
             .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
             .withBackoff(new ConstantBackoff(10000))
             .build();

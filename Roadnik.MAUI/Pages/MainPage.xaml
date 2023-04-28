@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<tookit:ContainerizedContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<tookit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
              xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
@@ -11,7 +11,10 @@
     </ContentPage.BindingContext>
 
     <AbsoluteLayout>
+        <!--CanShowRegilarView-->
         <WebView
+            IsVisible="{Binding CanShowRegilarView}"
+            x:Name="p_webView"
             Source="{Binding WebViewUrl}"
             AbsoluteLayout.LayoutFlags="All"  
             AbsoluteLayout.LayoutBounds="0,0,1,1"
@@ -19,23 +22,230 @@
             Navigated="MainWebView_Navigated">
         </WebView>
         <ActivityIndicator 
+            IsVisible="{Binding CanShowRegilarView}"
             Color="{Binding StartRecordButtonColor}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
             IsRunning="{Binding IsSpinnerRequired}" />
-        <Button
-            AbsoluteLayout.LayoutFlags="PositionProportional"  
-            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
-            CornerRadius="45"
-            BackgroundColor="{Binding StartRecordButtonColor}"
-            Clicked="FAB_Clicked">
-        </Button>
-        <ImageButton 
-            Source="record_rec.svg"
-            AbsoluteLayout.LayoutFlags="PositionProportional"  
-            AbsoluteLayout.LayoutBounds=".96,.96,70,70"
-            InputTransparent="True"/>
+
+        <Grid
+            IsVisible="{Binding CanShowRegilarView}"
+            AbsoluteLayout.LayoutFlags="PositionProportional"
+            AbsoluteLayout.LayoutBounds="0.00, 0.95, 60, 50">
+            <Button
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    CornerRadius="45"
+                    BackgroundColor="{StaticResource Primary}"
+                    Clicked="Message_Clicked">
+            </Button>
+            <ImageButton 
+                    WidthRequest="30"
+                    HeightRequest="30"
+                    Source="message.svg"
+                    InputTransparent="True"/>
+        </Grid>
+
+        <Grid
+            IsVisible="{Binding CanShowRegilarView}"
+            AbsoluteLayout.LayoutFlags="PositionProportional"
+            AbsoluteLayout.LayoutBounds="0.95, 0.95, 140, 130">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="10" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid 
+                Grid.Row="0"
+                Grid.Column="1">
+                <Button
+                    WidthRequest="50"
+                    HeightRequest="50"
+                    CornerRadius="45"
+                    HorizontalOptions="Center"
+                    BackgroundColor="{StaticResource Primary}"
+                    Clicked="Share_Clicked">
+                </Button>
+                <ImageButton 
+                    Margin="0,0,5,0"
+                    WidthRequest="30"
+                    HeightRequest="30"
+                    Source="share.svg"
+                    InputTransparent="True"/>
+            </Grid>
+            
+            <Grid 
+                Grid.Row="2"
+                Grid.Column="0">
+                <Button
+                    WidthRequest="50"
+                    HeightRequest="50"
+                    CornerRadius="45"
+                    HorizontalOptions="Center"
+                    BackgroundColor="{StaticResource Primary}"
+                    Clicked="GoToMyLocation_Clicked">
+                </Button>
+                <ImageButton 
+                    WidthRequest="40"
+                    HeightRequest="40"
+                    Source="my_location.svg"
+                    InputTransparent="True"/>
+            </Grid>
+
+            <Grid Grid.Row="2"
+                  Grid.Column="1">
+                <Button
+                    WidthRequest="70"
+                    HeightRequest="70"
+                    CornerRadius="45"
+                    BackgroundColor="{Binding StartRecordButtonColor}"
+                    Clicked="FAB_Clicked">
+                </Button>
+                <ImageButton 
+                    WidthRequest="70"
+                    HeightRequest="70"
+                    Source="record_rec.svg"
+                    InputTransparent="True"/>
+            </Grid>
+
+        </Grid>
+
+        <!--CanShowPermissionView-->
+        <Grid
+            IsVisible="{Binding CanShowPermissionView}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="50" />
+            </Grid.RowDefinitions>
+
+            <Image 
+                Grid.Row="0"
+                Grid.ColumnSpan="2"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=White}"
+                Source="map.svg"
+                HorizontalOptions="FillAndExpand" />
+
+            <Label 
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="10, 20"
+                HorizontalTextAlignment="Center"
+                Text="{Binding LocationPermissionDescription}" />
+            <Button 
+                Grid.Row="2"
+                Grid.Column="0"
+                BackgroundColor="GreenYellow"
+                HorizontalOptions="FillAndExpand"
+                Margin="20, 0"
+                Text="Okay"
+                TextColor="Black" 
+                FontSize="Medium"
+                Clicked="LocationPermissionYes_Clicked"/>
+            <Button 
+                Grid.Row="2"
+                Grid.Column="1"
+                BackgroundColor="{StaticResource DangerLow}"
+                HorizontalOptions="FillAndExpand"
+                Margin="20, 0"
+                Text="No" 
+                TextColor="Black" 
+                FontSize="Medium"
+                Clicked="LocationPermissionNo_Clicked"/>
+        </Grid>
+
+        <!--CanShowConnectionErrorView-->
+        <Grid
+            IsVisible="{Binding CanShowConnectionErrorView}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Image 
+                Grid.Row="0"
+                Grid.ColumnSpan="2"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=White}"
+                Source="cog_box.svg"
+                HorizontalOptions="FillAndExpand" />
+
+            <VerticalStackLayout 
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="10, 20">
+                <Label 
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Margin="10, 20"
+                    HorizontalTextAlignment="Center"
+                    Text="{Binding ServerIsNotRespondingDescription}" />
+                <Button 
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    BackgroundColor="{StaticResource DangerLow}"
+                    HorizontalOptions="FillAndExpand"
+                    Margin="20, 0"
+                    Text="Reload"
+                    TextColor="Black" 
+                    FontSize="Medium"
+                    Clicked="Reload_Clicked"/>
+            </VerticalStackLayout>
+            
+        </Grid>
+
+        <!--IsInBackground-->
+        <Grid
+            IsVisible="{Binding IsInBackground}"
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0, 0, 1, 1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="100" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Image 
+                Grid.Row="0"
+                Grid.ColumnSpan="2"
+                BackgroundColor="{AppThemeBinding Light=White, Dark=White}"
+                Source="cog_box.svg"
+                HorizontalOptions="FillAndExpand" />
+
+            <VerticalStackLayout 
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                Margin="10, 20">
+                <Label 
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Margin="10, 20"
+                    HorizontalTextAlignment="Center"
+                    Text="{Binding IsInBackgroundDescription}" />
+            </VerticalStackLayout>
+
+        </Grid>
+
     </AbsoluteLayout>
 
 
-</tookit:ContainerizedContentPage>
+</tookit:CContentPage>

@@ -1,9 +1,12 @@
 import os
 import shutil
 import zipfile
-import build_common.packages
+from build_common import utils
+from build_common import packages
+from build_common import git
 import argparse
-from subprocess import call
+
+sourceDirName = "Roadnik"
 
 argParser = argparse.ArgumentParser()
 argParser.add_argument('--platform', type=str, default= "win-x64", required=False, help='Target platfrom of server')
@@ -17,39 +20,47 @@ pkgFile = os.path.join(os.getcwd(), f"server-{platform}.zip")
 if (os.path.isfile(pkgFile)):
     os.remove(pkgFile)
 
+branch = git.get_current_branch()
+commitIndex = git.get_last_commit_index()
+version = f"{branch}.{commitIndex}"
+
 print(f"===========================================", flush=True)
 print(f"Output folder: '{outputDir}'", flush=True)
 print(f"===========================================", flush=True)
 
 print(f"===========================================", flush=True)
 print(f"Compiling server for platform '{platform}'...", flush=True)
+print(f"Version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
 serverOutputDir = os.path.join(outputDir, "bin")
-call(f"dotnet build Roadnik -c release -r {platform} --self-contained -o \"{serverOutputDir}\"")
+packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
+utils.callThrowIfError(f"dotnet build {sourceDirName} -c release -r {platform} --self-contained -o \"{serverOutputDir}\"")
 
 print(f"===========================================", flush=True)
 print(f"Compiling web...", flush=True)
 print(f"===========================================", flush=True)
 webSrcDir = os.path.join(os.getcwd(), "www")
 webOutputDir = os.path.join(outputDir, "www")
-build_common.packages.create_webpack(webSrcDir, webOutputDir)
+packages.create_webpack(webSrcDir, webOutputDir)
 
 print(f"===========================================", flush=True)
 print(f"Copying sample settings...", flush=True)
 print(f"===========================================", flush=True)
-settingsFileSrc = os.path.join(os.getcwd(), "_settings.json")
-settingsFileDst = os.path.join(outputDir, "_settings.json")
-shutil.move(settingsFileSrc, settingsFileDst)
+settingsFileSrc = os.path.join(os.getcwd(), sourceDirName, "_config.json")
+settingsFileDst = os.path.join(outputDir, "_config.json")
+shutil.copy(settingsFileSrc, settingsFileDst)
 
 print(f"===========================================", flush=True)
 print(f"Creating pkg...", flush=True)
 print(f"===========================================", flush=True)
-with zipfile.ZipFile(pkgFile, 'w', zipfile.ZIP_DEFLATED) as pkgFile:
+with zipfile.ZipFile(pkgFile, 'w', zipfile.ZIP_DEFLATED) as pkgZipFile:
     for root, _, files in os.walk(outputDir):
         for file in files:
             filePath = os.path.join(root, file)
-            pkgFile.write(filePath, os.path.relpath(filePath, outputDir))
+            pkgZipFile.write(filePath, os.path.relpath(filePath, outputDir))
 
 print(f"===========================================", flush=True)
 print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
+
+git.create_tag_and_push(version)

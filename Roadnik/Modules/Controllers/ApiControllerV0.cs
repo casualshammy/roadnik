@@ -1,7 +1,10 @@
 ﻿using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Roadnik.Attributes;
+using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
@@ -14,28 +17,41 @@ namespace Roadnik.Modules.Controllers;
 [Route("/")]
 public class ApiControllerV0 : JsonNetController
 {
+  record DeleteUserReq(string Key);
+
   private static long p_wsSessionsCount = 0;
+  private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
+  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
   private static readonly HttpClient p_httpClient = new();
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
+  private readonly IUsersController p_usersController;
+  private readonly ITilesCache p_tilesCache;
   private readonly ILogger p_logger;
 
   public ApiControllerV0(
     ISettings _settings,
     IDocumentStorage _documentStorage,
     ILogger _logger,
-    IWebSocketCtrl _webSocketCtrl)
+    IWebSocketCtrl _webSocketCtrl,
+    IUsersController _usersController,
+    ITilesCache _tilesCache)
   {
     p_settings = _settings;
     p_documentStorage = _documentStorage;
     p_webSocketCtrl = _webSocketCtrl;
+    p_usersController = _usersController;
+    p_tilesCache = _tilesCache;
     p_logger = _logger["api-v0"];
   }
 
   [HttpGet("/")]
   public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
+
+  [HttpHead("/")]
+  public async Task<IActionResult> GetIndexFileHeadAsync() => await Task.FromResult(Ok());
 
   [HttpGet("{**path}")]
   public async Task<IActionResult> GetStaticFileAsync(
@@ -55,7 +71,7 @@ public class ApiControllerV0 : JsonNetController
 
     if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
     {
-      p_logger.Error($"Tryed to get file not from webroot: '{_path}'");
+      p_logger.Error($"Tried to get file not from webroot: '{_path}'");
       return StatusCode(403);
     }
 
@@ -80,13 +96,36 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Z is null!");
     if (string.IsNullOrWhiteSpace(_type))
       return BadRequest("Type is null!");
-    if (string.IsNullOrEmpty(p_settings.TrunderforestApikey))
+    if (!ReqResUtil.IsKeySafe(_type))
+      return BadRequest("Type is incorrect!");
+    if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
 
+    if (p_settings.ThunderforestCacheSize > 0)
+    {
+      var cachedStream = await p_tilesCache.GetOrDefaultAsync(_x.Value, _y.Value, _z.Value, _type, _ct);
+      if (cachedStream != null)
+      {
+        p_logger.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
+        return File(cachedStream, MimeMapping.KnownMimeTypes.Png);
+      }
+    }
+
     p_logger.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
-    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.TrunderforestApikey}";
-    var stream = await p_httpClient.GetStreamAsync(url, _ct);
-    return File(stream, MimeMapping.KnownMimeTypes.Png);
+    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.ThunderforestApikey}";
+
+    if (p_settings.ThunderforestCacheSize <= 0)
+      return File(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
+
+    using var stream = await p_httpClient.GetStreamAsync(url, _ct);
+    var ms = new MemoryStream();
+    await stream.CopyToAsync(ms, _ct);
+
+    ms.Position = 0;
+    await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, ms, _ct);
+
+    ms.Position = 0;
+    return File(ms, MimeMapping.KnownMimeTypes.Png);
   }
 
   [HttpGet("/store")]
@@ -105,23 +144,32 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
     if (_lat == null)
       return BadRequest("Latitude is null!");
     if (_lon == null)
       return BadRequest("Longitude is null!");
     if (_alt == null)
       return BadRequest("Altitude is null!");
+    if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserMessageSafe(_message))
+      return BadRequest("Message is incorrect!");
 
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
+    var user = await p_usersController.GetUserAsync(_key, _ct);
+    if (!p_settings.AllowAnonymousPublish && user == null)
+      return Forbidden("Anonymous publishing is forbidden!");
+
+    var timeLimit = user != null ? TimeSpan.FromSeconds(0.9) : TimeSpan.FromSeconds(9);
     var now = DateTimeOffset.UtcNow;
-    if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < TimeSpan.FromSeconds(5))
+    if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
-      p_logger.Warn($"Too many requests for storing geo data, key '{_key}'");
+      p_logger.Warn($"Too many requests for storing geo data, key '{_key}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    var record = new StorageEntry(_lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
+    var record = new StorageEntry(_key, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
     await p_documentStorage.WriteSimpleDocumentAsync($"{_key}.{now.ToUnixTimeMilliseconds()}", record, _ct);
     p_storeLimiter[_key] = now;
     await p_webSocketCtrl.SendMsgByKeyAsync(_key, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
@@ -133,16 +181,33 @@ public class ApiControllerV0 : JsonNetController
   public async Task<IActionResult> GetAsync(
     [FromQuery(Name = "key")] string? _key = null,
     [FromQuery(Name = "limit")] int? _limit = null,
+    [FromQuery(Name = "offset")] long? _offsetUnixTimeMs = null,
     CancellationToken _ct = default)
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
+
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (ip == null)
+    {
+      p_logger.Error($"Ip is null, key: '{_key}'");
+      return BadRequest("Ip is null!");
+    }
+    var now = DateTimeOffset.UtcNow;
+    if (p_getLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_getTooFastLimitTime)
+    {
+      p_logger.Warn($"Too many requests from ip '{ip}', key: '{_key}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
 
     p_logger.Info($"Requested to get geo data, key: '{_key}'");
 
-    var now = DateTimeOffset.UtcNow;
+    var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
-      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}%"), _ct: _ct)
+      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}.%"), _ct: _ct)
+      .Where(_ => offset == null || _.Created > offset)
       .OrderByDescending(_ => _.Created)
       .Take(_limit != null ? Math.Min(_limit.Value, 1000) : 1000)
       .ToListAsync(_ct);
@@ -156,10 +221,10 @@ public class ApiControllerV0 : JsonNetController
     {
       var list = new List<StorageEntry>(documents.Count);
       var lastEntryTime = DateTimeOffset.MinValue;
-      StorageEntry? lastEntry = null; ;
-      foreach (var doc in documents)
+      StorageEntry? lastEntry = null;
+      foreach (var doc in Enumerable.Reverse(documents))
       {
-        list.Add(new StorageEntry(doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
+        list.Add(new StorageEntry(_key, doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
         if (doc.Created > lastEntryTime)
         {
           lastEntryTime = doc.Created;
@@ -170,6 +235,7 @@ public class ApiControllerV0 : JsonNetController
       result = new GetResData(true, lastEntryTime.ToUnixTimeMilliseconds(), lastEntry!, list);
     }
 
+    p_getLimiter[ip] = now;
     return Json(result);
   }
 
@@ -180,6 +246,8 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_key))
       return BadRequest("Key is null!");
+    if (!ReqResUtil.IsKeySafe(_key))
+      return BadRequest("Key is incorrect!");
 
     if (!HttpContext.WebSockets.IsWebSocketRequest)
       return StatusCode((int)HttpStatusCode.BadRequest, $"Expected web socket request");
@@ -193,5 +261,39 @@ public class ApiControllerV0 : JsonNetController
 
     return new EmptyResult();
   }
+
+  [ApiKeyRequired]
+  [HttpPost("add-user")]
+  public async Task<IActionResult> AddUserAsync(CancellationToken _ct)
+  {
+    var req = await GetJsonRequest<User>();
+    if (req == null)
+      return BadRequest("User is null");
+
+    await p_usersController.AddUserAsync(req.Key, req.Email, _ct);
+    return Ok();
+  }
+
+  [ApiKeyRequired]
+  [HttpPost("delete-user")]
+  public async Task<IActionResult> DeleteUserAsync(CancellationToken _ct)
+  {
+    var req = await GetJsonRequest<DeleteUserReq>();
+    if (req == null || req.Key == null)
+      return BadRequest("Key is null");
+
+    await p_usersController.DeleteUserAsync(req.Key, _ct);
+    return Ok();
+  }
+
+  [ApiKeyRequired]
+  [HttpGet("list-users")]
+  public async Task<IActionResult> ListUsersAsync(CancellationToken _ct)
+  {
+    var users = await p_usersController.ListUsersAsync(_ct);
+    return Json(users, true);
+  }
+
+
 
 }

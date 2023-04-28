@@ -148,6 +148,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     {
       // don't care
     }
+    catch (WebSocketException wsEx) when (wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
+    {
+      p_log.Info($"WS connection '{sessionIndex}' was closed prematurely for key '{session.Key}'");
+    }
     catch (Exception ex)
     {
       p_log.Error($"Error occured in loop: {ex}");

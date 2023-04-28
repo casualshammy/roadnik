@@ -1,4 +1,6 @@
-﻿namespace Roadnik.MAUI.Interfaces;
+﻿using System.Reactive;
+
+namespace Roadnik.MAUI.Interfaces;
 
 internal interface IPreferencesStorage
 {
@@ -7,8 +9,11 @@ internal interface IPreferencesStorage
   string TIME_INTERVAL { get; }
   string DISTANCE_INTERVAL { get; }
   string INITIALIZED { get; }
+  string TRACKPOINT_REPORTING_CONDITION { get; }
+  IObservable<Unit> PreferencesChanged { get; }
+  string USER_MSG { get; }
 
-  T? GetValueOrDefault<T>(string _key) where T : notnull;
-    void RemoveValue(string _key);
-    void SetValue<T>(string _key, T _value) where T : notnull;
+  T? GetValueOrDefault<T>(string _key);
+  void RemoveValue(string _key);
+  void SetValue<T>(string _key, T _value);
 }

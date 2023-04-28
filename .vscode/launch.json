@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Build: ubuntu.18.04-x64",
+            "name": "Build server: ubuntu.18.04-x64",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -14,11 +14,20 @@
             "justMyCode": true
         },
         {
-            "name": "Build: win-x64",
+            "name": "Build server: win-x64",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "args": ["--platform", "win-x64"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Build client: net6.0-android",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": ["--framework", "net6.0-android"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

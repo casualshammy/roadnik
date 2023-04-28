@@ -12,11 +12,18 @@ public class JsonNetController : Controller
     return Content(json, MimeMapping.KnownMimeTypes.Json, Encoding.UTF8);
   }
 
-  public async Task<T?> GetJsonContent<T>()
+  public async Task<T?> GetJsonRequest<T>()
   {
     using var sr = new StreamReader(Request.Body);
     var json = await sr.ReadToEndAsync();
-    return JsonConvert.DeserializeObject<T>(json);
+    try
+    {
+      return JsonConvert.DeserializeObject<T>(json);
+    }
+    catch (Exception)
+    {
+      return default;
+    }
   }
 
   public ActionResult Forbidden(object _data)
@@ -24,8 +31,8 @@ public class JsonNetController : Controller
     return StatusCode(403, _data);
   }
 
-  public ActionResult Forbidden()
+  public ActionResult Forbidden(string? _reason = null)
   {
-    return StatusCode(403);
+    return StatusCode(403, _reason);
   }
 }

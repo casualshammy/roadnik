@@ -1,11 +1,8 @@
 ﻿using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger;
 using JustLogger.Interfaces;
-using Microsoft.Maui.Devices.Sensors;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
@@ -29,6 +26,7 @@ public partial class MainPage : CContentPage
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILogger p_log;
   private readonly Subject<Unit> p_pageStatusChangeFlow = new();
+  private readonly MainPageViewModel p_bindingCtx;
   private volatile bool p_pageShown = false;
   private volatile WebAppState? p_webAppState;
 
@@ -39,6 +37,14 @@ public partial class MainPage : CContentPage
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
     p_log = Container.Locate<ILogger>()["main-page"];
+
+    if (BindingContext is not MainPageViewModel bindingCtx)
+    {
+      p_log.Error($"Can't get binding ctx!");
+      throw new InvalidDataException($"Can't get binding ctx!");
+    }
+
+    p_bindingCtx = bindingCtx;
 
     Observable
       .Return(Unit.Default)
@@ -53,20 +59,17 @@ public partial class MainPage : CContentPage
       .ObserveOn(scheduler)
       .SelectAsync(async (_, _ct) =>
       {
-        if (BindingContext is not MainPageViewModel bindingCtx)
-          return;
-
         bindingCtx.IsInBackground = !p_pageShown;
         if (!p_pageShown)
         {
-          await SaveWebViewStateAndShowLoadingPageAsync("loading.html");
+          await SaveWebViewStateAsync("loading.html");
           return;
         }
 
         var url = GetFullServerUrl();
         if (url == null)
         {
-          await SaveWebViewStateAndShowLoadingPageAsync("loading.html");
+          await SaveWebViewStateAsync("loading.html");
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
@@ -76,7 +79,7 @@ public partial class MainPage : CContentPage
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
           using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
           using var req = new HttpRequestMessage(HttpMethod.Head, url);
-          var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
+          using var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
           res.EnsureSuccessStatusCode();
           SetMapStateAsync(url);
           bindingCtx.IsRemoteServerNotResponding = false;
@@ -84,7 +87,7 @@ public partial class MainPage : CContentPage
         catch (Exception ex)
         {
           Debug.WriteLine(ex);
-          await SaveWebViewStateAndShowLoadingPageAsync("loading.html");
+          await SaveWebViewStateAsync("loading.html");
           bindingCtx.IsRemoteServerNotResponding = true;
         }
       }, scheduler)
@@ -105,11 +108,8 @@ public partial class MainPage : CContentPage
     p_pageStatusChangeFlow.OnNext();
   }
 
-  private async Task SaveWebViewStateAndShowLoadingPageAsync(string _url)
+  private async Task SaveWebViewStateAsync(string _url)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
     try
     {
       await MainThread.InvokeOnMainThreadAsync(async () =>
@@ -131,15 +131,12 @@ public partial class MainPage : CContentPage
     }
     finally
     {
-      bindingCtx.WebViewUrl = _url;
+      p_bindingCtx.WebViewUrl = _url;
     }
   }
 
   private void SetMapStateAsync(string _url)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
     try
     {
       if (p_webAppState == null)
@@ -152,15 +149,7 @@ public partial class MainPage : CContentPage
         if (_e.Result != WebNavigationResult.Success)
           return;
 
-        var jsonSerializer = new JsonSerializerSettings()
-        {
-          ContractResolver = new DefaultContractResolver
-          {
-            NamingStrategy = new CamelCaseNamingStrategy()
-          },
-          Formatting = Formatting.Indented
-        };
-        var command = $"setState({JsonConvert.SerializeObject(p_webAppState, jsonSerializer)});";
+        var command = $"setState({Serialization.SerializeToCamelCaseJson(p_webAppState)});";
         await MainThread.InvokeOnMainThreadAsync(() => p_webView.EvaluateJavaScriptAsync(command));
       }
 
@@ -171,7 +160,7 @@ public partial class MainPage : CContentPage
     }
     finally
     {
-      bindingCtx.WebViewUrl = _url;
+      p_bindingCtx.WebViewUrl = _url;
     }
   }
 
@@ -180,12 +169,6 @@ public partial class MainPage : CContentPage
     var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
     if (permission == PermissionStatus.Granted)
       return true;
-
-    if (BindingContext is not MainPageViewModel bindingCtx)
-    {
-      p_log.Error($"{nameof(IsLocationPermissionOkAsync)}: error obtaining binding ctx!");
-      throw new InvalidOperationException($"{nameof(IsLocationPermissionOkAsync)}: error obtaining binding ctx!");
-    }
 
     var platform = DeviceInfo.Platform;
     var osVersion = DeviceInfo.Current.Version;
@@ -197,7 +180,7 @@ public partial class MainPage : CContentPage
       }
       else if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
       {
-        bindingCtx.IsPermissionWindowShowing = true;
+        p_bindingCtx.IsPermissionWindowShowing = true;
         return false;
       }
     }
@@ -211,14 +194,12 @@ public partial class MainPage : CContentPage
     if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
       return null;
 
-    var url = $"{serverAddress.TrimEnd('/')}?key={serverKey}";
+    var url = $"{serverAddress}?key={serverKey}";
     return url;
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
-    var ctx = (MainPageViewModel)BindingContext;
-
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
 
@@ -228,14 +209,14 @@ public partial class MainPage : CContentPage
         return;
 
       if (Application.Current?.Resources.TryGetValue("DangerLow", out var rawColor) == true && rawColor is Color color)
-        ctx.StartRecordButtonColor = color;
+        p_bindingCtx.StartRecordButtonColor = color;
 
       locationReporterService.Start();
     }
     else
     {
       if (Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true && rawColor is Color color)
-        ctx.StartRecordButtonColor = color;
+        p_bindingCtx.StartRecordButtonColor = color;
 
       locationReporterService.Stop();
     }
@@ -243,21 +224,15 @@ public partial class MainPage : CContentPage
 
   private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
-    bindingCtx.IsSpinnerRequired = true;
+    p_bindingCtx.IsSpinnerRequired = true;
   }
 
   private void MainWebView_Navigated(object _sender, WebNavigatedEventArgs _e)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
     if (_e.Result != WebNavigationResult.Success)
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
 
-    bindingCtx.IsSpinnerRequired = false;
+    p_bindingCtx.IsSpinnerRequired = false;
   }
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
@@ -274,18 +249,12 @@ public partial class MainPage : CContentPage
 
   private void LocationPermissionNo_Clicked(object _sender, EventArgs _e)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
-    bindingCtx.IsPermissionWindowShowing = false;
+    p_bindingCtx.IsPermissionWindowShowing = false;
   }
 
   private void LocationPermissionYes_Clicked(object _sender, EventArgs _e)
   {
-    if (BindingContext is not MainPageViewModel bindingCtx)
-      return;
-
-    bindingCtx.IsPermissionWindowShowing = false;
+    p_bindingCtx.IsPermissionWindowShowing = false;
     AppInfo.Current.ShowSettingsUI();
   }
 

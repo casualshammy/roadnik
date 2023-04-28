@@ -3,7 +3,9 @@
 	"LogDirPath": "logs",
 	"DataDirPath": "data",
 	"ThunderforestApikey": null,
+	"ThunderforestCacheSize": 0,
 	"PortBind": 5544,
 	"IpBind": "0.0.0.0",
-	"AdminApiKey": null
+	"AdminApiKey": null,
+	"AllowAnonymousPublish": true
 }

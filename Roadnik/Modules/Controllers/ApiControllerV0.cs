@@ -28,6 +28,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IUsersController p_usersController;
+  private readonly ITilesCache p_tilesCache;
   private readonly ILogger p_logger;
 
   public ApiControllerV0(
@@ -35,12 +36,14 @@ public class ApiControllerV0 : JsonNetController
     IDocumentStorage _documentStorage,
     ILogger _logger,
     IWebSocketCtrl _webSocketCtrl,
-    IUsersController _usersController)
+    IUsersController _usersController,
+    ITilesCache _tilesCache)
   {
     p_settings = _settings;
     p_documentStorage = _documentStorage;
     p_webSocketCtrl = _webSocketCtrl;
     p_usersController = _usersController;
+    p_tilesCache = _tilesCache;
     p_logger = _logger["api-v0"];
   }
 
@@ -98,10 +101,31 @@ public class ApiControllerV0 : JsonNetController
     if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
 
+    if (p_settings.ThunderforestCacheSize > 0)
+    {
+      var cachedStream = await p_tilesCache.GetOrDefaultAsync(_x.Value, _y.Value, _z.Value, _type, _ct);
+      if (cachedStream != null)
+      {
+        p_logger.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
+        return File(cachedStream, MimeMapping.KnownMimeTypes.Png);
+      }
+    }
+
     p_logger.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
     var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.ThunderforestApikey}";
-    var stream = await p_httpClient.GetStreamAsync(url, _ct);
-    return File(stream, MimeMapping.KnownMimeTypes.Png);
+
+    if (p_settings.ThunderforestCacheSize <= 0)
+      return File(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
+
+    using var stream = await p_httpClient.GetStreamAsync(url, _ct);
+    var ms = new MemoryStream();
+    await stream.CopyToAsync(ms, _ct);
+
+    ms.Position = 0;
+    await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, ms, _ct);
+
+    ms.Position = 0;
+    return File(ms, MimeMapping.KnownMimeTypes.Png);
   }
 
   [HttpGet("/store")]
@@ -134,6 +158,9 @@ public class ApiControllerV0 : JsonNetController
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
     var user = await p_usersController.GetUserAsync(_key, _ct);
+    if (!p_settings.AllowAnonymousPublish && user == null)
+      return Forbidden("Anonymous publishing is forbidden!");
+
     var timeLimit = user != null ? TimeSpan.FromSeconds(0.9) : TimeSpan.FromSeconds(9);
     var now = DateTimeOffset.UtcNow;
     if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
@@ -267,6 +294,6 @@ public class ApiControllerV0 : JsonNetController
     return Json(users, true);
   }
 
-  
+
 
 }

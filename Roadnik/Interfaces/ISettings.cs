@@ -9,4 +9,6 @@ public interface ISettings
   string IpBind { get; }
   string? ThunderforestApikey { get; }
   string? AdminApiKey { get; }
+  long ThunderforestCacheSize { get; }
+  bool AllowAnonymousPublish { get; }
 }

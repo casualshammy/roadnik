@@ -21,7 +21,9 @@ Config file's options description:
     "PortBind": 5544,               // port of server (default: 5544)
     "IpBind": "0.0.0.0",            // ip to bind to (default: "0.0.0.0")
 	"AdminApiKey": null,            // admin api key (required for user management)
-	"AllowAnonymousPublish": true	// allows unregistered users to publish geolocation data (**default: true**)
+	"AllowAnonymousPublish": true,	// allows unregistered users to publish geolocation data (**default: true**)
+	"AnonymousMaxPoints": 100,		// max geolocation points to store for unregistered users (default: 100)
+	"RegisteredMaxPoints": 1000,	// max geolocation points to store for registered users (default: 1000)
 }
 ```
 Roadnik Server will serve all files from config's `WebrootDirPath`. Don't place your secrets there!

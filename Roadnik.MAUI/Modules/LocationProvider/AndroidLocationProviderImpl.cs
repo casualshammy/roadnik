@@ -3,18 +3,16 @@ using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
-using Org.Apache.Commons.Logging;
-#endif
 using Ax.Fw.Attributes;
 using JustLogger.Interfaces;
-using System.Collections.Immutable;
-using System.Reactive.Subjects;
+using Org.Apache.Commons.Logging;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
+using System.Collections.Immutable;
+using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-#if ANDROID
 [ExportClass(typeof(ILocationProvider), Singleton: true)]
 public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider
 {
@@ -116,6 +114,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
       p_activeProvider = _location.Provider;
       p_logger.Info($"Using provider: {p_activeProvider}");
+      System.Diagnostics.Debug.WriteLine($"Using provider: {p_activeProvider}");
     }
 
     var previous = Interlocked.Exchange(ref p_lastLocation, _location);
@@ -127,7 +126,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       Course = _location.HasBearing ? _location.Bearing : null,
       Speed = _location.HasSpeed ? _location.Speed : null,
       Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time),
-      
     };
     if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
 #pragma warning disable CA1416 // Validate platform compatibility
@@ -169,6 +167,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 #pragma warning disable CA1416 // Validate platform compatibility
       using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
       using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
       if (providerInfo1 == null && providerInfo2 == null)
         return _provider1;
       if (providerInfo1 == null)
@@ -187,6 +187,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 #pragma warning disable CS0618 // Type or member is obsolete
       using var providerInfo1 = p_locationManager.GetProvider(_provider1);
       using var providerInfo2 = p_locationManager.GetProvider(_provider2);
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
       if (providerInfo1 == null && providerInfo2 == null)
         return _provider1;
       if (providerInfo1 == null)

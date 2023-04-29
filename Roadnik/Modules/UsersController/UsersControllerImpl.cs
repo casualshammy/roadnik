@@ -17,7 +17,8 @@ internal class UsersControllerImpl : IUsersController
 
   public UsersControllerImpl(
     IDocumentStorage _storage,
-    IReadOnlyLifetime _lifetime)
+    IReadOnlyLifetime _lifetime,
+    ISettings _settings)
   {
     p_storage = _storage;
 
@@ -35,10 +36,10 @@ internal class UsersControllerImpl : IUsersController
 
         foreach (var keyGroup in entries.GroupBy(_ => _.Data.Key))
         {
-          var limit = 100;
+          var limit = _settings.AnonymousMaxPoints;
           var user = await GetUserAsync(keyGroup.Key, _ct);
           if (user != null)
-            limit = 1000;
+            limit = _settings.RegisteredMaxPoints;
 
           var counter = 0;
           foreach (var entry in keyGroup.OrderByDescending(_ => _.Created))

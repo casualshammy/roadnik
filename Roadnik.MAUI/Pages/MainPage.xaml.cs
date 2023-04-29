@@ -4,6 +4,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
 using Newtonsoft.Json;
 using Roadnik.Common.Toolkit;
+using Roadnik.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
@@ -18,9 +19,7 @@ namespace Roadnik.MAUI.Pages;
 
 public partial class MainPage : CContentPage
 {
-  record LatLon(double Lat, double Lng);
-  record WebAppState(LatLon Location, bool AutoPan, string? MapLayer, int Zoom);
-
+  private const string PREF_WEB_APP_STATE = "web-app-state";
   private readonly IPreferencesStorage p_storage;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
@@ -37,6 +36,8 @@ public partial class MainPage : CContentPage
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
     p_log = Container.Locate<ILogger>()["main-page"];
+
+    p_webAppState = p_storage.GetValueOrDefault<WebAppState>(PREF_WEB_APP_STATE);
 
     if (BindingContext is not MainPageViewModel bindingCtx)
     {
@@ -117,7 +118,7 @@ public partial class MainPage : CContentPage
         var jsonRaw = await p_webView.EvaluateJavaScriptAsync("getState();");
         if (jsonRaw == null)
         {
-          p_log.Error($"Can't get map state!");
+          p_log.Warn($"Can't get map state!");
           return;
         }
         var mapState = JsonConvert.DeserializeObject<WebAppState>(jsonRaw);
@@ -127,6 +128,7 @@ public partial class MainPage : CContentPage
           return;
         }
         p_webAppState = mapState;
+        p_storage.SetValue(PREF_WEB_APP_STATE, p_webAppState);
       });
     }
     finally

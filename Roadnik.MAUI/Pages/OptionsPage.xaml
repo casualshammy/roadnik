@@ -41,6 +41,11 @@
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
                     Tapped="TrackpointReportingCondition_Tapped"
                     Detail="{Binding TrackpointReportingConditionText}"/>
+                <TextCell
+                    Text="Required location accuracy"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="MinAccuracy_Tapped"
+                    Detail="{Binding MinAccuracy}"/>
             </TableSection>
         </TableRoot>
     </TableView>

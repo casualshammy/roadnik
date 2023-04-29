@@ -48,7 +48,8 @@ export class StorageApi {
     public setupWs(_key: string, _listener: (ws: Websocket, msg: WsBaseMsg) => any): Websocket {
         const host = window.document.location.host.replace(/\/+$/, "");
         const path = window.document.location.pathname.replace(/\/+$/, "");
-        const ws = new WebsocketBuilder(`ws://${host}${path}/ws?key=${_key}`)
+        const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";
+        const ws = new WebsocketBuilder(`${protocol}//${host}${path}/ws?key=${_key}`)
             .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
             .withBackoff(new ConstantBackoff(10000))
             .build();

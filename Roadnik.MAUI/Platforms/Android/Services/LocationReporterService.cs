@@ -3,6 +3,7 @@ using Android.Content;
 using Android.OS;
 using Android.Runtime;
 using Android.Webkit;
+using AndroidX.Core.App;
 using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
@@ -11,6 +12,7 @@ using Grace.DependencyInjection.Attributes;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
+using static Android.Icu.Text.CaseMap;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
@@ -21,11 +23,15 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
   private const int NOTIFICATION_ID = 100;
   private ILifetime? p_lifetime;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
   [Import]
   public ILocationReporter LocationReporter { get; init; }
 
   [Import]
   public IReadOnlyLifetime Lifetime { get; init; }
+
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
   public override IBinder OnBind(Intent? _intent)
   {
@@ -49,7 +55,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 
       LocationReporter.Stats
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_ => GetNotification($"Your location is being recorded ({_.Successful}/{_.Total})...", true), p_lifetime);
+        .Subscribe(_ => GetNotification($"Your location is being recorded (success: {_.Successful}; total: {_.Total})...", true), p_lifetime);
 
       p_lifetime.DoOnCompleted(() =>
       {
@@ -74,7 +80,9 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
     var intent = new Intent(context, typeof(LocationReporterService));
     intent.SetAction("START_SERVICE");
     if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+#pragma warning disable CA1416 // Validate platform compatibility
       context.StartForegroundService(intent);
+#pragma warning restore CA1416 // Validate platform compatibility
     else
       context.StartService(intent);
   }
@@ -96,13 +104,19 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
   private Notification GetNotification(string _text, bool _notify = false)
   {
     var context = global::Android.App.Application.Context;
-    var channel = new NotificationChannel("ServiceChannel", "Notify when recording is active", NotificationImportance.Max);
     var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
-    manager.CreateNotificationChannel(channel);
-
     var activity = PendingIntent.GetActivity(context, 0, Platform.CurrentActivity?.Intent, 0);
 
-    var builder = new Notification.Builder(this, channel.Id)
+    Notification notification;
+    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+    {
+      var channelId = "ServiceChannel";
+
+#pragma warning disable CA1416 // Validate platform compatibility
+
+      var channel = new NotificationChannel(channelId, "Notify when recording is active", NotificationImportance.Max);
+      manager.CreateNotificationChannel(channel);
+      var builder = new Notification.Builder(this, channelId)
        .SetContentTitle("Roadnik")
        .SetContentText(_text)
        .SetContentIntent(activity)
@@ -110,12 +124,31 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
        .SetOnlyAlertOnce(true)
        .SetOngoing(true);
 
-#pragma warning disable CA1416 // Validate platform compatibility
-    if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
-      builder = builder.SetForegroundServiceBehavior(1); // FOREGROUND_SERVICE_IMMEDIATE
 #pragma warning restore CA1416 // Validate platform compatibility
 
-    var notification = builder.Build();
+      if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+#pragma warning disable CA1416 // Validate platform compatibility
+        builder = builder.SetForegroundServiceBehavior(1); // FOREGROUND_SERVICE_IMMEDIATE
+#pragma warning restore CA1416 // Validate platform compatibility
+
+      notification = builder.Build();
+    }
+    else
+    {
+#pragma warning disable CS0618 // Type or member is obsolete
+
+      var builder = new NotificationCompat.Builder(this)
+        .SetContentTitle("Roadnik")
+        .SetContentText(_text)
+        .SetContentIntent(activity)
+        .SetSmallIcon(Resource.Drawable.letter_r)
+        .SetOnlyAlertOnce(true)
+        .SetOngoing(true);
+
+#pragma warning restore CS0618 // Type or member is obsolete
+
+      notification = builder.Build();
+    }
 
     if (_notify)
       manager.Notify(NOTIFICATION_ID, notification);

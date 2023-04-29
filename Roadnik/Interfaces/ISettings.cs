@@ -11,4 +11,6 @@ public interface ISettings
   string? AdminApiKey { get; }
   long ThunderforestCacheSize { get; }
   bool AllowAnonymousPublish { get; }
+  int AnonymousMaxPoints { get; }
+  int RegisteredMaxPoints { get; }
 }

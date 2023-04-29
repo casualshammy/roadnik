@@ -3,33 +3,25 @@ using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
-using Org.Apache.Commons.Logging;
-#endif
 using Ax.Fw.Attributes;
 using JustLogger.Interfaces;
+using Org.Apache.Commons.Logging;
+using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Toolkit;
 using System.Collections.Immutable;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-public interface ILocationProvider
-{
-  IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
-
-  void ChangeConstrains(TimeSpan _minTime, float _minDistanceMeters);
-  void Disable();
-  void Enable();
-}
-
-#if ANDROID
 [ExportClass(typeof(ILocationProvider), Singleton: true)]
 public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider
 {
-  private readonly IReadOnlyList<string> p_allProviders;
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
+  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_filteredLocationFlow = new(1);
   private readonly ILogger p_logger;
-  private ImmutableHashSet<string> p_activeProviders;
+  private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
+  private readonly KalmanLocationFilter p_kalmanFilter;
   private string? p_activeProvider;
   private Android.Locations.Location? p_lastLocation;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
@@ -41,14 +33,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_logger = _logger["location-provider"];
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
 
-    var providers = p_locationManager.GetProviders(false);
-    p_allProviders = providers.ToArray();
-    p_activeProviders = providers
-      .Where(_ => p_locationManager.IsProviderEnabled(_))
-      .ToImmutableHashSet();
+    p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
   }
 
   public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location => p_locationFlow;
+  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation => p_filteredLocationFlow;
 
   public void Enable()
   {
@@ -56,9 +45,16 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       return;
 
     p_enabled = true;
+
+    var providers = p_locationManager.GetProviders(false);
+    var allProviders = providers.ToArray();
+    p_activeProviders = providers
+      .Where(_ => p_locationManager.IsProviderEnabled(_))
+      .ToImmutableHashSet();
+
     MainThread.BeginInvokeOnMainThread(() =>
     {
-      foreach (var provider in p_allProviders)
+      foreach (var provider in allProviders)
         p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
     });
   }
@@ -103,25 +99,22 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     {
       if (p_activeProvider != null && p_locationManager.IsProviderEnabled(p_activeProvider))
       {
-        var providerAccuracy = GetProviderAccuracy(_location.Provider);
-        if (providerAccuracy == null)
+        var oldLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(p_lastLocation?.Time ?? 0);
+        var newLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time);
+        if (newLocationTime - oldLocationTime < p_minTimePeriod * 2)
         {
-          _location.Dispose();
-          return;
-        }
-
-        var elapsed = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time) - DateTimeOffset.FromUnixTimeMilliseconds(p_lastLocation?.Time ?? 0);
-        var oldAccuracy = GetProviderAccuracy(p_activeProvider);
-
-        if (oldAccuracy != null && providerAccuracy > oldAccuracy && elapsed < p_minTimePeriod * 2)
-        {
-          _location.Dispose();
-          return;
+          var bestProvider = GetBestProviderByAccuracy(p_activeProvider, _location.Provider);
+          if (bestProvider != _location.Provider)
+          {
+            _location.Dispose();
+            return;
+          }
         }
       }
 
       p_activeProvider = _location.Provider;
       p_logger.Info($"Using provider: {p_activeProvider}");
+      System.Diagnostics.Debug.WriteLine($"Using provider: {p_activeProvider}");
     }
 
     var previous = Interlocked.Exchange(ref p_lastLocation, _location);
@@ -133,10 +126,14 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       Course = _location.HasBearing ? _location.Bearing : null,
       Speed = _location.HasSpeed ? _location.Speed : null,
       Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time),
-      VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null
     };
+    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+#pragma warning disable CA1416 // Validate platform compatibility
+      location.VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null;
+#pragma warning restore CA1416 // Validate platform compatibility
 
     p_locationFlow.OnNext(location);
+    p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, DateTimeOffset.FromUnixTimeMilliseconds(_location.Time)));
   }
 
   public void OnStatusChanged(string? _provider, [GeneratedEnum] Availability _status, Bundle? _extras)
@@ -160,26 +157,49 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = p_activeProviders.Add(_provider);
   }
 
-  private int? GetProviderAccuracy(string _provider)
+  private string GetBestProviderByAccuracy(string _provider1, string _provider2)
   {
+    // const int ACCURACY_FINE = 1;
+    // const int ACCURACY_COARSE = 2;
+
     if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
     {
 #pragma warning disable CA1416 // Validate platform compatibility
-      using var provider = p_locationManager.GetProviderProperties(_provider);
-      if (provider == null)
-        return null;
+      using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
+      using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
+      if (providerInfo1 == null && providerInfo2 == null)
+        return _provider1;
+      if (providerInfo1 == null)
+        return _provider2;
+      if (providerInfo2 == null)
+        return _provider1;
 
-      return provider.Accuracy;
+      if (providerInfo1.Accuracy <= providerInfo2.Accuracy)
+        return _provider1;
+
+      return _provider2;
 #pragma warning restore CA1416 // Validate platform compatibility
     }
     else
     {
 #pragma warning disable CS0618 // Type or member is obsolete
-      using var provider = p_locationManager.GetProvider(_provider);
-      if (provider == null)
-        return null;
+      using var providerInfo1 = p_locationManager.GetProvider(_provider1);
+      using var providerInfo2 = p_locationManager.GetProvider(_provider2);
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
+      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
+      if (providerInfo1 == null && providerInfo2 == null)
+        return _provider1;
+      if (providerInfo1 == null)
+        return _provider2;
+      if (providerInfo2 == null)
+        return _provider1;
 
-      return 3 - (int)provider.Accuracy;
+      if ((int)providerInfo1.Accuracy <= (int)providerInfo2.Accuracy)
+        return _provider1;
+
+      return _provider2;
 #pragma warning restore CS0618 // Type or member is obsolete
     }
   }

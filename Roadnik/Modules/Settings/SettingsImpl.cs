@@ -14,7 +14,9 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(PortBind))] int? _portBind,
     [JsonProperty(nameof(IpBind))] string? _ipBind,
     [JsonProperty(nameof(AdminApiKey))] string? _adminApiKey,
-    [JsonProperty(nameof(AllowAnonymousPublish))] bool? _allowAnonymousPublish)
+    [JsonProperty(nameof(AllowAnonymousPublish))] bool? _allowAnonymousPublish,
+    [JsonProperty(nameof(AnonymousMaxPoints))] int? _anonymousMaxPoints,
+    [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints)
   {
     WebrootDirPath = _webrootDirPath ?? "www";
     LogDirPath = _logDirPath ?? "logs";
@@ -25,6 +27,8 @@ internal class SettingsImpl : ISettings
     AdminApiKey = _adminApiKey;
     ThunderforestCacheSize = _thunderforestCacheSize ?? 0;
     AllowAnonymousPublish = _allowAnonymousPublish ?? true;
+    AnonymousMaxPoints = _anonymousMaxPoints ?? 100;
+    RegisteredMaxPoints = _registeredMaxPoints ?? 1000;
   }
 
   public string WebrootDirPath { get; }
@@ -36,5 +40,7 @@ internal class SettingsImpl : ISettings
   public string IpBind { get; }
   public string? AdminApiKey { get; }
   public bool AllowAnonymousPublish { get; }
+  public int AnonymousMaxPoints { get; }
+  public int RegisteredMaxPoints { get; }
 
 }

@@ -57,5 +57,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage
   public string DISTANCE_INTERVAL { get; } = "settings.report.distance-interval";
   public string TRACKPOINT_REPORTING_CONDITION { get; } = "settings.report.trackpoint-reporting-condition";
   public string USER_MSG { get; } = "settings.report.user-msg";
+  public string MIN_ACCURACY { get; } = "settings.report.min-accuracy";
 
 }

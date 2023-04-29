@@ -127,8 +127,12 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       Course = _location.HasBearing ? _location.Bearing : null,
       Speed = _location.HasSpeed ? _location.Speed : null,
       Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time),
-      VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null
+      
     };
+    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+#pragma warning disable CA1416 // Validate platform compatibility
+      location.VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null;
+#pragma warning restore CA1416 // Validate platform compatibility
 
     p_locationFlow.OnNext(location);
     p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, DateTimeOffset.FromUnixTimeMilliseconds(_location.Time)));
@@ -155,8 +159,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = p_activeProviders.Add(_provider);
   }
 
-#pragma warning disable CA1416 // Validate platform compatibility
-#pragma warning disable CS0618 // Type or member is obsolete
   private string GetBestProviderByAccuracy(string _provider1, string _provider2)
   {
     // const int ACCURACY_FINE = 1;
@@ -164,6 +166,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
     if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
     {
+#pragma warning disable CA1416 // Validate platform compatibility
       using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
       using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
       if (providerInfo1 == null && providerInfo2 == null)
@@ -177,9 +180,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
         return _provider1;
 
       return _provider2;
+#pragma warning restore CA1416 // Validate platform compatibility
     }
     else
     {
+#pragma warning disable CS0618 // Type or member is obsolete
       using var providerInfo1 = p_locationManager.GetProvider(_provider1);
       using var providerInfo2 = p_locationManager.GetProvider(_provider2);
       if (providerInfo1 == null && providerInfo2 == null)
@@ -193,10 +198,9 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
         return _provider1;
 
       return _provider2;
+#pragma warning restore CS0618 // Type or member is obsolete
     }
   }
-#pragma warning restore CS0618 // Type or member is obsolete
-#pragma warning restore CA1416 // Validate platform compatibility
 
 }
 #endif

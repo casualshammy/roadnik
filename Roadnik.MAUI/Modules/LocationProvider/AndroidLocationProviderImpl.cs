@@ -18,12 +18,11 @@ namespace Roadnik.MAUI.Modules.LocationProvider;
 [ExportClass(typeof(ILocationProvider), Singleton: true)]
 public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider
 {
-  private readonly IReadOnlyList<string> p_allProviders;
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_filteredLocationFlow = new(1);
   private readonly ILogger p_logger;
-  private ImmutableHashSet<string> p_activeProviders;
+  private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
   private readonly KalmanLocationFilter p_kalmanFilter;
   private string? p_activeProvider;
   private Android.Locations.Location? p_lastLocation;
@@ -35,12 +34,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   {
     p_logger = _logger["location-provider"];
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
-
-    var providers = p_locationManager.GetProviders(false);
-    p_allProviders = providers.ToArray();
-    p_activeProviders = providers
-      .Where(_ => p_locationManager.IsProviderEnabled(_))
-      .ToImmutableHashSet();
 
     p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
   }
@@ -54,9 +47,16 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       return;
 
     p_enabled = true;
+
+    var providers = p_locationManager.GetProviders(false);
+    var allProviders = providers.ToArray();
+    p_activeProviders = providers
+      .Where(_ => p_locationManager.IsProviderEnabled(_))
+      .ToImmutableHashSet();
+
     MainThread.BeginInvokeOnMainThread(() =>
     {
-      foreach (var provider in p_allProviders)
+      foreach (var provider in allProviders)
         p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
     });
   }

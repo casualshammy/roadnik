@@ -55,7 +55,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 
       LocationReporter.Stats
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_ => GetNotification($"Your location is being recorded ({_.Successful}/{_.Total})...", true), p_lifetime);
+        .Subscribe(_ => GetNotification($"Your location is being recorded (success: {_.Successful}; total: {_.Total})...", true), p_lifetime);
 
       p_lifetime.DoOnCompleted(() =>
       {

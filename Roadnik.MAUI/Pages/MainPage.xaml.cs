@@ -111,7 +111,7 @@ public partial class MainPage : CContentPage
           if (life == null)
             return _acc;
 
-          saveWebStateFlow.Subscribe(life);
+          //saveWebStateFlow.Subscribe(life);
           return life;
         }
         else

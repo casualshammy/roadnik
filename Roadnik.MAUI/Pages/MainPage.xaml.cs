@@ -210,24 +210,20 @@ public partial class MainPage : CContentPage
       if (!await IsLocationPermissionOkAsync())
         return;
 
-      if (!(Application.Current?.Resources.TryGetValue("DangerLow", out var rawColor) == true) || rawColor is not Color color)
-      {
-        p_log.Error($"Resource 'DangerLow' is not found! Total entries in dictionary: '{Application.Current?.Resources.Count}'");
-        return;
-      }
+      if (Application.Current?.Resources.TryGetValue("DangerLowBrush", out var rawBrush) == true && rawBrush is Brush brush)
+        p_startRecordButton.Background = brush;
+      else
+        p_log.Error($"Resource 'DangerLowBrush' is not found!");
 
-      p_bindingCtx.StartRecordButtonColor = color;
       locationReporterService.Start();
     }
     else
     {
-      if (!(Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true) || rawColor is not Color color)
-      {
-        p_log.Error($"Resource 'Primary' is not found! Total entries in dictionary: '{Application.Current?.Resources.Count}'");
-        return;
-      }
+      if (Application.Current?.Resources.TryGetValue("PrimaryBrush", out var rawBrush) == true && rawBrush is Brush brush)
+        p_startRecordButton.Background = brush;
+      else
+        p_log.Error($"Resource 'PrimaryBrush' is not found!");
 
-      p_bindingCtx.StartRecordButtonColor = color;
       locationReporterService.Stop();
     }
   }

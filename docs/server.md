@@ -18,8 +18,8 @@ Config file's options description:
 	"DataDirPath": "data",          // absolute or relative path to storage folder
 	"ThunderforestApikey": null,    // API key to https://www.thunderforest.com/ service. If this parameter is null or invalid, thunderforest maps will not work
 	"ThunderforestCacheSize": 0,	// size in bytes of local cache of thunderforest tiles (default: 0)
-    "PortBind": 5544,               // port of server (default: 5544)
-    "IpBind": "0.0.0.0",            // ip to bind to (default: "0.0.0.0")
+	"PortBind": 5544,               // port of server (default: 5544)
+	"IpBind": "0.0.0.0",            // ip to bind to (default: "0.0.0.0")
 	"AdminApiKey": null,            // admin api key (required for user management)
 	"AllowAnonymousPublish": true,	// allows unregistered users to publish geolocation data (**default: true**)
 	"AnonymousMaxPoints": 100,		// max geolocation points to store for unregistered users (default: 100)

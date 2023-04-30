@@ -210,16 +210,24 @@ public partial class MainPage : CContentPage
       if (!await IsLocationPermissionOkAsync())
         return;
 
-      if (Application.Current?.Resources.TryGetValue("DangerLow", out var rawColor) == true && rawColor is Color color)
-        p_bindingCtx.StartRecordButtonColor = color;
+      if (!(Application.Current?.Resources.TryGetValue("DangerLow", out var rawColor) == true) || rawColor is not Color color)
+      {
+        p_log.Error($"Resource 'DangerLow' is not found! Total entries in dictionary: '{Application.Current?.Resources.Count}'");
+        return;
+      }
 
+      p_bindingCtx.StartRecordButtonColor = color;
       locationReporterService.Start();
     }
     else
     {
-      if (Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true && rawColor is Color color)
-        p_bindingCtx.StartRecordButtonColor = color;
+      if (!(Application.Current?.Resources.TryGetValue("Primary", out var rawColor) == true) || rawColor is not Color color)
+      {
+        p_log.Error($"Resource 'Primary' is not found! Total entries in dictionary: '{Application.Current?.Resources.Count}'");
+        return;
+      }
 
+      p_bindingCtx.StartRecordButtonColor = color;
       locationReporterService.Stop();
     }
   }

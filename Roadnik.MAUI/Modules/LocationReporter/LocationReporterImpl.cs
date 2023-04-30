@@ -130,7 +130,7 @@ internal class LocationReporterImpl : ILocationReporter
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, location, batteryStat, signalStrength);
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
           var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
           resFiltered.EnsureSuccessStatusCode();
 

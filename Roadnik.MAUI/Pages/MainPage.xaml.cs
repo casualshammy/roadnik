@@ -24,7 +24,7 @@ public partial class MainPage : CContentPage
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILogger p_log;
-  private readonly Subject<Unit> p_pageStatusChangeFlow = new();
+  private readonly Subject<bool> p_pageVisibleChangeFlow = new();
   private readonly MainPageViewModel p_bindingCtx;
   private volatile bool p_pageShown = false;
   private volatile WebAppState? p_webAppState;
@@ -56,21 +56,21 @@ public partial class MainPage : CContentPage
 
     p_storage.PreferencesChanged
       .Sample(TimeSpan.FromSeconds(1), scheduler)
-      .Merge(p_pageStatusChangeFlow)
+      .Merge(p_pageVisibleChangeFlow.ToUnit())
       .ObserveOn(scheduler)
       .SelectAsync(async (_, _ct) =>
       {
         bindingCtx.IsInBackground = !p_pageShown;
         if (!p_pageShown)
         {
-          await SaveWebViewStateAsync("loading.html");
+          await SaveWebViewStateAndNavigateAsync("loading.html");
           return;
         }
 
         var url = GetFullServerUrl();
         if (url == null)
         {
-          await SaveWebViewStateAsync("loading.html");
+          await SaveWebViewStateAndNavigateAsync("loading.html");
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
@@ -82,16 +82,47 @@ public partial class MainPage : CContentPage
           using var req = new HttpRequestMessage(HttpMethod.Head, url);
           using var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
           res.EnsureSuccessStatusCode();
-          SetMapStateAsync(url);
+          NavigateAndSetMapStateAsync(url);
           bindingCtx.IsRemoteServerNotResponding = false;
         }
         catch (Exception ex)
         {
           Debug.WriteLine(ex);
-          await SaveWebViewStateAsync("loading.html");
+          await SaveWebViewStateAndNavigateAsync("loading.html");
           bindingCtx.IsRemoteServerNotResponding = true;
         }
       }, scheduler)
+      .Subscribe(p_lifetime);
+
+    var saveWebStateFlow = Observable
+      .Interval(TimeSpan.FromSeconds(1), scheduler)
+      .ObserveOn(scheduler)
+      .SelectAsync(async (_, _ct) => await SaveWebViewStateAndNavigateAsync(null), scheduler);
+
+    p_pageVisibleChangeFlow
+      .Scan((ILifetime?)null, (_acc, _isPageVisible) =>
+      {
+        if (_isPageVisible)
+        {
+          if (_acc != null)
+            return _acc;
+
+          var life = p_lifetime.GetChildLifetime();
+          if (life == null)
+            return _acc;
+
+          saveWebStateFlow.Subscribe(life);
+          return life;
+        }
+        else
+        {
+          if (_acc == null)
+            return _acc;
+
+          _acc.Complete();
+          return null;
+        }
+      })
       .Subscribe(p_lifetime);
   }
 
@@ -99,17 +130,17 @@ public partial class MainPage : CContentPage
   {
     base.OnAppearing();
     p_pageShown = true;
-    p_pageStatusChangeFlow.OnNext();
+    p_pageVisibleChangeFlow.OnNext(true);
   }
 
   protected override void OnDisappearing()
   {
     base.OnDisappearing();
     p_pageShown = false;
-    p_pageStatusChangeFlow.OnNext();
+    p_pageVisibleChangeFlow.OnNext(false);
   }
 
-  private async Task SaveWebViewStateAsync(string _url)
+  private async Task SaveWebViewStateAndNavigateAsync(string? _url)
   {
     try
     {
@@ -133,11 +164,12 @@ public partial class MainPage : CContentPage
     }
     finally
     {
-      p_bindingCtx.WebViewUrl = _url;
+      if (_url != null)
+        p_bindingCtx.WebViewUrl = _url;
     }
   }
 
-  private void SetMapStateAsync(string _url)
+  private void NavigateAndSetMapStateAsync(string _url)
   {
     try
     {
@@ -266,7 +298,7 @@ public partial class MainPage : CContentPage
 
   private void Reload_Clicked(object _sender, EventArgs _e)
   {
-    p_pageStatusChangeFlow.OnNext();
+    p_pageVisibleChangeFlow.OnNext(true);
   }
 
   private async void Share_Clicked(object _sender, EventArgs _e)

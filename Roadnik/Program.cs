@@ -58,7 +58,7 @@ public class Program
     lifetime.DisposeOnCompleted(docStorage);
 
     Observable
-      .Interval(TimeSpan.FromDays(1))
+      .Interval(TimeSpan.FromHours(6))
       .StartWithDefault()
       .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
       .Subscribe(lifetime);

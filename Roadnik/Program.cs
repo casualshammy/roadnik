@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
@@ -42,33 +43,60 @@ public class Program
 
     var lifetime = new Lifetime();
 
-    var classAggregator = new ExportClassMgr(lifetime, GetServices(lifetime, configFilePath));
-    var host = CreateHostBuilder(_args, classAggregator).Build();
+    var settings = JsonConvert.DeserializeObject<SettingsImpl>(File.ReadAllText(configFilePath, Encoding.UTF8))
+      ?? throw new FormatException($"Settings file is corrupted!");
 
-    using var log = classAggregator.Locate<ILoggerDisposable>();
-    var settings = classAggregator.Locate<ISettings>();
-    log.Info($"-------------------------------------------");
-    log.Info($"Roadnik Server Started");
-    log.Info($"Address: {settings.IpBind}:{settings.PortBind}");
-    log.Info($"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}");
-    log.Info($"Config file: '{configFilePath}'");
-    log.Info($"-------------------------------------------");
+    if (!Directory.Exists(settings.LogDirPath))
+      Directory.CreateDirectory(settings.LogDirPath);
+
+    using var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
+    lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30)));
+
+    var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
+      .WithCache(1000, TimeSpan.FromHours(1));
+
+    lifetime.DisposeOnCompleted(docStorage);
+
+    Observable
+      .Interval(TimeSpan.FromDays(1))
+      .StartWithDefault()
+      .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
+      .Subscribe(lifetime);
+
+    var depMgr = DependencyManagerBuilder
+      .Create(lifetime)
+      .AddSingleton<JustLogger.Interfaces.ILogger>(logger)
+      .AddSingleton<ILoggerDisposable>(logger)
+      .AddSingleton(docStorage)
+      .AddSingleton<ILifetime>(lifetime)
+      .AddSingleton<IReadOnlyLifetime>(lifetime)
+      .AddSingleton<ISettings>(settings)
+      .Build();
+
+    var host = CreateHostBuilder(_args, depMgr).Build();
+
+    logger.Info($"-------------------------------------------");
+    logger.Info($"Roadnik Server Started");
+    logger.Info($"Address: {settings.IpBind}:{settings.PortBind}");
+    logger.Info($"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}");
+    logger.Info($"Config file: '{configFilePath}'");
+    logger.Info($"-------------------------------------------");
 
     host.Run();
     lifetime.Complete();
 
-    log.Info($"-------------------------------------------");
-    log.Info($"Server stopped");
-    log.Info($"-------------------------------------------");
+    logger.Info($"-------------------------------------------");
+    logger.Info($"Server stopped");
+    logger.Info($"-------------------------------------------");
   }
 
-  public static IHostBuilder CreateHostBuilder(string[] _args, ExportClassMgr _classAggregator)
+  public static IHostBuilder CreateHostBuilder(string[] _args, DependencyManager _depMgr)
   {
-    var settings = _classAggregator.Locate<ISettings>();
+    var settings = _depMgr.Locate<ISettings>();
     return Host
         .CreateDefaultBuilder(_args)
         .ConfigureLogging((_ctx, _logBuilder) => _logBuilder.ClearProviders())
-        .UseGraceContainer(_classAggregator.ServiceProvider)
+        .UseGraceContainer(_depMgr.ServiceProvider)
         .ConfigureWebHostDefaults(_webBuilder =>
         {
           _webBuilder
@@ -82,39 +110,6 @@ public class Program
         });
   }
 
-  public static IReadOnlyDictionary<Type, Func<IExportLocatorScope, object>> GetServices(ILifetime _lifetime, string _configFilePath)
-  {
-    var settings = JsonConvert.DeserializeObject<SettingsImpl>(File.ReadAllText(_configFilePath, Encoding.UTF8));
-    if (settings == null)
-      throw new FormatException($"Settings file is corrupted!");
-
-    if (!Directory.Exists(settings.LogDirPath))
-      Directory.CreateDirectory(settings.LogDirPath);
-
-    var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
-    _lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30)));
-
-    var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
-      .WithCache(1000, TimeSpan.FromHours(1));
-
-    _lifetime.DisposeOnCompleted(docStorage);
-
-    Observable
-      .Interval(TimeSpan.FromDays(1))
-      .StartWithDefault()
-      .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
-      .Subscribe(_lifetime);
-
-    return new Dictionary<Type, Func<IExportLocatorScope, object>>()
-    {
-      { typeof(JustLogger.Interfaces.ILogger), _scope => logger },
-      { typeof(ILoggerDisposable), _scope => logger },
-      { typeof(IDocumentStorage), _scope => docStorage },
-      { typeof(ILifetime), _scope => _lifetime },
-      { typeof(IReadOnlyLifetime), _scope => _lifetime },
-      { typeof(ISettings), _scope => settings}
-    };
-  }
 }
 
 public class Options

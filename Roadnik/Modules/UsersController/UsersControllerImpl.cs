@@ -46,6 +46,8 @@ internal class UsersControllerImpl : IUsersController
             if (++counter > limit)
               await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
         }
+
+        await p_storage.FlushAsync(true, _ct);
       }, scheduler)
       .Subscribe(_lifetime);
   }

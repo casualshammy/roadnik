@@ -52,7 +52,9 @@ internal class LocationReporterImpl : ILocationReporter
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION),
         UserMsg = _storage.GetValueOrDefault<string>(_storage.USER_MSG),
         MinAccuracy = _storage.GetValueOrDefault<int>(_storage.MIN_ACCURACY)
-      });
+      })
+      .Replay(1)
+      .RefCount();
 
     var batteryStatsFlow = Observable
       .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
@@ -78,6 +80,24 @@ internal class LocationReporterImpl : ILocationReporter
       .Where(_ => _.Ok)
       .ToUnit();
 
+    var locationFlow = _locationProvider.Location
+      .CombineLatest(prefsFlow)
+      .Where(_ =>
+      {
+        var (location, prefs) = _;
+        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
+      })
+      .Select(_ => _.First);
+
+    var filteredLocationFlow = _locationProvider.FilteredLocation
+      .CombineLatest(prefsFlow)
+      .Where(_ =>
+      {
+        var (location, prefs) = _;
+        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
+      })
+      .Select(_ => _.First);
+
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
     _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
@@ -86,7 +106,7 @@ internal class LocationReporterImpl : ILocationReporter
       .Interval(TimeSpan.FromSeconds(1.01), scheduler)
       .ToUnit()
       .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location, _locationProvider.FilteredLocation)
+      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, locationFlow, filteredLocationFlow)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>

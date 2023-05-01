@@ -35,10 +35,10 @@ internal class KalmanLocationFilter
     }
     else
     {
-      var elapsedMs = (_measurementTime - p_lastLocationTime).TotalMilliseconds;
-      if (elapsedMs > 0)
+      var elapsed = _measurementTime - p_lastLocationTime;
+      if (elapsed.TotalMilliseconds > 0)
       {
-        p_variance += (float)(elapsedMs * p_qMetresPerSecond * p_qMetresPerSecond / 1000);
+        p_variance += (float)(elapsed.TotalMilliseconds * p_qMetresPerSecond * p_qMetresPerSecond / 1000);
         p_lastLocationTime = _measurementTime;
       }
 
@@ -55,8 +55,11 @@ internal class KalmanLocationFilter
         var oldLocation = new Location(oldLat, oldLng);
         var newLocation = new Location(p_lat, p_lng);
         var distance = oldLocation.CalculateDistance(newLocation, DistanceUnits.Kilometers);
-        var speed = distance * 1000 / (_measurementTime - p_lastLocationTime).TotalSeconds; // m/s
-        p_qMetresPerSecond = (float)speed;
+        if (distance > 0 && elapsed.TotalSeconds > 0)
+        {
+          var speed = distance * 1000 / elapsed.TotalSeconds; // m/s
+          p_qMetresPerSecond = (float)speed;
+        }
       }
     }
 

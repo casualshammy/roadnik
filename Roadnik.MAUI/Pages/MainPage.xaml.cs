@@ -2,7 +2,6 @@
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
-using Newtonsoft.Json;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.MAUI.Interfaces;
@@ -26,8 +25,7 @@ public partial class MainPage : CContentPage
   private readonly ILogger p_log;
   private readonly Subject<bool> p_pageVisibleChangeFlow = new();
   private readonly MainPageViewModel p_bindingCtx;
-  private volatile bool p_pageShown = false;
-  private volatile WebAppState? p_webAppState;
+  private volatile bool p_webViewReadyToJsSubs = false;
 
   public MainPage()
   {
@@ -36,8 +34,6 @@ public partial class MainPage : CContentPage
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
     p_log = Container.Locate<ILogger>()["main-page"];
-
-    p_webAppState = p_storage.GetValueOrDefault<WebAppState>(PREF_WEB_APP_STATE);
 
     if (BindingContext is not MainPageViewModel bindingCtx)
     {
@@ -56,21 +52,23 @@ public partial class MainPage : CContentPage
 
     p_storage.PreferencesChanged
       .Sample(TimeSpan.FromSeconds(1), scheduler)
-      .Merge(p_pageVisibleChangeFlow.ToUnit())
+      .CombineLatest(p_pageVisibleChangeFlow)
       .ObserveOn(scheduler)
-      .SelectAsync(async (_, _ct) =>
+      .SelectAsync(async (_entry, _ct) =>
       {
-        bindingCtx.IsInBackground = !p_pageShown;
-        if (!p_pageShown)
+        var (_, pageShown) = _entry;
+
+        bindingCtx.IsInBackground = !pageShown;
+        if (!pageShown)
         {
-          await SaveWebViewStateAndNavigateAsync("loading.html");
+          p_bindingCtx.WebViewUrl = "loading.html";
           return;
         }
 
         var url = GetFullServerUrl();
         if (url == null)
         {
-          await SaveWebViewStateAndNavigateAsync("loading.html");
+          p_bindingCtx.WebViewUrl = "loading.html";
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
@@ -82,46 +80,34 @@ public partial class MainPage : CContentPage
           using var req = new HttpRequestMessage(HttpMethod.Head, url);
           using var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
           res.EnsureSuccessStatusCode();
-          NavigateAndSetMapStateAsync(url);
+          p_bindingCtx.WebViewUrl = url;
           bindingCtx.IsRemoteServerNotResponding = false;
         }
         catch (Exception ex)
         {
           Debug.WriteLine(ex);
-          await SaveWebViewStateAndNavigateAsync("loading.html");
+          p_bindingCtx.WebViewUrl = "loading.html";
           bindingCtx.IsRemoteServerNotResponding = true;
         }
       }, scheduler)
       .Subscribe(p_lifetime);
 
-    var saveWebStateFlow = Observable
-      .Interval(TimeSpan.FromSeconds(1), scheduler)
-      .ObserveOn(scheduler)
-      .SelectAsync(async (_, _ct) => await SaveWebViewStateAndNavigateAsync(null), scheduler);
+    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var webViewReadyForJsSubsScheduler));
 
-    p_pageVisibleChangeFlow
-      .Scan((ILifetime?)null, (_acc, _isPageVisible) =>
+    p_webView.JsonData
+      .ObserveOn(webViewReadyForJsSubsScheduler)
+      .Where(_ => p_webViewReadyToJsSubs)
+      .DistinctUntilChanged(_ => _.First)
+      .Select(_jToken =>
       {
-        if (_isPageVisible)
-        {
-          if (_acc != null)
-            return _acc;
+        if (_jToken == null)
+          return;
 
-          var life = p_lifetime.GetChildLifetime();
-          if (life == null)
-            return _acc;
+        var webAppState = _jToken.ToObject<WebAppState>();
+        if (webAppState == null)
+          return;
 
-          //saveWebStateFlow.Subscribe(life);
-          return life;
-        }
-        else
-        {
-          if (_acc == null)
-            return _acc;
-
-          _acc.Complete();
-          return null;
-        }
+        p_storage.SetValue(PREF_WEB_APP_STATE, webAppState);
       })
       .Subscribe(p_lifetime);
   }
@@ -129,73 +115,13 @@ public partial class MainPage : CContentPage
   protected override void OnAppearing()
   {
     base.OnAppearing();
-    p_pageShown = true;
     p_pageVisibleChangeFlow.OnNext(true);
   }
 
   protected override void OnDisappearing()
   {
     base.OnDisappearing();
-    p_pageShown = false;
     p_pageVisibleChangeFlow.OnNext(false);
-  }
-
-  private async Task SaveWebViewStateAndNavigateAsync(string? _url)
-  {
-    try
-    {
-      await MainThread.InvokeOnMainThreadAsync(async () =>
-      {
-        var jsonRaw = await p_webView.EvaluateJavaScriptAsync("getState();");
-        if (jsonRaw == null)
-        {
-          p_log.Warn($"Can't get map state!");
-          return;
-        }
-        var mapState = JsonConvert.DeserializeObject<WebAppState>(jsonRaw);
-        if (mapState == null)
-        {
-          p_log.Error($"Can't parse map state!");
-          return;
-        }
-        p_webAppState = mapState;
-        p_storage.SetValue(PREF_WEB_APP_STATE, p_webAppState);
-      });
-    }
-    finally
-    {
-      if (_url != null)
-        p_bindingCtx.WebViewUrl = _url;
-    }
-  }
-
-  private void NavigateAndSetMapStateAsync(string _url)
-  {
-    try
-    {
-      if (p_webAppState == null)
-        return;
-
-      async void navigated(object? _sender, WebNavigatedEventArgs _e)
-      {
-        p_webView.Navigated -= navigated;
-
-        if (_e.Result != WebNavigationResult.Success)
-          return;
-
-        var command = $"setState({Serialization.SerializeToCamelCaseJson(p_webAppState)});";
-        await MainThread.InvokeOnMainThreadAsync(() => p_webView.EvaluateJavaScriptAsync(command));
-      }
-
-      p_webView.Navigated += navigated;
-      Observable
-        .Timer(TimeSpan.FromSeconds(30))
-        .Subscribe(_ => p_webView.Navigated -= navigated, p_lifetime);
-    }
-    finally
-    {
-      p_bindingCtx.WebViewUrl = _url;
-    }
   }
 
   private async Task<bool> IsLocationPermissionOkAsync()
@@ -228,7 +154,7 @@ public partial class MainPage : CContentPage
     if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
       return null;
 
-    var url = $"{serverAddress}?key={serverKey}";
+    var url = $"{serverAddress.TrimEnd('/')}/?key={serverKey}";
     return url;
   }
 
@@ -263,14 +189,30 @@ public partial class MainPage : CContentPage
   private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e)
   {
     p_bindingCtx.IsSpinnerRequired = true;
+    p_webViewReadyToJsSubs = false;
   }
 
-  private void MainWebView_Navigated(object _sender, WebNavigatedEventArgs _e)
+  private async void MainWebView_Navigated(object _sender, WebNavigatedEventArgs _e)
   {
     if (_e.Result != WebNavigationResult.Success)
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
 
     p_bindingCtx.IsSpinnerRequired = false;
+
+    var webAppState = p_storage.GetValueOrDefault<WebAppState>(PREF_WEB_APP_STATE);
+    if (webAppState == null)
+    {
+      p_webViewReadyToJsSubs = true;
+      return;
+    }
+
+    var command = $"setState({Serialization.SerializeToCamelCaseJson(webAppState)});";
+    await MainThread.InvokeOnMainThreadAsync(async () =>
+    {
+      var result = await p_webView.EvaluateJavaScriptAsync(command);
+      if (result != null)
+        p_webViewReadyToJsSubs = true;
+    });
   }
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
@@ -296,10 +238,7 @@ public partial class MainPage : CContentPage
     AppInfo.Current.ShowSettingsUI();
   }
 
-  private void Reload_Clicked(object _sender, EventArgs _e)
-  {
-    p_pageVisibleChangeFlow.OnNext(true);
-  }
+  private void Reload_Clicked(object _sender, EventArgs _e) => p_pageVisibleChangeFlow.OnNext(true);
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {

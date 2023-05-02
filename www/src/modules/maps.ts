@@ -77,7 +77,7 @@ export function GetMapLayers(): MapLayersData {
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: undefined });
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-		googleAttribution = "(c)2015 Google - Map data",
+		googleAttribution = "(c)2023 Google",
 		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
 
 	var resultArray = Array<MapLayerWithName>(5);

@@ -12,7 +12,7 @@
 
     <AbsoluteLayout>
         <!--CanShowRegilarView-->
-        <WebView
+        <tookit:InteractableWebView
             IsVisible="{Binding CanShowRegilarView}"
             x:Name="p_webView"
             Source="{Binding WebViewUrl}"
@@ -20,7 +20,7 @@
             AbsoluteLayout.LayoutBounds="0,0,1,1"
             Navigating="MainWebView_Navigating"
             Navigated="MainWebView_Navigated">
-        </WebView>
+        </tookit:InteractableWebView>
         <ActivityIndicator 
             IsVisible="{Binding CanShowRegilarView}"
             Color="{StaticResource Primary}"

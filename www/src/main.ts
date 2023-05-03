@@ -92,6 +92,7 @@ const map = new L.Map('map', {
 });
 map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
+    sendDataToHost(JSON.stringify(getState()));
 });
 p_currentLayer = mapsData.array[0].name;
 
@@ -109,7 +110,10 @@ const circle = L.circle([51.4768, 0.0006], 100, { color: 'blue', fillColor: '#f0
 const path = L.polyline([], { color: 'red', smoothFactor: 1, weight: 5 })
     .addTo(map);
 
-const autoPanCheckbox = Maps.GetCheckBox("Auto pan", 'topleft', _checked => p_autoPan = _checked)
+const autoPanCheckbox = Maps.GetCheckBox("Auto pan", 'topleft', _checked => {
+    p_autoPan = _checked;
+    sendDataToHost(JSON.stringify(getState()));
+})
     .addTo(map);
 
 if (key !== null) {
@@ -120,6 +124,14 @@ if (key !== null) {
         if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
             refreshPositionFullAsync(key, p_lastOffset);
     });
+}
+
+// C# interaction
+function sendDataToHost(_data: string): void {
+    try {
+        (window as any).jsBridge.invokeAction(_data);
+    } 
+    catch { }
 }
 
 // exports for C#
@@ -138,7 +150,7 @@ function getState() : WebAppState {
 }
 (window as any).getState = getState;
 
-function setState(_state: WebAppState) : void {
+function setState(_state: WebAppState) : boolean {
     p_autoPan = _state.autoPan;
     autoPanCheckbox.setChecked(p_autoPan);
 
@@ -149,5 +161,7 @@ function setState(_state: WebAppState) : void {
         if (layer !== undefined)
             layer.tileLayer.addTo(map);
     }
+
+    return true;
 }
 (window as any).setState = setState;

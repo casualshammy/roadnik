@@ -15,7 +15,7 @@
                   HeightRequest="200">
                 <Image Aspect="AspectFill"
                        Source="road_f.svg"
-                       BackgroundColor="CornflowerBlue"
+                       BackgroundColor="{StaticResource Primary}"
                        Opacity="0.6" />
             </Grid>
         </DataTemplate>

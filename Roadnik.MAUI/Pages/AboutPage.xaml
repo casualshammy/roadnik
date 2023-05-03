@@ -50,11 +50,20 @@
                        Margin="16, 0"
                        HeightRequest="2"/>
             <Label 
-                Margin="20, 10, 0, 0"
+                Margin="20, 10, 20, 0"
                 Text="{Binding SupportText}">
             </Label>
             <Label Margin="20, 10, 0, 0"
-                   Text="Click here to go to issue tracker"
+                   Text="Roadnik app's website"
+                   TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                <Label.GestureRecognizers>
+                    <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://roadnik.app" />
+                </Label.GestureRecognizers>
+            </Label>
+            <Label Margin="20, 10, 0, 0"
+                   Text="Issue tracker"
                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
                 <Label.GestureRecognizers>
                     <TapGestureRecognizer 
@@ -71,6 +80,7 @@
                         CommandParameter="mailto:axio.name?subject=Message from Roadnik app" />
                 </Label.GestureRecognizers>
             </Label>
+            
         </VerticalStackLayout>
 
         <Label Grid.ColumnSpan="2"

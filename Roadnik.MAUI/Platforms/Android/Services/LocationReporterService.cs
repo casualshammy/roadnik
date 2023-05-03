@@ -55,7 +55,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 
       LocationReporter.Stats
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_ => GetNotification($"Your location is being recorded (success: {_.Successful}; total: {_.Total})...", true), p_lifetime);
+        .Subscribe(_ => GetNotification("Your location is being recorded...", $"Success: {_.Successful}; total: {_.Total}", true), p_lifetime);
 
       p_lifetime.DoOnCompleted(() =>
       {
@@ -97,11 +97,11 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 
   private void RegisterNotification()
   {
-    var notification = GetNotification("Your location is being recorded...");
+    var notification = GetNotification("Your location is being recorded...", "");
     StartForeground(NOTIFICATION_ID, notification);
   }
 
-  private Notification GetNotification(string _text, bool _notify = false)
+  private Notification GetNotification(string _title, string _text, bool _notify = false)
   {
     var context = global::Android.App.Application.Context;
     var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
@@ -117,7 +117,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
       var channel = new NotificationChannel(channelId, "Notify when recording is active", NotificationImportance.Max);
       manager.CreateNotificationChannel(channel);
       var builder = new Notification.Builder(this, channelId)
-       .SetContentTitle("Roadnik")
+       .SetContentTitle(_title)
        .SetContentText(_text)
        .SetContentIntent(activity)
        .SetSmallIcon(Resource.Drawable.letter_r)
@@ -138,7 +138,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 #pragma warning disable CS0618 // Type or member is obsolete
 
       var builder = new NotificationCompat.Builder(this)
-        .SetContentTitle("Roadnik")
+        .SetContentTitle(_title)
         .SetContentText(_text)
         .SetContentIntent(activity)
         .SetSmallIcon(Resource.Drawable.letter_r)

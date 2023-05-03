@@ -12,7 +12,7 @@
 
     <AbsoluteLayout>
         <!--CanShowRegilarView-->
-        <WebView
+        <tookit:InteractableWebView
             IsVisible="{Binding CanShowRegilarView}"
             x:Name="p_webView"
             Source="{Binding WebViewUrl}"
@@ -20,10 +20,10 @@
             AbsoluteLayout.LayoutBounds="0,0,1,1"
             Navigating="MainWebView_Navigating"
             Navigated="MainWebView_Navigated">
-        </WebView>
+        </tookit:InteractableWebView>
         <ActivityIndicator 
             IsVisible="{Binding CanShowRegilarView}"
-            Color="{Binding StartRecordButtonColor}"
+            Color="{StaticResource Primary}"
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
             IsRunning="{Binding IsSpinnerRequired}" />
@@ -36,7 +36,7 @@
                     WidthRequest="40"
                     HeightRequest="40"
                     CornerRadius="45"
-                    BackgroundColor="{StaticResource Primary}"
+                    Background="{StaticResource PrimaryBrush}"
                     Clicked="Message_Clicked">
             </Button>
             <ImageButton 
@@ -68,7 +68,7 @@
                     HeightRequest="50"
                     CornerRadius="45"
                     HorizontalOptions="Center"
-                    BackgroundColor="{StaticResource Primary}"
+                    Background="{StaticResource PrimaryBrush}"
                     Clicked="Share_Clicked">
                 </Button>
                 <ImageButton 
@@ -87,7 +87,7 @@
                     HeightRequest="50"
                     CornerRadius="45"
                     HorizontalOptions="Center"
-                    BackgroundColor="{StaticResource Primary}"
+                    Background="{StaticResource PrimaryBrush}"
                     Clicked="GoToMyLocation_Clicked">
                 </Button>
                 <ImageButton 
@@ -100,10 +100,11 @@
             <Grid Grid.Row="2"
                   Grid.Column="1">
                 <Button
+                    x:Name="p_startRecordButton"
                     WidthRequest="70"
                     HeightRequest="70"
                     CornerRadius="45"
-                    BackgroundColor="{Binding StartRecordButtonColor}"
+                    Background="{StaticResource PrimaryBrush}"
                     Clicked="FAB_Clicked">
                 </Button>
                 <ImageButton 
@@ -156,7 +157,7 @@
             <Button 
                 Grid.Row="2"
                 Grid.Column="1"
-                BackgroundColor="{StaticResource DangerLow}"
+                Background="{StaticResource DangerLowBrush}"
                 HorizontalOptions="FillAndExpand"
                 Margin="20, 0"
                 Text="No" 
@@ -199,7 +200,7 @@
                 <Button 
                     Grid.Row="2"
                     Grid.Column="0"
-                    BackgroundColor="{StaticResource DangerLow}"
+                    Background="{StaticResource DangerLowBrush}"
                     HorizontalOptions="FillAndExpand"
                     Margin="20, 0"
                     Text="Reload"

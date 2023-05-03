@@ -22,8 +22,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly ILogger p_logger;
   private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
   private readonly KalmanLocationFilter p_kalmanFilter;
-  private string? p_activeProvider;
-  private Android.Locations.Location? p_lastLocation;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
   private volatile bool p_enabled;
@@ -89,51 +87,35 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void OnLocationChanged(Android.Locations.Location _location)
   {
-    if (_location.Provider == null)
+    try
     {
-      _location.Dispose();
-      return;
-    }
+      if (_location.Provider == null)
+        return;
 
-    if (_location.Provider != p_activeProvider)
-    {
-      if (p_activeProvider != null && p_locationManager.IsProviderEnabled(p_activeProvider))
+      if (!_location.HasAccuracy)
+        return;
+
+      var timeStamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time);
+
+      var location = new Microsoft.Maui.Devices.Sensors.Location(_location.Latitude, _location.Longitude, _location.Altitude)
       {
-        var oldLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(p_lastLocation?.Time ?? 0);
-        var newLocationTime = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time);
-        if (newLocationTime - oldLocationTime < p_minTimePeriod * 2)
-        {
-          var bestProvider = GetBestProviderByAccuracy(p_activeProvider, _location.Provider);
-          if (bestProvider != _location.Provider)
-          {
-            _location.Dispose();
-            return;
-          }
-        }
-      }
-
-      p_activeProvider = _location.Provider;
-      p_logger.Info($"Using provider: {p_activeProvider}");
-      System.Diagnostics.Debug.WriteLine($"Using provider: {p_activeProvider}");
-    }
-
-    var previous = Interlocked.Exchange(ref p_lastLocation, _location);
-    previous?.Dispose();
-
-    var location = new Microsoft.Maui.Devices.Sensors.Location(_location.Latitude, _location.Longitude, _location.Altitude)
-    {
-      Accuracy = _location.HasAccuracy ? _location.Accuracy : null,
-      Course = _location.HasBearing ? _location.Bearing : null,
-      Speed = _location.HasSpeed ? _location.Speed : null,
-      Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time),
-    };
-    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+        Accuracy = _location.Accuracy,
+        Course = _location.HasBearing ? _location.Bearing : null,
+        Speed = _location.HasSpeed ? _location.Speed : null,
+        Timestamp = timeStamp,
+      };
+      if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
 #pragma warning disable CA1416 // Validate platform compatibility
-      location.VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null;
+        location.VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null;
 #pragma warning restore CA1416 // Validate platform compatibility
 
-    p_locationFlow.OnNext(location);
-    p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, DateTimeOffset.FromUnixTimeMilliseconds(_location.Time)));
+      p_locationFlow.OnNext(location);
+      p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, timeStamp));
+    }
+    finally
+    {
+      _location.Dispose();
+    }
   }
 
   public void OnStatusChanged(string? _provider, [GeneratedEnum] Availability _status, Bundle? _extras)

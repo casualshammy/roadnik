@@ -14,13 +14,9 @@ using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
-
-public record LocationReporterSessionStats(int Total, int Successful)
-{
-  public static LocationReporterSessionStats Empty { get; } = new LocationReporterSessionStats(0, 0);
-}
 
 [ExportClass(typeof(ILocationReporter), Singleton: true, ActivateOnStart: true)]
 internal class LocationReporterImpl : ILocationReporter
@@ -45,14 +41,16 @@ internal class LocationReporterImpl : ILocationReporter
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
       {
-        ServerAddress = _storage.GetValueOrDefault<string>(_storage.SERVER_ADDRESS),
-        ServerKey = _storage.GetValueOrDefault<string>(_storage.SERVER_KEY),
-        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(_storage.TIME_INTERVAL)),
-        DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
-        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION),
-        UserMsg = _storage.GetValueOrDefault<string>(_storage.USER_MSG),
-        MinAccuracy = _storage.GetValueOrDefault<int>(_storage.MIN_ACCURACY)
-      });
+        ServerAddress = _storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS),
+        ServerKey = _storage.GetValueOrDefault<string>(PREF_SERVER_KEY),
+        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
+        DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
+        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
+        UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
+        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY)
+      })
+      .Replay(1)
+      .RefCount();
 
     var batteryStatsFlow = Observable
       .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
@@ -78,6 +76,24 @@ internal class LocationReporterImpl : ILocationReporter
       .Where(_ => _.Ok)
       .ToUnit();
 
+    var locationFlow = _locationProvider.Location
+      .CombineLatest(prefsFlow)
+      .Where(_ =>
+      {
+        var (location, prefs) = _;
+        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
+      })
+      .Select(_ => _.First);
+
+    var filteredLocationFlow = _locationProvider.FilteredLocation
+      .CombineLatest(prefsFlow)
+      .Where(_ =>
+      {
+        var (location, prefs) = _;
+        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
+      })
+      .Select(_ => _.First);
+
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
     _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
@@ -86,7 +102,7 @@ internal class LocationReporterImpl : ILocationReporter
       .Interval(TimeSpan.FromSeconds(1.01), scheduler)
       .ToUnit()
       .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, _locationProvider.Location, _locationProvider.FilteredLocation)
+      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, locationFlow, filteredLocationFlow)
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
@@ -130,7 +146,7 @@ internal class LocationReporterImpl : ILocationReporter
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, location, batteryStat, signalStrength);
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
           var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
           resFiltered.EnsureSuccessStatusCode();
 

@@ -3,7 +3,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
 using Roadnik.Common.Toolkit;
-using Roadnik.Data;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
@@ -13,12 +13,12 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Pages;
 
 public partial class MainPage : CContentPage
 {
-  private const string PREF_WEB_APP_STATE = "web-app-state";
   private readonly IPreferencesStorage p_storage;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
@@ -149,8 +149,8 @@ public partial class MainPage : CContentPage
 
   private string? GetFullServerUrl()
   {
-    var serverAddress = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
-    var serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var serverKey = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
     if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
       return null;
 
@@ -259,12 +259,12 @@ public partial class MainPage : CContentPage
       "Message:",
       "Some special characters are not allowed",
       maxLength: ReqResUtil.MaxUserMsgLength,
-      initialValue: p_storage.GetValueOrDefault<string>(p_storage.USER_MSG));
+      initialValue: p_storage.GetValueOrDefault<string>(PREF_USER_MSG));
 
     if (msg == null)
       return;
 
-    p_storage.SetValue(p_storage.USER_MSG, ReqResUtil.ClearUserMsg(msg));
+    p_storage.SetValue(PREF_USER_MSG, ReqResUtil.ClearUserMsg(msg));
   }
 
 }

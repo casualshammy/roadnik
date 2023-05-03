@@ -1,5 +1,6 @@
 ﻿using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.ViewModels;
 
@@ -16,12 +17,12 @@ internal class OptionsPageViewModel : BaseViewModel
   public OptionsPageViewModel()
   {
     p_storage = Container.Locate<IPreferencesStorage>();
-    p_serverName = p_storage.GetValueOrDefault<string>(p_storage.SERVER_ADDRESS);
-    p_serverKey = p_storage.GetValueOrDefault<string>(p_storage.SERVER_KEY);
-    p_minimumTime = p_storage.GetValueOrDefault<int>(p_storage.TIME_INTERVAL);
-    p_minimumDistance = p_storage.GetValueOrDefault<int>(p_storage.DISTANCE_INTERVAL);
-    p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(p_storage.TRACKPOINT_REPORTING_CONDITION);
-    p_minAccuracy = p_storage.GetValueOrDefault<int>(p_storage.MIN_ACCURACY);
+    p_serverName = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    p_serverKey = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
+    p_minimumTime = p_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL);
+    p_minimumDistance = p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL);
+    p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION);
+    p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
   }
 
   public string Title { get; } = "Options";
@@ -32,7 +33,7 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       SetProperty(ref p_serverName, value);
       if (p_serverName != null)
-        p_storage.SetValue(p_storage.SERVER_ADDRESS, p_serverName);
+        p_storage.SetValue(PREF_SERVER_ADDRESS, p_serverName);
     }
   }
   public string? ServerKey
@@ -42,7 +43,7 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       SetProperty(ref p_serverKey, value);
       if (p_serverKey != null)
-        p_storage.SetValue(p_storage.SERVER_KEY, p_serverKey);
+        p_storage.SetValue(PREF_SERVER_KEY, p_serverKey);
     }
   }
   public int MinimumTime
@@ -51,7 +52,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minimumTime, value);
-      p_storage.SetValue(p_storage.TIME_INTERVAL, p_minimumTime);
+      p_storage.SetValue(PREF_TIME_INTERVAL, p_minimumTime);
     }
   }
   public int MinimumDistance
@@ -60,7 +61,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minimumDistance, value);
-      p_storage.SetValue(p_storage.DISTANCE_INTERVAL, p_minimumDistance);
+      p_storage.SetValue(PREF_DISTANCE_INTERVAL, p_minimumDistance);
     }
   }
   public string TrackpointReportingConditionText
@@ -78,7 +79,7 @@ internal class OptionsPageViewModel : BaseViewModel
         return;
 
       SetProperty(ref p_trackpointReportingCondition, condition);
-      p_storage.SetValue(p_storage.TRACKPOINT_REPORTING_CONDITION, p_trackpointReportingCondition);
+      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, p_trackpointReportingCondition);
     }
   }
   public int MinAccuracy
@@ -87,7 +88,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minAccuracy, value);
-      p_storage.SetValue(p_storage.MIN_ACCURACY, p_minAccuracy);
+      p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy);
     }
   }
 

@@ -14,13 +14,9 @@ using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
-
-public record LocationReporterSessionStats(int Total, int Successful)
-{
-  public static LocationReporterSessionStats Empty { get; } = new LocationReporterSessionStats(0, 0);
-}
 
 [ExportClass(typeof(ILocationReporter), Singleton: true, ActivateOnStart: true)]
 internal class LocationReporterImpl : ILocationReporter
@@ -45,13 +41,13 @@ internal class LocationReporterImpl : ILocationReporter
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
       {
-        ServerAddress = _storage.GetValueOrDefault<string>(_storage.SERVER_ADDRESS),
-        ServerKey = _storage.GetValueOrDefault<string>(_storage.SERVER_KEY),
-        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(_storage.TIME_INTERVAL)),
-        DistanceInterval = _storage.GetValueOrDefault<int>(_storage.DISTANCE_INTERVAL),
-        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(_storage.TRACKPOINT_REPORTING_CONDITION),
-        UserMsg = _storage.GetValueOrDefault<string>(_storage.USER_MSG),
-        MinAccuracy = _storage.GetValueOrDefault<int>(_storage.MIN_ACCURACY)
+        ServerAddress = _storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS),
+        ServerKey = _storage.GetValueOrDefault<string>(PREF_SERVER_KEY),
+        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
+        DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
+        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
+        UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
+        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY)
       })
       .Replay(1)
       .RefCount();

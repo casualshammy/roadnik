@@ -2,6 +2,7 @@
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI;
 
@@ -18,16 +19,16 @@ public partial class App : CMauiApplication
   private void SetupDefaultPreferences()
   {
     var storage = Container.Locate<IPreferencesStorage>();
-    if (storage.GetValueOrDefault<bool>(storage.INITIALIZED) != true)
+    if (storage.GetValueOrDefault<bool>(PREF_INITIALIZED) != true)
     {
-      storage.SetValue(storage.INITIALIZED, true);
-      storage.SetValue(storage.SERVER_ADDRESS, "https://roadnik.axio.name");
-      storage.SetValue(storage.SERVER_KEY, Utilities.GetRandomString(10, false));
-      storage.SetValue(storage.TIME_INTERVAL, 15);
-      storage.SetValue(storage.DISTANCE_INTERVAL, 100);
-      storage.SetValue(storage.TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
-      storage.SetValue(storage.USER_MSG, "");
-      storage.SetValue(storage.MIN_ACCURACY, 30);
+      storage.SetValue(PREF_INITIALIZED, true);
+      storage.SetValue(PREF_SERVER_ADDRESS, "https://roadnik.axio.name");
+      storage.SetValue(PREF_SERVER_KEY, Utilities.GetRandomString(10, false));
+      storage.SetValue(PREF_TIME_INTERVAL, 15);
+      storage.SetValue(PREF_DISTANCE_INTERVAL, 100);
+      storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+      storage.SetValue(PREF_USER_MSG, "");
+      storage.SetValue(PREF_MIN_ACCURACY, 30);
     }
   }
 

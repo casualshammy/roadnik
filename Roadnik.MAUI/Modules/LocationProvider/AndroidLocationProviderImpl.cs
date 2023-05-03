@@ -22,8 +22,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly ILogger p_logger;
   private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
   private readonly KalmanLocationFilter p_kalmanFilter;
-  private string? p_activeProvider;
-  private Android.Locations.Location? p_lastLocation;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
   private volatile bool p_enabled;

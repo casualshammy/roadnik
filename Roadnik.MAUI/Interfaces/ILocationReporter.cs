@@ -1,4 +1,4 @@
-﻿using Roadnik.MAUI.Modules.LocationReporter;
+﻿using Roadnik.MAUI.Data;
 
 namespace Roadnik.MAUI.Interfaces;
 

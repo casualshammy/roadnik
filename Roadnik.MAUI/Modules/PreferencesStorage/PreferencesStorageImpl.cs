@@ -50,13 +50,4 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     p_prefChangedFlow.OnNext();
   }
 
-  public string INITIALIZED { get; } = "settings.initialized";
-  public string SERVER_ADDRESS { get; } = "settings.network.server-address";
-  public string SERVER_KEY { get; } = "settings.network.server-key";
-  public string TIME_INTERVAL { get; } = "settings.report.time-interval";
-  public string DISTANCE_INTERVAL { get; } = "settings.report.distance-interval";
-  public string TRACKPOINT_REPORTING_CONDITION { get; } = "settings.report.trackpoint-reporting-condition";
-  public string USER_MSG { get; } = "settings.report.user-msg";
-  public string MIN_ACCURACY { get; } = "settings.report.min-accuracy";
-
 }

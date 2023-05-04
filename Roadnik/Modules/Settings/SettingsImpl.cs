@@ -16,7 +16,9 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(AdminApiKey))] string? _adminApiKey,
     [JsonProperty(nameof(AllowAnonymousPublish))] bool? _allowAnonymousPublish,
     [JsonProperty(nameof(AnonymousMaxPoints))] int? _anonymousMaxPoints,
-    [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints)
+    [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints,
+    [JsonProperty(nameof(AnonymousMinInterval))] TimeSpan? _anonymousMinInterval,
+    [JsonProperty(nameof(RegisteredMinInterval))] TimeSpan? _registeredMinInterval)
   {
     WebrootDirPath = _webrootDirPath ?? "www";
     LogDirPath = _logDirPath ?? "logs";
@@ -29,6 +31,8 @@ internal class SettingsImpl : ISettings
     AllowAnonymousPublish = _allowAnonymousPublish ?? true;
     AnonymousMaxPoints = _anonymousMaxPoints ?? 100;
     RegisteredMaxPoints = _registeredMaxPoints ?? 1000;
+    AnonymousMinInterval = _anonymousMinInterval ?? TimeSpan.FromSeconds(9.9);
+    RegisteredMinInterval = _registeredMinInterval ?? TimeSpan.FromSeconds(0.9);
   }
 
   public string WebrootDirPath { get; }
@@ -42,5 +46,7 @@ internal class SettingsImpl : ISettings
   public bool AllowAnonymousPublish { get; }
   public int AnonymousMaxPoints { get; }
   public int RegisteredMaxPoints { get; }
+  public TimeSpan AnonymousMinInterval { get; }
+  public TimeSpan RegisteredMinInterval { get; }
 
 }

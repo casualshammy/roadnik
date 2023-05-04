@@ -13,4 +13,6 @@ public interface ISettings
   bool AllowAnonymousPublish { get; }
   int AnonymousMaxPoints { get; }
   int RegisteredMaxPoints { get; }
+  TimeSpan AnonymousMinInterval { get; }
+  TimeSpan RegisteredMinInterval { get; }
 }

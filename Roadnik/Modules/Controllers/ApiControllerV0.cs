@@ -161,7 +161,7 @@ public class ApiControllerV0 : JsonNetController
     if (!p_settings.AllowAnonymousPublish && user == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var timeLimit = user != null ? TimeSpan.FromSeconds(0.9) : TimeSpan.FromSeconds(9);
+    var timeLimit = user != null ? p_settings.RegisteredMinInterval : p_settings.AnonymousMinInterval;
     var now = DateTimeOffset.UtcNow;
     if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
@@ -293,7 +293,5 @@ public class ApiControllerV0 : JsonNetController
     var users = await p_usersController.ListUsersAsync(_ct);
     return Json(users, true);
   }
-
-
 
 }

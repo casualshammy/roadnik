@@ -238,50 +238,6 @@ internal class LocationReporterImpl : ILocationReporter
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
   }
 
-  public async Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
-  {
-    try
-    {
-      var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
-      var location = await Geolocation.GetLocationAsync(request, _ct);
-      return location;
-    }
-    catch (FeatureNotSupportedException)
-    {
-      return null;
-    }
-    catch (FeatureNotEnabledException)
-    {
-      return null;
-    }
-    catch (PermissionException)
-    {
-      return null;
-    }
-  }
-
-  public async Task<Location?> GetCurrentAnyLocationAsync(TimeSpan _timeout, CancellationToken _ct)
-  {
-    try
-    {
-      var request = new GeolocationRequest(GeolocationAccuracy.Medium, _timeout);
-      var location = await Geolocation.GetLocationAsync(request, _ct);
-      return location;
-    }
-    catch (FeatureNotSupportedException)
-    {
-      return null;
-    }
-    catch (FeatureNotEnabledException)
-    {
-      return null;
-    }
-    catch (PermissionException)
-    {
-      return null;
-    }
-  }
-
   private static double? GetSignalStrength()
   {
 #if ANDROID

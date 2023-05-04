@@ -139,6 +139,28 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = p_activeProviders.Add(_provider);
   }
 
+  public async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  {
+    try
+    {
+      var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
+      var location = await Geolocation.GetLocationAsync(request, _ct);
+      return location;
+    }
+    catch (FeatureNotSupportedException)
+    {
+      return null;
+    }
+    catch (FeatureNotEnabledException)
+    {
+      return null;
+    }
+    catch (PermissionException)
+    {
+      return null;
+    }
+  }
+
   private string GetBestProviderByAccuracy(string _provider1, string _provider2)
   {
     // const int ACCURACY_FINE = 1;

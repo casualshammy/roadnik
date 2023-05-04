@@ -8,4 +8,5 @@ public interface ILocationProvider
   void ChangeConstrains(TimeSpan _minTime, float _minDistanceMeters);
   void Disable();
   void Enable();
+  Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
 }

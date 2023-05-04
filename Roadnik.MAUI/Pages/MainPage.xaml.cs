@@ -217,13 +217,30 @@ public partial class MainPage : CContentPage
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
   {
-    var locationReporter = Container.Locate<ILocationReporter>();
-    var location = await locationReporter.GetCurrentAnyLocationAsync(TimeSpan.FromSeconds(3), default);
-    if (location != null)
+    if (!await IsLocationPermissionOkAsync())
+      return;
+    if (_sender is not Button button)
+      return;
+
+    button.IsEnabled = false;
+    using var animation = new Animation(_d => button.RotateTo(_d), 0, 360);
+    animation.Commit(button, "my-loc-anim", 16, 2000, null, null, () => true);
+    try
     {
-      var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
-      var lng = location.Longitude.ToString(CultureInfo.InvariantCulture);
-      await p_webView.EvaluateJavaScriptAsync($"setLocation({lat},{lng})");
+      var locationProvider = Container.Locate<ILocationProvider>();
+      var location = await locationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), default);
+      if (location != null)
+      {
+        var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
+        var lng = location.Longitude.ToString(CultureInfo.InvariantCulture);
+        await p_webView.EvaluateJavaScriptAsync($"setLocation({lat},{lng})");
+      }
+    }
+    finally
+    {
+      button.IsEnabled = true;
+      button.CancelAnimations();
+      await button.RotateTo(0);
     }
   }
 

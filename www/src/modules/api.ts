@@ -3,7 +3,9 @@ import {WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";
 export const WS_MSG_TYPE_DATA_UPDATED: string = "ws-msg-data-updated";
 
-export interface StorageEntry {
+export interface TimedStorageEntry {
+    UnixTimeMs: number;
+    Key: string;
     Nickname: string;
     Latitude: number;
     Longitude: number;
@@ -19,7 +21,7 @@ export interface StorageEntry {
 export interface GetResData {
     Success: boolean;
     LastUpdateUnixMs: number;
-    Entries: StorageEntry[];
+    Entries: TimedStorageEntry[];
 }
 
 export interface WsBaseMsg {

@@ -7,6 +7,43 @@ import { groupBy } from "./modules/toolkit";
 
 const p_storageApi = new Api.StorageApi();
 
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+const key = urlParams.get('key');
+
+const p_lastAlts = new Map<string, number>();
+const p_markers = new Map<string, L.Marker>();
+const p_circles = new Map<string, L.Circle>();
+const p_paths = new Map<string, L.Polyline>();
+
+let p_firstCentered = false;
+let p_autoTrack = false;
+let p_lastOffset = 0;
+let p_currentLayer: string | undefined = undefined;
+
+const p_mapsData = Maps.GetMapLayers();
+const p_overlays = Maps.GetMapOverlayLayers();
+
+const p_map = new L.Map('map', {
+    center: new L.LatLng(51.4768, 0.0006),
+    zoom: 14,
+    layers: [p_mapsData.array[0].tileLayer]
+});
+p_map.on('baselayerchange', function (_e) {
+    p_currentLayer = _e.name;
+    sendDataToHost(JSON.stringify(getState()));
+});
+p_currentLayer = p_mapsData.array[0].name;
+
+const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
+p_map.addControl(p_layersControl);
+
+const p_autoTrackCheckbox = Maps.GetCheckBox("Auto track", 'topleft', _checked => {
+    p_autoTrack = _checked;
+    sendDataToHost(JSON.stringify(getState()));
+});
+p_autoTrackCheckbox.addTo(p_map);
+
 async function refreshPositionFullAsync(_key: string, _offset: number | undefined = undefined) {
     const data = await p_storageApi.getDataAsync(_key, undefined, _offset);
     if (data === null || !data.Success)
@@ -20,158 +57,130 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     // init users controls
     let colorIndex = 0;
     for (let user of users) {
-        const color = Maps.Colors[colorIndex % Maps.Colors.length];
-        const colorFile = `img/map_icon_${colorIndex}.png`;
-
-        if (p_lastAlts.get(user) === undefined)
-            p_lastAlts.set(user, 0);
-        if (p_markers.get(user) === undefined) {
-            var icon = L.icon({
-                iconUrl: colorFile,
-                iconSize: [40, 40],
-                iconAnchor: [20, 40],
-                popupAnchor: [0, -40]
-            });
-            p_markers.set(user, L.marker([51.4768, 0.0006], { title: user, icon: icon})
-                .addTo(map)
-                .bindPopup("<b>Unknown track!</b>")
-                .openPopup());
-        }
-        if (p_circles.get(user) === undefined)
-            p_circles.set(user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })
-                .addTo(map));
-        if (p_paths.get(user) === undefined)
-            p_paths.set(user, L.polyline([], { color: color, smoothFactor: 1, weight: 5 })
-                .addTo(map));
-
+        initControlsForUser(user, colorIndex);
         colorIndex++;
     }
 
+    // hide auto trace checkbox?
     if (p_paths.size > 1) {
-        p_autoPan = false;
-        autoPanCheckbox.remove();
+        p_autoTrack = false;
+        p_autoTrackCheckbox.remove();
     }
 
     // update users controls
     for (let user of users) {
         const userData = usersMap[user];
-        const lastEntry = userData[userData.length - 1];
-        if (lastEntry === undefined)
-            continue;
-
-        const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
-
-        const circle = p_circles.get(user);
-        if (circle !== undefined) {
-            circle.setLatLng(lastLocation);
-            circle.setRadius(lastEntry.Accuracy ?? 100);
-            circle.bringToFront();
-        }
-
-        if (!p_firstCentered) {
-            map.setView(lastLocation, 15);
-            p_firstCentered = true;
-        }
-
-        const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - data.LastUpdateUnixMs);
-        let elapsedString = "now";
-        if (Math.abs(elapsedSinceLastUpdate.totalSeconds) > 5)
-            elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
-
-        const kmh = (lastEntry.Speed ?? 0) * 3.6;
-
-        let altChangeMark = "\u2192";
-        const lastAlt = p_lastAlts.get(user);
-        if (lastAlt !== undefined) {
-            if (lastEntry.Altitude > lastAlt)
-                altChangeMark = "\u2191";
-            else if (lastEntry.Altitude < lastAlt)
-                altChangeMark = "\u2193";
-        }
-        p_lastAlts.set(user, lastEntry.Altitude);
-
-        const popUpText =
-            `<b>${user}</b>: ${lastEntry.Message ?? "Hi!"}
-            </br>
-            <p>
-            Speed: ${kmh.toFixed(2)} km/h
-            </br>
-            Altitude ( ${altChangeMark} ): ${lastEntry.Altitude} m
-            </br>
-            Heading: ${lastEntry.Bearing} degrees
-            </p>
-            <p>
-            Battery: ${lastEntry.Battery}%
-            </br>
-            GSM power: ${lastEntry.GsmSignal}%
-            <br/>
-            Updated ${elapsedString}
-            </p>`;
-
-        const marker = p_markers.get(user);
-        if (marker !== undefined) {
-            marker.setLatLng(lastLocation);
-            marker.setPopupContent(popUpText);
-        }
-
-        if (p_autoPan === true)
-            map.flyTo(lastLocation);
-
-        const path = p_paths.get(user);
-        if (path !== undefined) {
-            const points = userData.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-            if (_offset === undefined)
-                path.setLatLngs(points);
-            else
-                for (let point of points)
-                    path.addLatLng(point);
-        }
+        updateControlsForUser(user, userData, _offset === undefined);
     }
 }
 
-const queryString = window.location.search;
-const urlParams = new URLSearchParams(queryString);
-const key = urlParams.get('key');
+function initControlsForUser(_user: string, _colorIndex: number): void {
+    const color = Maps.Colors[_colorIndex % Maps.Colors.length];
+    const colorFile = `img/map_icon_${_colorIndex}.png`;
 
-let p_lastAlts = new Map<string, number>();
-let p_markers = new Map<string, L.Marker>();
-let p_circles = new Map<string, L.Circle>();
-let p_paths = new Map<string, L.Polyline>();
+    if (p_lastAlts.get(_user) === undefined)
+        p_lastAlts.set(_user, 0);
+    if (p_markers.get(_user) === undefined) {
+        var icon = L.icon({
+            iconUrl: colorFile,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
+        p_markers.set(_user, L.marker([51.4768, 0.0006], { title: _user, icon: icon})
+            .addTo(p_map)
+            .bindPopup("<b>Unknown track!</b>")
+            .openPopup());
+    }
+    if (p_circles.get(_user) === undefined)
+        p_circles.set(_user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })
+            .addTo(p_map));
+    if (p_paths.get(_user) === undefined)
+        p_paths.set(_user, L.polyline([], { color: color, smoothFactor: 1, weight: 5 })
+            .addTo(p_map));
+}
 
-let p_firstCentered = false;
-let p_autoPan = false;
-let p_lastOffset = 0;
-let p_currentLayer: string | undefined = undefined;
+function updateControlsForUser(
+    _user: string, 
+    _entries: Api.TimedStorageEntry[], 
+    _firstUpdate: boolean): void
+{
+    const lastEntry = _entries[_entries.length - 1];
+    if (lastEntry === undefined)
+        return;
 
-const mapsData = Maps.GetMapLayers();
-const overlays = Maps.GetMapOverlayLayers();
+    const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
 
-const map = new L.Map('map', {
-    center: new L.LatLng(51.4768, 0.0006),
-    zoom: 14,
-    layers: [mapsData.array[0].tileLayer]
-});
-map.on('baselayerchange', function (_e) {
-    p_currentLayer = _e.name;
-    sendDataToHost(JSON.stringify(getState()));
-});
-p_currentLayer = mapsData.array[0].name;
+    const circle = p_circles.get(_user);
+    if (circle !== undefined) {
+        circle.setLatLng(lastLocation);
+        circle.setRadius(lastEntry.Accuracy ?? 100);
+        circle.bringToFront();
+    }
 
-const layersControl = new L.Control.Layers(mapsData.obj, overlays);
-map.addControl(layersControl);
+    if (!p_firstCentered) {
+        p_map.setView(lastLocation, 15);
+        p_firstCentered = true;
+    }
 
-const autoPanCheckbox = Maps.GetCheckBox("Auto track", 'topleft', _checked => {
-    p_autoPan = _checked;
-    sendDataToHost(JSON.stringify(getState()));
-});
-autoPanCheckbox.addTo(map);
+    const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - lastEntry.UnixTimeMs);
+    let elapsedString = "now";
+    if (Math.abs(elapsedSinceLastUpdate.totalSeconds) > 5)
+        elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
+
+    const kmh = (lastEntry.Speed ?? 0) * 3.6;
+
+    let altChangeMark = "\u2192";
+    const lastAlt = p_lastAlts.get(_user);
+    if (lastAlt !== undefined) {
+        if (lastEntry.Altitude > lastAlt)
+            altChangeMark = "\u2191";
+        else if (lastEntry.Altitude < lastAlt)
+            altChangeMark = "\u2193";
+    }
+    p_lastAlts.set(_user, lastEntry.Altitude);
+
+    const popUpText =
+        `<b>${_user}</b>: ${lastEntry.Message ?? "Hi!"}
+        </br>
+        <p>
+        Speed: ${kmh.toFixed(2)} km/h
+        </br>
+        Altitude ( ${altChangeMark} ): ${lastEntry.Altitude} m
+        </br>
+        Heading: ${lastEntry.Bearing} degrees
+        </p>
+        <p>
+        Battery: ${lastEntry.Battery}%
+        </br>
+        GSM power: ${lastEntry.GsmSignal}%
+        <br/>
+        Updated ${elapsedString}
+        </p>`;
+
+    const marker = p_markers.get(_user);
+    if (marker !== undefined) {
+        marker.setLatLng(lastLocation);
+        marker.setPopupContent(popUpText);
+    }
+
+    if (p_autoTrack === true)
+        p_map.flyTo(lastLocation);
+
+    const path = p_paths.get(_user);
+    if (path !== undefined) {
+        const points = _entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
+        if (_firstUpdate === true)
+            path.setLatLngs(points);
+        else
+            for (let point of points)
+                path.addLatLng(point);
+    }
+}
 
 if (key !== null) {
     const ws = p_storageApi.setupWs(key, (_ws, _data) => {
-        if (_data.Type === Api.WS_MSG_TYPE_HELLO)
-            refreshPositionFullAsync(key);
-
-        if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
+        if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
             refreshPositionFullAsync(key, p_lastOffset);
     });
 }
@@ -186,30 +195,30 @@ function sendDataToHost(_data: string): void {
 
 // exports for C#
 function setLocation(_x: number, _y: number): void {
-    map.flyTo([_x, _y]);
+    p_map.flyTo([_x, _y]);
 }
 (window as any).setLocation = setLocation;
 
 function getState(): WebAppState {
     return {
-        location: map.getCenter(),
-        zoom: map.getZoom(),
+        location: p_map.getCenter(),
+        zoom: p_map.getZoom(),
         mapLayer: p_currentLayer,
-        autoPan: p_autoPan
+        autoPan: p_autoTrack
     };
 }
 (window as any).getState = getState;
 
 function setState(_state: WebAppState): boolean {
-    p_autoPan = _state.autoPan;
-    autoPanCheckbox.setChecked(p_autoPan);
+    p_autoTrack = _state.autoPan;
+    p_autoTrackCheckbox.setChecked(p_autoTrack);
 
-    map.flyTo(_state.location, _state.zoom);
+    p_map.flyTo(_state.location, _state.zoom);
 
     if (_state.mapLayer !== undefined) {
-        var layer = mapsData.array.find((_v, _i, _o) => _v.name == _state.mapLayer);
+        var layer = p_mapsData.array.find((_v, _i, _o) => _v.name == _state.mapLayer);
         if (layer !== undefined)
-            layer.tileLayer.addTo(map);
+            layer.tileLayer.addTo(p_map);
     }
 
     return true;

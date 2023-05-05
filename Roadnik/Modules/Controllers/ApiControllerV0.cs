@@ -218,12 +218,14 @@ public class ApiControllerV0 : JsonNetController
     GetResData result;
     if (!documents.Any())
     {
-      result = new GetResData(false, 0, Array.Empty<StorageEntry>());
+      result = new GetResData(false, 0, Array.Empty<TimedStorageEntry>());
     }
     else
     {
       var lastEntryTime = documents[0].Created.ToUnixTimeMilliseconds();
-      var entries = Enumerable.Reverse(documents).Select(_ => _.Data);
+      var entries = Enumerable
+        .Reverse(documents)
+        .Select(TimedStorageEntry.FromStorageEntry);
 
       result = new GetResData(true, lastEntryTime, entries);
     }

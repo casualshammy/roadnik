@@ -5,6 +5,7 @@ namespace Roadnik.Data;
 [SimpleDocument("geo-data")]
 internal record StorageEntry(
   string Key,
+  string Nickname,
   float Latitude,
   float Longitude,
   float Altitude,

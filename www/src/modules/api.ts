@@ -4,6 +4,7 @@ export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";
 export const WS_MSG_TYPE_DATA_UPDATED: string = "ws-msg-data-updated";
 
 export interface StorageEntry {
+    Nickname: string;
     Latitude: number;
     Longitude: number;
     Altitude: number;
@@ -17,8 +18,7 @@ export interface StorageEntry {
 
 export interface GetResData {
     Success: boolean;
-    LastUpdateUnixMs?: number | undefined | null;
-    LastEntry?: StorageEntry | undefined | null; 
+    LastUpdateUnixMs: number;
     Entries: StorageEntry[];
 }
 

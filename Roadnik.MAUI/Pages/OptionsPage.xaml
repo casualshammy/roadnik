@@ -11,7 +11,7 @@
 
     <TableView Intent="Settings">
         <TableRoot>
-            <TableSection Title="Server settings"
+            <TableSection Title="Connection settings"
                           TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
                 <TextCell
                     Text="Server address"
@@ -19,10 +19,15 @@
                     Tapped="ServerAddress_Tapped"
                     Detail="{Binding ServerName}"/>
                 <TextCell
-                    Text="Server key"
+                    Text="Room ID"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
                     Tapped="ServerKey_Tapped"
-                    Detail="{Binding ServerKey}"/>
+                    Detail="{Binding RoomId}"/>
+                <TextCell
+                    Text="Nickname"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="Nickname_Tapped"
+                    Detail="{Binding Nickname}"/>
             </TableSection>
             <TableSection Title="Reporting settings"
                           TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">

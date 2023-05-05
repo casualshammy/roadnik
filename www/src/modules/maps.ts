@@ -3,6 +3,21 @@ import * as L from "leaflet"
 
 let customCtrlsCounter = 0;
 
+export const Colors: string[] = [
+	"maroon",
+	"red",
+	"purple",
+	"fuchsia",
+	"green",
+	"lime",
+	"olive",
+	"yellow",
+	"navy",
+	"blue",
+	"teal",
+	"aqua",
+];
+
 export interface MapLayerWithName {
 	name: string;
 	tileLayer: L.TileLayer;
@@ -56,7 +71,7 @@ export class LCheckBox implements L.Control {
 
 	setChecked(_value: boolean): void {
 		const element = document.getElementById(this.p_elementId) as HTMLInputElement;
-		if (element.checked !== _value)
+		if (element !== undefined && element !== null && element.checked !== _value)
 			element.click();
 	}
 }
@@ -130,7 +145,11 @@ export function GetCheckBox(_text: string, _position: string, _handler: (_checke
 				</form>
 				</div>`;
 			setTimeout(() => {
-				document.getElementById(id)!.addEventListener("change", _ev => {
+				const element = document.getElementById(id);
+				if (element === null)
+					return;
+
+				element.addEventListener("change", _ev => {
 					const element = document.getElementById(id) as HTMLInputElement;
 					if (element !== null)
 						_handler(element.checked);

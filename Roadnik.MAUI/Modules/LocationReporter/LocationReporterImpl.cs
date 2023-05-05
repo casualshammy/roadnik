@@ -47,7 +47,8 @@ internal class LocationReporterImpl : ILocationReporter
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
-        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY)
+        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
+        Nickname = _storage.GetValueOrDefault<string>(PREF_NICKNAME)
       })
       .Replay(1)
       .RefCount();
@@ -142,11 +143,11 @@ internal class LocationReporterImpl : ILocationReporter
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.UserMsg, location, batteryStat, signalStrength);
+          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.Nickname, prefs.UserMsg, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.Nickname, prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
           var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
           resFiltered.EnsureSuccessStatusCode();
 
@@ -275,6 +276,7 @@ internal class LocationReporterImpl : ILocationReporter
   private static string GetUrl(
     string _serverAddress,
     string _serverKey,
+    string? _nickname,
     string? _userMsg,
     Location _location,
     BatteryInfoChangedEventArgs _batteryInfo,
@@ -285,6 +287,8 @@ internal class LocationReporterImpl : ILocationReporter
     sb.Append(_serverAddress.TrimEnd('/'));
     sb.Append("/store?key=");
     sb.Append(_serverKey);
+    sb.Append("&nickname=");
+    sb.Append(_nickname ?? _serverKey);
     sb.Append("&lat=");
     sb.Append(_location.Latitude.ToString(culture));
     sb.Append("&lon=");

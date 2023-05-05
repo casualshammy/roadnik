@@ -33,16 +33,31 @@ public partial class OptionsPage : ContentPage
   private async void ServerKey_Tapped(object _sender, EventArgs _e)
   {
     var serverKey = await DisplayPromptAsync(
-      "Server key",
+      "Room ID",
       $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
       "Save",
-      initialValue: p_bindingCtx.ServerKey,
+      initialValue: p_bindingCtx.RoomId,
       maxLength: ReqResUtil.MaxKeyKength);
 
     if (serverKey == null)
       return;
 
-    p_bindingCtx.ServerKey = serverKey;
+    p_bindingCtx.RoomId = serverKey;
+  }
+
+  private async void Nickname_Tapped(object _sender, EventArgs _e)
+  {
+    var nicknameRaw = await DisplayPromptAsync(
+      "Nickname:",
+      $"Empty nickname is not allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
+      "Save",
+      initialValue: p_bindingCtx.Nickname,
+      maxLength: ReqResUtil.MaxKeyKength);
+
+    if (nicknameRaw == null)
+      return;
+
+    p_bindingCtx.Nickname = nicknameRaw;
   }
 
   private async void MinimumInterval_Tapped(object _sender, EventArgs _e)
@@ -108,4 +123,5 @@ public partial class OptionsPage : ContentPage
     p_bindingCtx.MinAccuracy = minAccuracy;
   }
 
+  
 }

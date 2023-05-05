@@ -1,4 +1,5 @@
-﻿using Roadnik.MAUI.Data;
+﻿using Roadnik.Common.Toolkit;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -8,7 +9,8 @@ internal class OptionsPageViewModel : BaseViewModel
 {
   private readonly IPreferencesStorage p_storage;
   private string? p_serverName;
-  private string? p_serverKey;
+  private string? p_roomId;
+  private string? p_nickname;
   private int p_minimumTime;
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
@@ -18,7 +20,8 @@ internal class OptionsPageViewModel : BaseViewModel
   {
     p_storage = Container.Locate<IPreferencesStorage>();
     p_serverName = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    p_serverKey = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
+    p_roomId = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
+    p_nickname = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
     p_minimumTime = p_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL);
     p_minimumDistance = p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL);
     p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION);
@@ -36,14 +39,37 @@ internal class OptionsPageViewModel : BaseViewModel
         p_storage.SetValue(PREF_SERVER_ADDRESS, p_serverName);
     }
   }
-  public string? ServerKey
+  public string? RoomId
   {
-    get => p_serverKey;
+    get => p_roomId;
     set
     {
-      SetProperty(ref p_serverKey, value);
-      if (p_serverKey != null)
-        p_storage.SetValue(PREF_SERVER_KEY, p_serverKey);
+      if (value == null || !ReqResUtil.IsKeySafe(value))
+        return;
+
+      SetProperty(ref p_roomId, value);
+      if (p_roomId != null)
+        p_storage.SetValue(PREF_SERVER_KEY, p_roomId);
+    }
+  }
+  public string? Nickname
+  {
+    get => p_nickname;
+    set
+    {
+      if (value == null)
+        return;
+
+      var v = value;
+      if (!ReqResUtil.IsUserDefinedStringSafe(v))
+        v = ReqResUtil.ClearUserMsg(v);
+
+      if (!ReqResUtil.IsUserDefinedStringSafe(v))
+        return;
+
+      SetProperty(ref p_nickname, v);
+      if (p_nickname != null && !string.IsNullOrWhiteSpace(p_nickname))
+        p_storage.SetValue(PREF_NICKNAME, p_nickname);
     }
   }
   public int MinimumTime

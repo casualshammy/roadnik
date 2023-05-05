@@ -13,10 +13,10 @@ public static class ReqResUtil
   public static int MinKeyKength { get; } = 4;
 
   public static bool IsKeySafe(string _data) => _data.Length >= MinKeyKength && _data.Length <= MaxKeyKength && p_safeStringRegex.IsMatch(_data);
-  public static bool IsUserMessageSafe(string _data) => _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
+  public static bool IsUserDefinedStringSafe(string _data) => _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
   public static string ClearUserMsg(string _data)
   {
-    if (IsUserMessageSafe(_data))
+    if (IsUserDefinedStringSafe(_data))
       return _data;
 
     var sb = new StringBuilder();

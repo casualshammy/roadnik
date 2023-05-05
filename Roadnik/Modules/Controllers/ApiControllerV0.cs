@@ -131,6 +131,7 @@ public class ApiControllerV0 : JsonNetController
   [HttpGet("/store")]
   public async Task<IActionResult> StoreAsync(
     [FromQuery(Name = "key")] string? _key = null,
+    [FromQuery(Name = "nickname")] string? _nickname = null,
     [FromQuery(Name = "lat")] float? _lat = null,
     [FromQuery(Name = "lon")] float? _lon = null,
     [FromQuery(Name = "alt")] float? _alt = null, // metres
@@ -152,8 +153,10 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Longitude is null!");
     if (_alt == null)
       return BadRequest("Altitude is null!");
-    if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserMessageSafe(_message))
+    if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserDefinedStringSafe(_message))
       return BadRequest("Message is incorrect!");
+    if (!string.IsNullOrWhiteSpace(_nickname) && !ReqResUtil.IsUserDefinedStringSafe(_nickname))
+      return BadRequest("Nickname is incorrect!");
 
     p_logger.Info($"Requested to store geo data, key: '{_key}'");
 
@@ -163,15 +166,16 @@ public class ApiControllerV0 : JsonNetController
 
     var timeLimit = user != null ? p_settings.RegisteredMinInterval : p_settings.AnonymousMinInterval;
     var now = DateTimeOffset.UtcNow;
-    if (p_storeLimiter.TryGetValue(_key, out var lastStoredTime) && now - lastStoredTime < timeLimit)
+    var compositeKey = $"{_key}{_nickname ?? ""}";
+    if (p_storeLimiter.TryGetValue(compositeKey, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
       p_logger.Warn($"Too many requests for storing geo data, key '{_key}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    var record = new StorageEntry(_key, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
+    var record = new StorageEntry(_key, _nickname ?? _key, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
     await p_documentStorage.WriteSimpleDocumentAsync($"{_key}.{now.ToUnixTimeMilliseconds()}", record, _ct);
-    p_storeLimiter[_key] = now;
+    p_storeLimiter[compositeKey] = now;
     await p_webSocketCtrl.SendMsgByKeyAsync(_key, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
@@ -206,8 +210,7 @@ public class ApiControllerV0 : JsonNetController
 
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
-      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}.%"), _ct: _ct)
-      .Where(_ => offset == null || _.Created > offset)
+      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}.%"), _from: offset ?? null, _ct: _ct)
       .OrderByDescending(_ => _.Created)
       .Take(_limit != null ? Math.Min(_limit.Value, 1000) : 1000)
       .ToListAsync(_ct);
@@ -215,24 +218,14 @@ public class ApiControllerV0 : JsonNetController
     GetResData result;
     if (!documents.Any())
     {
-      result = new GetResData(false, null, null, Array.Empty<StorageEntry>());
+      result = new GetResData(false, 0, Array.Empty<StorageEntry>());
     }
     else
     {
-      var list = new List<StorageEntry>(documents.Count);
-      var lastEntryTime = DateTimeOffset.MinValue;
-      StorageEntry? lastEntry = null;
-      foreach (var doc in Enumerable.Reverse(documents))
-      {
-        list.Add(new StorageEntry(_key, doc.Data.Latitude, doc.Data.Longitude, doc.Data.Altitude));
-        if (doc.Created > lastEntryTime)
-        {
-          lastEntryTime = doc.Created;
-          lastEntry = doc.Data;
-        }
-      }
+      var lastEntryTime = documents[0].Created.ToUnixTimeMilliseconds();
+      var entries = Enumerable.Reverse(documents).Select(_ => _.Data);
 
-      result = new GetResData(true, lastEntryTime.ToUnixTimeMilliseconds(), lastEntry!, list);
+      result = new GetResData(true, lastEntryTime, entries);
     }
 
     p_getLimiter[ip] = now;

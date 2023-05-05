@@ -7,7 +7,9 @@ public partial class InteractableWebView
     if (_sender is not WebView { Handler.PlatformView: Android.Webkit.WebView nativeWebView })
       return;
 
-    //nativeWebView.SetWebViewClient(new JavascriptWebViewClient($"{p_javascriptFunction}"));
+    nativeWebView.SetWebChromeClient(new ConsoleWebChromeClient(this));
+
+    //nativeWebView.SetWebViewClient();
     nativeWebView.AddJavascriptInterface(new JsBridge(this), "jsBridge");
   }
 

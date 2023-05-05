@@ -2,6 +2,5 @@
 
 internal record GetResData(
   bool Success,
-  long? LastUpdateUnixMs,
-  StorageEntry? LastEntry,
+  long LastUpdateUnixMs,
   IEnumerable<StorageEntry> Entries);

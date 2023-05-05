@@ -19,6 +19,7 @@ namespace Roadnik.MAUI.Pages;
 
 public partial class MainPage : CContentPage
 {
+  private const string p_loadingPageUrl = "loading.html";
   private readonly IPreferencesStorage p_storage;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
@@ -61,14 +62,14 @@ public partial class MainPage : CContentPage
         bindingCtx.IsInBackground = !pageShown;
         if (!pageShown)
         {
-          p_bindingCtx.WebViewUrl = "loading.html";
+          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           return;
         }
 
         var url = GetFullServerUrl();
         if (url == null)
         {
-          p_bindingCtx.WebViewUrl = "loading.html";
+          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
@@ -86,7 +87,7 @@ public partial class MainPage : CContentPage
         catch (Exception ex)
         {
           Debug.WriteLine(ex);
-          p_bindingCtx.WebViewUrl = "loading.html";
+          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           bindingCtx.IsRemoteServerNotResponding = true;
         }
       }, scheduler)
@@ -198,6 +199,9 @@ public partial class MainPage : CContentPage
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
 
     p_bindingCtx.IsSpinnerRequired = false;
+
+    if (_e.Url.EndsWith(p_loadingPageUrl) || _e.Url == "about:blank")
+      return;
 
     var webAppState = p_storage.GetValueOrDefault<WebAppState>(PREF_WEB_APP_STATE);
     if (webAppState == null)

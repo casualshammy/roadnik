@@ -3,6 +3,7 @@ using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Interfaces;
+using JustLogger.Interfaces;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using System.Reactive.Concurrency;
@@ -18,9 +19,11 @@ internal class UsersControllerImpl : IUsersController
   public UsersControllerImpl(
     IDocumentStorage _storage,
     IReadOnlyLifetime _lifetime,
-    ISettings _settings)
+    ISettings _settings,
+    ILogger _log)
   {
     p_storage = _storage;
+    var log = _log["users-controller"];
 
     _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
@@ -45,6 +48,10 @@ internal class UsersControllerImpl : IUsersController
           foreach (var entry in keyGroup.OrderByDescending(_ => _.Created))
             if (++counter > limit)
               await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+
+          var deleted = counter - limit;
+          if (deleted > 0)
+            log.Warn($"Removed '{deleted}' geo entries of room id '{keyGroup.Key}'");
         }
       }, scheduler)
       .Subscribe(_lifetime);

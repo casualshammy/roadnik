@@ -9,6 +9,7 @@ using CommandLine;
 using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -97,6 +98,7 @@ public class Program
         .CreateDefaultBuilder(_args)
         .ConfigureLogging((_ctx, _logBuilder) => _logBuilder.ClearProviders())
         .UseGraceContainer(_depMgr.ServiceProvider)
+        .ConfigureServices(_ => _.AddResponseCompression(_options => _options.EnableForHttps = true))
         .ConfigureWebHostDefaults(_webBuilder =>
         {
           _webBuilder

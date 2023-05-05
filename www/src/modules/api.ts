@@ -33,7 +33,6 @@ export interface WebAppState {
     location: L.LatLng;
     zoom: number;
     mapLayer?: string | undefined;
-    autoPan: boolean;
 }
 
 export class StorageApi {

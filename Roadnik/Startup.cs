@@ -35,6 +35,7 @@ public class Startup
       {
         KeepAliveInterval = TimeSpan.FromSeconds(300)
       })
+      .UseResponseCompression()
       .UseEndpoints(_endpoints => _endpoints.MapControllers());
   }
 }

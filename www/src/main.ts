@@ -17,9 +17,9 @@ const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
 
 let p_firstCentered = false;
-let p_autoTrack = false;
 let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
+let p_userColorIndex = 0;
 
 const p_mapsData = Maps.GetMapLayers();
 const p_overlays = Maps.GetMapOverlayLayers();
@@ -38,12 +38,6 @@ p_currentLayer = p_mapsData.array[0].name;
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
 p_map.addControl(p_layersControl);
 
-const p_autoTrackCheckbox = Maps.GetCheckBox("Auto track", 'topleft', _checked => {
-    p_autoTrack = _checked;
-    sendDataToHost(JSON.stringify(getState()));
-});
-p_autoTrackCheckbox.addTo(p_map);
-
 async function refreshPositionFullAsync(_key: string, _offset: number | undefined = undefined) {
     const data = await p_storageApi.getDataAsync(_key, undefined, _offset);
     if (data === null || !data.Success)
@@ -55,28 +49,21 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     const users = Object.keys(usersMap);
 
     // init users controls
-    let colorIndex = 0;
-    for (let user of users) {
-        initControlsForUser(user, colorIndex);
-        colorIndex++;
-    }
-
-    // hide auto trace checkbox?
-    if (p_paths.size > 1) {
-        p_autoTrack = false;
-        p_autoTrackCheckbox.remove();
-    }
+    for (let user of users)
+        initControlsForUser(user);
 
     // update users controls
     for (let user of users) {
         const userData = usersMap[user];
         updateControlsForUser(user, userData, _offset === undefined);
     }
+
+    document.title = `Roadnik: ${_key} (${p_paths.size})`;
 }
 
-function initControlsForUser(_user: string, _colorIndex: number): void {
-    const color = Maps.Colors[_colorIndex % Maps.Colors.length];
-    const colorFile = `img/map_icon_${_colorIndex}.png`;
+function initControlsForUser(_user: string): void {
+    const color = Maps.Colors[p_userColorIndex % Maps.Colors.length];
+    const colorFile = `img/map_icon_${p_userColorIndex}.png`;
 
     if (p_lastAlts.get(_user) === undefined)
         p_lastAlts.set(_user, 0);
@@ -87,7 +74,7 @@ function initControlsForUser(_user: string, _colorIndex: number): void {
             iconAnchor: [20, 40],
             popupAnchor: [0, -40]
         });
-        p_markers.set(_user, L.marker([51.4768, 0.0006], { title: _user, icon: icon})
+        p_markers.set(_user, L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
             .bindPopup("<b>Unknown track!</b>")
             .openPopup());
@@ -98,13 +85,14 @@ function initControlsForUser(_user: string, _colorIndex: number): void {
     if (p_paths.get(_user) === undefined)
         p_paths.set(_user, L.polyline([], { color: color, smoothFactor: 1, weight: 5 })
             .addTo(p_map));
+
+    p_userColorIndex++;
 }
 
 function updateControlsForUser(
-    _user: string, 
-    _entries: Api.TimedStorageEntry[], 
-    _firstUpdate: boolean): void
-{
+    _user: string,
+    _entries: Api.TimedStorageEntry[],
+    _firstUpdate: boolean): void {
     const lastEntry = _entries[_entries.length - 1];
     if (lastEntry === undefined)
         return;
@@ -162,10 +150,10 @@ function updateControlsForUser(
     if (marker !== undefined) {
         marker.setLatLng(lastLocation);
         marker.setPopupContent(popUpText);
-    }
 
-    if (p_autoTrack === true)
-        p_map.flyTo(lastLocation);
+        if (marker.isPopupOpen())
+            p_map.flyTo(lastLocation);
+    }
 
     const path = p_paths.get(_user);
     if (path !== undefined) {
@@ -203,16 +191,12 @@ function getState(): WebAppState {
     return {
         location: p_map.getCenter(),
         zoom: p_map.getZoom(),
-        mapLayer: p_currentLayer,
-        autoPan: p_autoTrack
+        mapLayer: p_currentLayer
     };
 }
 (window as any).getState = getState;
 
 function setState(_state: WebAppState): boolean {
-    p_autoTrack = _state.autoPan;
-    p_autoTrackCheckbox.setChecked(p_autoTrack);
-
     p_map.flyTo(_state.location, _state.zoom);
 
     if (_state.mapLayer !== undefined) {

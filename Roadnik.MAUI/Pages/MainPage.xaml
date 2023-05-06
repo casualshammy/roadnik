@@ -91,6 +91,7 @@
                     Clicked="GoToMyLocation_Clicked">
                 </Button>
                 <ImageButton 
+                    x:Name="p_goToMyLocationImage"
                     WidthRequest="40"
                     HeightRequest="40"
                     Source="my_location.svg"

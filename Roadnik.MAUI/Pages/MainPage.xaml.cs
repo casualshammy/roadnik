@@ -227,10 +227,11 @@ public partial class MainPage : CContentPage
       return;
 
     button.IsEnabled = false;
-    using var animation = new Animation(_d => button.RotateTo(_d), 0, 360);
-    animation.Commit(button, "my-loc-anim", 16, 2000, null, null, () => true);
+    var animation = new Animation(_rotation => p_goToMyLocationImage.Rotation = _rotation, 0, 360);
     try
     {
+      animation.Commit(p_goToMyLocationImage, "my-loc-anim", 16, 2000, null, null, () => true);
+
       var locationProvider = Container.Locate<ILocationProvider>();
       var location = await locationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), default);
       if (location != null)
@@ -242,9 +243,9 @@ public partial class MainPage : CContentPage
     }
     finally
     {
+      animation.Dispose();
       button.IsEnabled = true;
-      button.CancelAnimations();
-      await button.RotateTo(0);
+      p_goToMyLocationImage.Rotation = 0;
     }
   }
 

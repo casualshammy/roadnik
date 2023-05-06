@@ -75,11 +75,12 @@ internal class UsersControllerImpl : IUsersController
 
   public async Task<IReadOnlyList<User>> ListUsersAsync(CancellationToken _ct)
   {
-    return await AsyncEnumerable.ToListAsync(
-      p_storage
-        .ListSimpleDocumentsAsync<User>(_ct: _ct)
-        .SelectAwait(async _ => await Task.FromResult(_.Data)),
-      _ct);
+    var users = await p_storage
+      .ListSimpleDocumentsAsync<User>(_ct: _ct)
+      .Select(_ => _.Data)
+      .ToListAsync(_ct: _ct);
+
+    return users;
   }
 
 }

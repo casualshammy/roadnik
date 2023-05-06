@@ -48,7 +48,14 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [HttpGet("/")]
-  public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
+  public async Task<IActionResult> GetIndexFileAsync(
+    [FromQuery(Name = "key")] string? _key = null)
+  {
+    if (_key == null)
+      return Redirect("landing.html");
+
+    return await GetStaticFileAsync("/");
+  }
 
   [HttpHead("/")]
   public async Task<IActionResult> GetIndexFileHeadAsync() => await Task.FromResult(Ok());

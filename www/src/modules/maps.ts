@@ -5,16 +5,16 @@ let customCtrlsCounter = 0;
 
 export const Colors: string[] = [
 	"maroon",
-	"red",
 	"purple",
-	"fuchsia",
 	"green",
-	"lime",
 	"olive",
-	"yellow",
 	"navy",
-	"blue",
 	"teal",
+	"red",
+	"fuchsia",
+	"lime",
+	"yellow",
+	"blue",
 	"aqua",
 ];
 

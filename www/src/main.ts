@@ -33,6 +33,12 @@ p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
     sendDataToHost(JSON.stringify(getState()));
 });
+p_map.on('zoomend', function (_e) {
+    sendDataToHost(JSON.stringify(getState()));
+});
+p_map.on('moveend', function (_e) {
+    sendDataToHost(JSON.stringify(getState()));
+});
 p_currentLayer = p_mapsData.array[0].name;
 
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
@@ -76,8 +82,7 @@ function initControlsForUser(_user: string): void {
         });
         p_markers.set(_user, L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
-            .bindPopup("<b>Unknown track!</b>")
-            .openPopup());
+            .bindPopup("<b>Unknown track!</b>"));
     }
     if (p_circles.get(_user) === undefined)
         p_circles.set(_user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })
@@ -120,13 +125,14 @@ function updateControlsForUser(
 
     let altChangeMark = "\u2192";
     const lastAlt = p_lastAlts.get(_user);
+    const newAlt = Math.ceil(lastEntry.Altitude);
     if (lastAlt !== undefined) {
-        if (lastEntry.Altitude > lastAlt)
+        if (newAlt > lastAlt)
             altChangeMark = "\u2191";
-        else if (lastEntry.Altitude < lastAlt)
+        else if (newAlt < lastAlt)
             altChangeMark = "\u2193";
     }
-    p_lastAlts.set(_user, lastEntry.Altitude);
+    p_lastAlts.set(_user, newAlt);
 
     const popUpText =
         `<b>${_user}</b>: ${lastEntry.Message ?? "Hi!"}
@@ -134,9 +140,9 @@ function updateControlsForUser(
         <p>
         Speed: ${kmh.toFixed(2)} km/h
         </br>
-        Altitude ( ${altChangeMark} ): ${lastEntry.Altitude} m
+        Altitude ( ${altChangeMark} ): ${newAlt} m
         </br>
-        Heading: ${lastEntry.Bearing} degrees
+        Heading: ${Math.round(lastEntry.Bearing ?? -1)} °
         </p>
         <p>
         Battery: ${lastEntry.Battery}%

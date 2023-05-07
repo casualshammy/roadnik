@@ -99,6 +99,7 @@ public partial class MainPage : CContentPage
       .ObserveOn(webViewReadyForJsSubsScheduler)
       .Where(_ => p_webViewReadyToJsSubs)
       .DistinctUntilChanged(_ => _.First)
+      .Sample(TimeSpan.FromSeconds(1), webViewReadyForJsSubsScheduler)
       .Select(_jToken =>
       {
         if (_jToken == null)

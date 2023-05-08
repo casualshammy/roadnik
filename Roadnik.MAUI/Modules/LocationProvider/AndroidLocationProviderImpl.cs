@@ -9,6 +9,7 @@ using Org.Apache.Commons.Logging;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Collections.Immutable;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
@@ -24,7 +25,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly KalmanLocationFilter p_kalmanFilter;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
-  private volatile bool p_enabled;
+  private long p_enabled = 0;
 
   public AndroidLocationProviderImpl(ILogger _logger)
   {
@@ -32,17 +33,23 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
 
     p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
+
+    Location = p_locationFlow
+      .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
+
+    FilteredLocation = p_filteredLocationFlow
+      .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
   }
 
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location => p_locationFlow;
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation => p_filteredLocationFlow;
+  public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
+  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation { get; }
 
   public void Enable()
   {
-    if (p_enabled)
-      return;
+    var oldEnabled = Interlocked.Exchange(ref p_enabled, 1);
 
-    p_enabled = true;
+    if (oldEnabled == 1)
+      return;
 
     var providers = p_locationManager.GetProviders(false);
     var allProviders = providers.ToArray();
@@ -59,10 +66,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void Disable()
   {
-    if (!p_enabled)
+    var oldEnabled = Interlocked.Exchange(ref p_enabled, 0);
+
+    if (oldEnabled == 0)
       return;
 
-    p_enabled = false;
     try
     {
       MainThread.BeginInvokeOnMainThread(() => p_locationManager.RemoveUpdates(this));
@@ -78,7 +86,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_minTimePeriod = _minTime;
     p_minDistanceMeters = _minDistanceMeters;
 
-    if (p_enabled)
+    if (Interlocked.Read(ref p_enabled) == 1)
     {
       Disable();
       Enable();

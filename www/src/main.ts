@@ -142,7 +142,7 @@ function updateControlsForUser(
         </br>
         Altitude ( ${altChangeMark} ): ${newAlt} m
         </br>
-        Heading: ${Math.round(lastEntry.Bearing ?? -1)} °
+        Heading: ${Math.round(lastEntry.Bearing ?? -1)}°
         </p>
         <p>
         Battery: ${lastEntry.Battery}%

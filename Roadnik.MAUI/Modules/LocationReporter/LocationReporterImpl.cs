@@ -15,6 +15,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using static Roadnik.MAUI.Data.Consts;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -25,7 +26,6 @@ internal class LocationReporterImpl : ILocationReporter
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
-  private readonly Subject<Unit> p_forceReload = new();
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
 
@@ -34,9 +34,12 @@ internal class LocationReporterImpl : ILocationReporter
     ILogger _log,
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
-    ILocationProvider _locationProvider)
+    ILocationProvider _locationProvider,
+    ITelephonyMgrProvider _telephonyMgrProvider)
   {
     p_log = _log["location-reporter"];
+
+    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var reportScheduler));
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
@@ -53,29 +56,26 @@ internal class LocationReporterImpl : ILocationReporter
       .Replay(1)
       .RefCount();
 
-    var batteryStatsFlow = Observable
-      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
-      .Select(_ => _.EventArgs)
-      .StartWith(new BatteryInfoChangedEventArgs(Battery.Default.ChargeLevel, Battery.Default.State, Battery.Default.PowerSource));
-
-    var signalStrengthFlow = Observable
-      .Interval(TimeSpan.FromMinutes(1))
-      .StartWithDefault()
-      .Select(_ => GetSignalStrength());
-
-    var reportInterval = TimeSpan.FromSeconds(10);
-
-    var forceReqFlow = p_forceReload
-      .Scan(new ForceReqData(DateTimeOffset.MinValue, true), (_acc, _entry) =>
+    var timerFlow = prefsFlow
+      .Select(_prefs =>
       {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _acc.DateTime < reportInterval)
-          return _acc with { Ok = false };
+        if (_prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
+          return Observable
+            .Interval(_prefs.TimeInterval, reportScheduler)
+            .StartWithDefault();
 
-        return new ForceReqData(now, true);
+        return Observable
+          .Return(Unit.Default)
+          .Select(_ => 0L);
       })
-      .Where(_ => _.Ok)
+      .Switch()
       .ToUnit();
+
+    var batteryStatsFlow = Observable
+      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.Default.BatteryInfoChanged += _, _ => Battery.Default.BatteryInfoChanged -= _)
+      .Select(_ => _.EventArgs)
+      .Do(_ => p_log.Info($"Battery level: {_.ChargeLevel*100}"))
+      .StartWith(new BatteryInfoChangedEventArgs(Battery.Default.ChargeLevel, Battery.Default.State, Battery.Default.PowerSource));
 
     var locationFlow = _locationProvider.Location
       .CombineLatest(prefsFlow)
@@ -97,14 +97,10 @@ internal class LocationReporterImpl : ILocationReporter
 
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
-
-    var reportFlow = Observable
-      .Interval(TimeSpan.FromSeconds(1.01), scheduler)
-      .ToUnit()
-      .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, locationFlow, filteredLocationFlow)
-      .Sample(TimeSpan.FromSeconds(1), scheduler)
+    
+    var reportFlow = timerFlow
+      .CombineLatest(batteryStatsFlow, _telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow, filteredLocationFlow)
+      .Sample(TimeSpan.FromSeconds(1), reportScheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
       {
@@ -115,7 +111,7 @@ internal class LocationReporterImpl : ILocationReporter
         Interlocked.Decrement(ref counter);
         return false;
       })
-      .ObserveOn(scheduler)
+      .ObserveOn(reportScheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
         var (_, batteryStat, signalStrength, prefs, location, filteredLocation) = _entry;
@@ -184,34 +180,16 @@ internal class LocationReporterImpl : ILocationReporter
 
     p_enableFlow
       .ObserveOn(locationProviderStateScheduler)
-      .Scan((ILifetime?)null, (_acc, _enable) =>
+      .HotAlive(_lifetime, (_enable, _life) =>
       {
-        if (_enable)
-        {
-          if (_acc != null)
-            return _acc;
+        if (!_enable)
+          return;
 
-          var life = _lifetime.GetChildLifetime();
-          if (life == null)
-            return _acc;
-
-          life.DoOnCompleted(() => stats = LocationReporterSessionStats.Empty);
-          life.DoOnCompleted(_locationProvider.Disable);
-
-          _locationProvider.Enable();
-          reportFlow.Subscribe(life);
-          return life;
-        }
-        else
-        {
-          if (_acc == null)
-            return _acc;
-
-          _acc.Complete();
-          return null;
-        }
-      })
-      .Subscribe(_lifetime);
+        _life.DoOnCompleted(() => stats = LocationReporterSessionStats.Empty);
+        _life.DoOnCompleted(_locationProvider.Disable);
+        _locationProvider.Enable();
+        reportFlow.Subscribe(_life);
+      });
 
     p_enableFlow.OnNext(false);
 
@@ -233,44 +211,7 @@ internal class LocationReporterImpl : ILocationReporter
   public void SetState(bool _enabled)
   {
     p_enableFlow.OnNext(_enabled);
-    if (_enabled)
-      p_forceReload.OnNext();
-
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
-  }
-
-  private static double? GetSignalStrength()
-  {
-#if ANDROID
-    var service = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
-    if (service == null || service.AllCellInfo == null)
-      return null;
-
-    static double normalize(int _level)
-    {
-      if (_level == 0)
-        return 0.01;
-
-      return (_level + 1) * 20 / 100d;
-    }
-
-    var signalStrength = 0d;
-    foreach (var info in service.AllCellInfo)
-    {
-      // we cast to specific type because getting value of abstract field `CellSignalStrength` raises exception
-      if (info is CellInfoWcdma wcdma && wcdma.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(wcdma.CellSignalStrength.Level));
-      else if (info is CellInfoGsm gsm && gsm.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(gsm.CellSignalStrength.Level));
-      else if (info is CellInfoLte lte && lte.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(lte.CellSignalStrength.Level));
-      else if (info is CellInfoCdma cdma && cdma.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(cdma.CellSignalStrength.Level));
-    }
-    return signalStrength;
-#else
-    return null;
-#endif
   }
 
   private static string GetUrl(
@@ -302,11 +243,11 @@ internal class LocationReporterImpl : ILocationReporter
     sb.Append("&bearing=");
     sb.Append(_location.Course?.ToString(culture) ?? "0");
     sb.Append("&battery=");
-    sb.Append((_batteryInfo.ChargeLevel * 100).ToString(culture));
+    sb.Append(((float)(_batteryInfo.ChargeLevel * 100)).ToString(culture));
     if (_signalStrength != null)
     {
       sb.Append("&gsm_signal=");
-      sb.Append((_signalStrength.Value * 100).ToString(culture));
+      sb.Append(((float)(_signalStrength.Value * 100)).ToString(culture));
     }
     if (_userMsg?.Length > 0)
     {

@@ -19,7 +19,7 @@ internal static class Serialization
     };
   }
 
-  public static string SerializeToCamelCaseJson(object _obj)
+  public static string SerializeToCamelCaseJson(object? _obj)
   {
     return JsonConvert.SerializeObject(_obj, p_camelCaseSerializer);
   }

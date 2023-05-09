@@ -44,10 +44,10 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx = bindingCtx;
 
-    Observable
-      .Return(Unit.Default)
-      .SelectAsync(async (_, _ct) => await IsLocationPermissionOkAsync())
-      .Subscribe(p_lifetime);
+    //Observable
+    //  .Return(Unit.Default)
+    //  .SelectAsync(async (_, _ct) => await IsLocationPermissionOkAsync())
+    //  .Subscribe(p_lifetime);
 
     p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
@@ -165,7 +165,7 @@ public partial class MainPage : CContentPage
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
 
-    if (!await locationReporter.IsEnabled())
+    if (!await locationReporter.IsEnabledAsync())
     {
       if (!await IsLocationPermissionOkAsync())
         return;
@@ -211,12 +211,31 @@ public partial class MainPage : CContentPage
       return;
     }
 
-    var command = $"setState({Serialization.SerializeToCamelCaseJson(webAppState)});";
+    var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
+
+    var commands = new List<string> {
+      $"setMapLayer({Serialization.SerializeToCamelCaseJson(webAppState.MapLayer)});"
+    };
+
+    if (mapOpenBehavior == MapOpeningBehavior.LastPosition)
+      commands.Add($"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom})");
+
     await MainThread.InvokeOnMainThreadAsync(async () =>
     {
-      var result = await p_webView.EvaluateJavaScriptAsync(command);
-      if (result != null)
+      var counter = 0;
+      foreach (var command in commands)
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result != null)
+          ++counter;
+        else
+          p_log.Error($"Commands returned an error: '{command}'");
+      }
+
+      if (counter == commands.Count)
         p_webViewReadyToJsSubs = true;
+      else
+        p_log.Error($"Can't complete all commands! Commands: {commands.Count}, done: {counter}");
     });
   }
 

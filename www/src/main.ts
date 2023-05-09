@@ -64,6 +64,21 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
         updateControlsForUser(user, userData, _offset === undefined);
     }
 
+    if (!p_firstCentered) {
+        p_firstCentered = true;
+        if (p_paths.size > 0) {
+            let bounds: L.LatLngBoundsExpression | undefined = undefined;
+            for (let path of p_paths.values())
+                if (bounds === undefined)
+                    bounds = path.getBounds();
+                else
+                    bounds = bounds.extend(path.getBounds());
+
+            if (bounds !== undefined)
+                p_map.fitBounds(bounds);
+        }
+    }
+
     document.title = `Roadnik: ${_key} (${p_paths.size})`;
 }
 
@@ -109,11 +124,6 @@ function updateControlsForUser(
         circle.setLatLng(lastLocation);
         circle.setRadius(lastEntry.Accuracy ?? 100);
         circle.bringToFront();
-    }
-
-    if (!p_firstCentered) {
-        p_map.setView(lastLocation, 15);
-        p_firstCentered = true;
     }
 
     const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - lastEntry.UnixTimeMs);
@@ -188,10 +198,20 @@ function sendDataToHost(_data: string): void {
 }
 
 // exports for C#
-function setLocation(_x: number, _y: number): void {
-    p_map.flyTo([_x, _y]);
+function setLocation(_x: number, _y: number, _zoom?: number | undefined): boolean {
+    p_map.flyTo([_x, _y], _zoom);
+    return true;
 }
 (window as any).setLocation = setLocation;
+
+function setMapLayer(_mapLayer?: string | undefined | null): boolean {
+    var layer = p_mapsData.array.find((_v, _i, _o) => _v.name === _mapLayer);
+    if (layer !== undefined)
+        layer.tileLayer.addTo(p_map);
+
+    return true;
+}
+(window as any).setMapLayer = setMapLayer;
 
 function getState(): WebAppState {
     return {
@@ -201,16 +221,3 @@ function getState(): WebAppState {
     };
 }
 (window as any).getState = getState;
-
-function setState(_state: WebAppState): boolean {
-    p_map.flyTo(_state.location, _state.zoom);
-
-    if (_state.mapLayer !== undefined) {
-        var layer = p_mapsData.array.find((_v, _i, _o) => _v.name == _state.mapLayer);
-        if (layer !== undefined)
-            layer.tileLayer.addTo(p_map);
-    }
-
-    return true;
-}
-(window as any).setState = setState;

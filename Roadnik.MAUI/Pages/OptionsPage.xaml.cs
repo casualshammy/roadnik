@@ -123,5 +123,19 @@ public partial class OptionsPage : ContentPage
     p_bindingCtx.MinAccuracy = minAccuracy;
   }
 
-  
+  private async void MapOpenBehavior_Tapped(object _sender, EventArgs _e)
+  {
+    var allTracks = "Show all tracks";
+    var lastPosition = "Show last viewed location";
+
+    var result = await DisplayActionSheet("What to show on map opening:", null, null, allTracks, lastPosition);
+    if (result == null)
+      return;
+
+    if (result == allTracks)
+      p_bindingCtx.MapOpenBehavior = MapOpeningBehavior.AllTracks.ToString();
+    else if (result == lastPosition)
+      p_bindingCtx.MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
+  }
+
 }

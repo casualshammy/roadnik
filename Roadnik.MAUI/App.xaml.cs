@@ -30,6 +30,7 @@ public partial class App : CMauiApplication
       storage.SetValue(PREF_USER_MSG, "");
       storage.SetValue(PREF_MIN_ACCURACY, 30);
       storage.SetValue(PREF_NICKNAME, $"user-{Random.Shared.Next(100000, 999999)}");
+      storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     }
   }
 

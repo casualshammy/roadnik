@@ -52,6 +52,14 @@
                     Tapped="MinAccuracy_Tapped"
                     Detail="{Binding MinAccuracy}"/>
             </TableSection>
+            <TableSection Title="Map appearance"
+                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
+                <TextCell
+                    Text="What to show on map opening"
+                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                    Tapped="MapOpenBehavior_Tapped"
+                    Detail="{Binding MapOpenBehavior}"/>
+            </TableSection>
         </TableRoot>
     </TableView>
 

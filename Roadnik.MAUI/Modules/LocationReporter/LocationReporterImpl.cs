@@ -206,7 +206,7 @@ internal class LocationReporterImpl : ILocationReporter
 
   public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;
 
-  public async Task<bool> IsEnabled() => await p_enableFlow.FirstOrDefaultAsync();
+  public async Task<bool> IsEnabledAsync() => await p_enableFlow.FirstOrDefaultAsync();
 
   public void SetState(bool _enabled)
   {

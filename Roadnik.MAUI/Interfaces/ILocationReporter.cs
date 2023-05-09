@@ -6,6 +6,6 @@ public interface ILocationReporter
 {
   IObservable<LocationReporterSessionStats> Stats { get; }
 
-  Task<bool> IsEnabled();
+  Task<bool> IsEnabledAsync();
   void SetState(bool _enabled);
 }

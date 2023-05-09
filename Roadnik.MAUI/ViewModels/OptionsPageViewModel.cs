@@ -1,4 +1,5 @@
-﻿using Roadnik.Common.Toolkit;
+﻿using Microsoft.Maui.Controls;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using static Roadnik.MAUI.Data.Consts;
@@ -15,6 +16,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
+  private MapOpeningBehavior p_mapOpeningBehavior;
 
   public OptionsPageViewModel()
   {
@@ -26,6 +28,7 @@ internal class OptionsPageViewModel : BaseViewModel
     p_minimumDistance = p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL);
     p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION);
     p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
+    p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
   }
 
   public string Title { get; } = "Options";
@@ -115,6 +118,24 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       SetProperty(ref p_minAccuracy, value);
       p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy);
+    }
+  }
+  public string MapOpenBehavior
+  {
+    get
+    {
+      if (p_mapOpeningBehavior == MapOpeningBehavior.AllTracks)
+        return "Show all tracks";
+      else
+        return "Show last viewed location";
+    }
+    set
+    {
+      if (!Enum.TryParse<MapOpeningBehavior>(value, out var behavior))
+        return;
+
+      SetProperty(ref p_mapOpeningBehavior, behavior);
+      p_storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, p_mapOpeningBehavior);
     }
   }
 

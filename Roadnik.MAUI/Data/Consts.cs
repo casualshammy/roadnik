@@ -12,4 +12,5 @@ internal static class Consts
   public const string PREF_TRACKPOINT_REPORTING_CONDITION = "settings.report.trackpoint-reporting-condition";
   public const string PREF_USER_MSG = "settings.report.user-msg";
   public const string PREF_MIN_ACCURACY = "settings.report.min-accuracy";
+  public const string PREF_MAP_OPEN_BEHAVIOR = "settings.appearance.map-open-behavior";
 }

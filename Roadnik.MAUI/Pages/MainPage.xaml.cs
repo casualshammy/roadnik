@@ -211,14 +211,15 @@ public partial class MainPage : CContentPage
       return;
     }
 
-    var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-
     var commands = new List<string> {
       $"setMapLayer({Serialization.SerializeToCamelCaseJson(webAppState.MapLayer)});"
     };
 
+    var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
     if (mapOpenBehavior == MapOpeningBehavior.LastPosition)
-      commands.Add($"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom})");
+      commands.Add($"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});");
+    else if (mapOpenBehavior == MapOpeningBehavior.AllTracks)
+      commands.Add($"setViewToAllTracks();");
 
     await MainThread.InvokeOnMainThreadAsync(async () =>
     {

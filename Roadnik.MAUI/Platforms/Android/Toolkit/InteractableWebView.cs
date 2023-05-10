@@ -7,9 +7,10 @@ public partial class InteractableWebView
     if (_sender is not WebView { Handler.PlatformView: Android.Webkit.WebView nativeWebView })
       return;
 
-    nativeWebView.SetWebChromeClient(new ConsoleWebChromeClient(this));
+    nativeWebView.Settings.JavaScriptEnabled = true;
+    nativeWebView.Settings.UserAgentString += $" RoadnikApp/{AppInfo.Current.VersionString}";
 
-    //nativeWebView.SetWebViewClient();
+    nativeWebView.SetWebChromeClient(new ConsoleWebChromeClient(this));
     nativeWebView.AddJavascriptInterface(new JsBridge(this), "jsBridge");
   }
 

@@ -64,19 +64,11 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
         updateControlsForUser(user, userData, _offset === undefined);
     }
 
-    if (!p_firstCentered) {
+    const userAgent = navigator.userAgent;
+    if (!p_firstCentered && !userAgent.includes("RoadnikApp")) {
         p_firstCentered = true;
-        if (p_paths.size > 0) {
-            let bounds: L.LatLngBoundsExpression | undefined = undefined;
-            for (let path of p_paths.values())
-                if (bounds === undefined)
-                    bounds = path.getBounds();
-                else
-                    bounds = bounds.extend(path.getBounds());
-
-            if (bounds !== undefined)
-                p_map.fitBounds(bounds);
-        }
+        console.log("Not roadnik app, setting default view...");
+        setViewToAllTracks();
     }
 
     document.title = `Roadnik: ${_key} (${p_paths.size})`;
@@ -203,6 +195,23 @@ function setLocation(_x: number, _y: number, _zoom?: number | undefined): boolea
     return true;
 }
 (window as any).setLocation = setLocation;
+
+function setViewToAllTracks(): boolean {
+    if (p_paths.size > 0) {
+        let bounds: L.LatLngBoundsExpression | undefined = undefined;
+        for (let path of p_paths.values())
+            if (bounds === undefined)
+                bounds = path.getBounds();
+            else
+                bounds = bounds.extend(path.getBounds());
+
+        if (bounds !== undefined)
+            p_map.fitBounds(bounds);
+    }
+
+    return true;
+}
+(window as any).setViewToAllTracks = setViewToAllTracks;
 
 function setMapLayer(_mapLayer?: string | undefined | null): boolean {
     var layer = p_mapsData.array.find((_v, _i, _o) => _v.name === _mapLayer);

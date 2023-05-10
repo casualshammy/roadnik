@@ -27,7 +27,7 @@ public partial class InteractableWebView
             .GetValue(client) as WebViewHandler;
 
           if (handler != null)
-            nativeWebView.SetWebViewClient(new CachedMauiWebViewClient(handler, p_tilesCache, p_log));
+            nativeWebView.SetWebViewClient(new CachedMauiWebViewClient(handler, p_tilesCache, p_log, p_storage));
         }
       }
     }

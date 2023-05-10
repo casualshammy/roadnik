@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using System.ComponentModel;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -11,6 +12,7 @@ public partial class InteractableWebView : WebView
 {
   private readonly ITilesCache? p_tilesCache;
   private readonly ILogger? p_log;
+  private readonly IPreferencesStorage? p_storage;
   private readonly Subject<JsToCSharpMsg> p_jsonDataFlow = new();
   private readonly Subject<(string MsgLevel, string Msg)> p_consoleMsgFlow = new();
   
@@ -19,6 +21,7 @@ public partial class InteractableWebView : WebView
     var cMauiApp = Application.Current as CMauiApplication;
     p_tilesCache = cMauiApp?.Container.Locate<ITilesCache>();
     p_log = cMauiApp?.Container.Locate<ILogger>()["interactable-web-view"];
+    p_storage = cMauiApp?.Container.Locate<IPreferencesStorage>();
 
     JsonData = p_jsonDataFlow
       .Publish()

@@ -1,6 +1,7 @@
 ﻿using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.ViewModels;
+using System.Globalization;
 
 namespace Roadnik.MAUI.Pages;
 
@@ -138,4 +139,18 @@ public partial class OptionsPage : ContentPage
       p_bindingCtx.MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
   }
 
+  private async void MapCache_Tapped(object sender, EventArgs e)
+  {
+    var enable = "Enable";
+    var disable = "Disable";
+
+    var result = await DisplayActionSheet("Map data caching extremely speeds up map loading time", null, null, enable, disable);
+    if (result == null)
+      return;
+
+    if (result == enable)
+      p_bindingCtx.MapCacheEnabled = true;
+    else if (result == disable)
+      p_bindingCtx.MapCacheEnabled = false;
+  }
 }

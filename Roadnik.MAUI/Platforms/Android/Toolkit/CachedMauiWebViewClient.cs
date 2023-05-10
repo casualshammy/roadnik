@@ -5,6 +5,7 @@ using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;
 using System.Net;
 using System.Text.RegularExpressions;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
@@ -21,14 +22,17 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     new Regex(@"openstreetmap\.org/\d+/\d+/\d+\.png$", RegexOptions.Compiled),
   };
   private readonly ITilesCache? p_tilesCache;
+  private readonly IPreferencesStorage? p_storage;
   private readonly ILogger? p_log;
 
   public CachedMauiWebViewClient(
     WebViewHandler _handler, 
     ITilesCache? _tilesCache,
-    ILogger? _log) : base(_handler)
+    ILogger? _log,
+    IPreferencesStorage? _storage) : base(_handler)
   {
     p_tilesCache = _tilesCache;
+    p_storage = _storage;
     p_log = _log?["cached-web-view-client"];
 #pragma warning disable SYSLIB0014 // Type or member is obsolete
     p_webClient = new WebClient();
@@ -40,6 +44,10 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     IWebResourceRequest? _request)
   {
     if (p_tilesCache == null)
+      return base.ShouldInterceptRequest(_view, _request);
+
+    var cacheEnabled = p_storage?.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
+    if (cacheEnabled != true)
       return base.ShouldInterceptRequest(_view, _request);
 
     var url = _request?.Url?.ToString();

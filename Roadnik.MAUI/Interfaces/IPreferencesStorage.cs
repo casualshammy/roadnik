@@ -2,7 +2,7 @@
 
 namespace Roadnik.MAUI.Interfaces;
 
-internal interface IPreferencesStorage
+public interface IPreferencesStorage
 {
   IObservable<Unit> PreferencesChanged { get; }
   T? GetValueOrDefault<T>(string _key);

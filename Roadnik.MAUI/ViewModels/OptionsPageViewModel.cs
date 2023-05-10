@@ -17,6 +17,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
   private MapOpeningBehavior p_mapOpeningBehavior;
+  private bool p_mapCacheEnabled;
 
   public OptionsPageViewModel()
   {
@@ -29,6 +30,7 @@ internal class OptionsPageViewModel : BaseViewModel
     p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION);
     p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
     p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
+    p_mapCacheEnabled = p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
   }
 
   public string Title { get; } = "Options";
@@ -136,6 +138,15 @@ internal class OptionsPageViewModel : BaseViewModel
 
       SetProperty(ref p_mapOpeningBehavior, behavior);
       p_storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, p_mapOpeningBehavior);
+    }
+  }
+  public bool MapCacheEnabled
+  {
+    get => p_mapCacheEnabled;
+    set
+    {
+      SetProperty(ref p_mapCacheEnabled, value);
+      p_storage.SetValue(PREF_MAP_CACHE_ENABLED, p_mapCacheEnabled);
     }
   }
 

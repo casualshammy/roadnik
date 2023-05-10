@@ -2,12 +2,16 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+             xmlns:converters="clr-namespace:Roadnik.MAUI.Toolkit.XamlConverters"
              x:Class="Roadnik.MAUI.Pages.OptionsPage"
              Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:OptionsPageViewModel />
     </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <converters:BoolToEnabledDisabledTextConverter x:Key="BoolToEnabledDisabledText" />
+    </ContentPage.Resources>
 
     <TableView Intent="Settings">
         <TableRoot>
@@ -54,11 +58,14 @@
             </TableSection>
             <TableSection Title="Map appearance"
                           TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell
-                    Text="What to show on map opening"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MapOpenBehavior_Tapped"
-                    Detail="{Binding MapOpenBehavior}"/>
+                <TextCell Text="What to show on map opening"
+                          TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                          Tapped="MapOpenBehavior_Tapped"
+                          Detail="{Binding MapOpenBehavior}"/>
+                <TextCell Text="Map data caching"
+                          TextColor="{AppThemeBinding Dark=White, Light=Black}"
+                          Tapped="MapCache_Tapped"
+                          Detail="{Binding MapCacheEnabled, Converter={StaticResource BoolToEnabledDisabledText}}"/>
             </TableSection>
         </TableRoot>
     </TableView>

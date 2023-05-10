@@ -1,4 +1,7 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using JustLogger.Interfaces;
+using Newtonsoft.Json.Linq;
+using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Interfaces;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -6,11 +9,17 @@ namespace Roadnik.MAUI.Toolkit;
 
 public partial class InteractableWebView : WebView
 {
-  private Subject<JToken> p_jsonDataFlow = new();
-  private Subject<(string MsgLevel, string Msg)> p_consoleMsgFlow = new();
-
+  private readonly ITilesCache? p_tilesCache;
+  private readonly ILogger? p_log;
+  private readonly Subject<JsToCSharpMsg> p_jsonDataFlow = new();
+  private readonly Subject<(string MsgLevel, string Msg)> p_consoleMsgFlow = new();
+  
   public InteractableWebView() : base()
   {
+    var cMauiApp = Application.Current as CMauiApplication;
+    p_tilesCache = cMauiApp?.Container.Locate<ITilesCache>();
+    p_log = cMauiApp?.Container.Locate<ILogger>()["interactable-web-view"];
+
     JsonData = p_jsonDataFlow
       .Publish()
       .RefCount();
@@ -20,7 +29,7 @@ public partial class InteractableWebView : WebView
       .RefCount();
   }
 
-  public IObservable<JToken> JsonData { get; }
+  public IObservable<JsToCSharpMsg> JsonData { get; }
   public IObservable<(string MsgLevel, string Msg)> ConsoleMsg { get; }
 
   partial void ChangedHandler(object _sender);
@@ -44,7 +53,11 @@ public partial class InteractableWebView : WebView
     {
       var jToken = JToken.Parse(_data);
       if (jToken != null)
-        p_jsonDataFlow.OnNext(jToken);
+      {
+        var msg = jToken.ToObject<JsToCSharpMsg>();
+        if (msg != null)
+          p_jsonDataFlow.OnNext(msg);
+      }
     }
     catch { }
   }

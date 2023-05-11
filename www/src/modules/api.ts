@@ -7,6 +7,7 @@ export const JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
 export const JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
+export const JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
 
 export interface TimedStorageEntry {
     UnixTimeMs: number;

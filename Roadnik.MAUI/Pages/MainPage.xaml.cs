@@ -203,6 +203,29 @@ public partial class MainPage : CContentPage
           p_log.Error($"Commands returned an error: '{command}'");
       });
     }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_NEW_TRACK)
+    {
+      var notificationEnabled = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
+      if (!notificationEnabled)
+        return;
+
+      var newUser = _msg.Data.ToObject<string>();
+      if (string.IsNullOrWhiteSpace(newUser))
+        return;
+
+      var myName = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
+      if (newUser.Equals(myName, StringComparison.InvariantCultureIgnoreCase))
+        return;
+
+      var hash = newUser.GetHashCode();
+
+      SimpleNotification.Show(
+        hash, 
+        "New Track Added",
+        "Notify when new user has started transmitting their location",
+        $"{newUser} has started transmitting their location",
+        $"Event time: {DateTimeOffset.Now:f}");
+    }
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)

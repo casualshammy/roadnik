@@ -4,12 +4,14 @@ using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Attributes;
+using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace Roadnik.Modules.Controllers;
 
@@ -262,6 +264,31 @@ public class ApiControllerV0 : JsonNetController
     p_logger.Info($"WS connection '{sessionIndex}' for key '{_key}' is closed");
 
     return new EmptyResult();
+  }
+
+  [HttpGet("/check-github-update-apk")]
+  public async Task<IActionResult> CheckGithubApkAsync(CancellationToken _ct = default)
+  {
+    var apkRegex = new Regex(@"^roadnik\.(\d+)\.(\d+)\.(\d+)\.apk$");
+    var distrDir = new DirectoryInfo( Path.Combine(p_settings.WebrootDirPath, "distr"));
+    if (!distrDir.Exists)
+      return Json(CheckUpdateRes.Fail);
+
+    foreach (var fileInfo in distrDir.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
+    {
+      var match = apkRegex.Match(fileInfo.Name);
+      if (match.Success)
+      {
+        var version = new Ax.Fw.SerializableVersion(
+          int.Parse(match.Groups[1].Value),
+          int.Parse(match.Groups[2].Value),
+          int.Parse(match.Groups[3].Value));
+
+        return Json(new CheckUpdateRes(true, version, $"{{server-name}}/{distrDir.Name}/{fileInfo.Name}"));
+      }
+    }
+
+    return Json(CheckUpdateRes.Fail);
   }
 
   [ApiKeyRequired]

@@ -18,6 +18,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minAccuracy;
   private MapOpeningBehavior p_mapOpeningBehavior;
   private bool p_mapCacheEnabled;
+  private bool p_notificationOnNewUser;
 
   public OptionsPageViewModel()
   {
@@ -31,6 +32,7 @@ internal class OptionsPageViewModel : BaseViewModel
     p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
     p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
     p_mapCacheEnabled = p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
+    p_notificationOnNewUser = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
   }
 
   public string Title { get; } = "Options";
@@ -147,6 +149,15 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       SetProperty(ref p_mapCacheEnabled, value);
       p_storage.SetValue(PREF_MAP_CACHE_ENABLED, p_mapCacheEnabled);
+    }
+  }
+  public bool NotificationOnNewUser
+  {
+    get => p_notificationOnNewUser;
+    set
+    {
+      SetProperty(ref p_notificationOnNewUser, value);
+      p_storage.SetValue(PREF_NOTIFY_NEW_USER, p_notificationOnNewUser);
     }
   }
 

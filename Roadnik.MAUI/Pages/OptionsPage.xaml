@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
              xmlns:converters="clr-namespace:Roadnik.MAUI.Toolkit.XamlConverters"
+             xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
              x:Class="Roadnik.MAUI.Pages.OptionsPage"
              Title="{Binding Title}">
 
@@ -15,20 +16,20 @@
 
     <TableView Intent="Settings">
         <TableRoot>
-            <TableSection Title="Connection settings"
+            <TableSection Title="{x:Static l:AppResources.page_options_connectionSettings}"
                           TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
                 <TextCell
-                    Text="Server address"
+                    Text="{x:Static l:AppResources.page_options_serverAddress}"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
                     Tapped="ServerAddress_Tapped"
                     Detail="{Binding ServerName}"/>
                 <TextCell
-                    Text="Room ID"
+                    Text="{x:Static l:AppResources.page_options_roomId}"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
                     Tapped="ServerKey_Tapped"
                     Detail="{Binding RoomId}"/>
                 <TextCell
-                    Text="Nickname"
+                    Text="{x:Static l:AppResources.page_options_username}"
                     TextColor="{AppThemeBinding Dark=White, Light=Black}"
                     Tapped="Nickname_Tapped"
                     Detail="{Binding Nickname}"/>
@@ -67,7 +68,296 @@
                           Tapped="MapCache_Tapped"
                           Detail="{Binding MapCacheEnabled, Converter={StaticResource BoolToEnabledDisabledText}}"/>
             </TableSection>
+            <TableSection Title="Notifications"
+                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
+                <SwitchCell Text="A new user has appeared" 
+                            OnColor="{AppThemeBinding Dark=White, Light={StaticResource Primary}}"
+                            On="{Binding NotificationOnNewUser}"/>
+            </TableSection>
         </TableRoot>
     </TableView>
+    <!--<Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+            <RowDefinition Height="50" />
+        </Grid.RowDefinitions>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <Label 
+                Text="Connection settings"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0">
+                <Label 
+                    Text="Server address"/>
+                <Label 
+                    Text="{Binding ServerName}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Stroke="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0">
+                <Label 
+                    Text="Room ID"/>
+                <Label 
+                    Text="{Binding RoomId}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Stroke="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0"
+                >
+                <Label 
+                    Text="Nickname"/>
+                <Label 
+                    Text="{Binding Nickname}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"
+                OnColor="{AppThemeBinding Light={StaticResource Primary}, Dark=LightBlue}"
+                ThumbColor="{AppThemeBinding Light=Grey, Dark=Grey}"/>
+        </Grid>
+
+        --><!-- REPORTING SETTINGS --><!--
+        <Grid
+            Margin="20, 5"
+            Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <Label 
+                Text="Connection settings"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0">
+                <Label 
+                    Text="Server address"/>
+                <Label 
+                    Text="{Binding ServerName}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Stroke="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0">
+                <Label 
+                    Text="Room ID"/>
+                <Label 
+                    Text="{Binding RoomId}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Stroke="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+        <Grid
+            Margin="20, 5"
+            Grid.Row="7">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="50" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="2" />
+            </Grid.RowDefinitions>
+            <VerticalStackLayout
+                VerticalOptions="Center"
+                Grid.Column="0"
+                Grid.Row="0">
+                <Label 
+                    Text="Nickname"/>
+                <Label 
+                    Text="{Binding Nickname}"
+                    TextColor="Grey"
+                    FontSize="Caption"/>
+            </VerticalStackLayout>
+            <Switch
+                Grid.Column="1"
+                Grid.Row="0"
+                HorizontalOptions="End"
+                VerticalOptions="Center"/>
+            <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Stroke="{AppThemeBinding Light=LightGrey, Dark=White}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+        </Grid>
+
+    </Grid>-->
+    
 
 </ContentPage>

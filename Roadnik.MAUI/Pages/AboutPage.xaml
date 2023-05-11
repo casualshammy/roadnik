@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<toolkit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
-             xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
-             x:Class="Roadnik.MAUI.Pages.AboutPage"
-             Title="{Binding Title}">
+<toolkit:CContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
+    xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
+    x:Class="Roadnik.MAUI.Pages.AboutPage"
+    Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:AboutPageViewModel />
@@ -19,7 +21,7 @@
             <RowDefinition Height="50" />
             <RowDefinition Height="50" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="50" />
+            <RowDefinition Height="70" />
         </Grid.RowDefinitions>
         <HorizontalStackLayout 
             Grid.Row="1"
@@ -80,14 +82,26 @@
                         CommandParameter="mailto:axio.name?subject=Message from Roadnik app" />
                 </Label.GestureRecognizers>
             </Label>
-            
+
         </VerticalStackLayout>
 
-        <Label Grid.ColumnSpan="2"
-               Grid.Row="3"
-               HorizontalOptions="Center"
-               VerticalOptions="End"
-               Text="{Binding AppVersion}" />
+        <VerticalStackLayout
+            Grid.ColumnSpan="2"
+            Grid.Row="3"
+            HorizontalOptions="Center"
+            VerticalOptions="End"
+            Margin="0, 0, 0, 5">
+
+            <Label 
+                HorizontalOptions="Center"
+                Text="{Binding AppVersion}"/>
+            <Button 
+                HorizontalOptions="Center"
+                IsVisible="{Binding UpdateAvailable}"
+                Text="{Binding UpdateButtonText}"
+                Clicked="UpdateAvailable_Clicked"/>
+        </VerticalStackLayout>
+
     </Grid>
 
 </toolkit:CContentPage>

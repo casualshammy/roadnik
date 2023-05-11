@@ -15,9 +15,12 @@ internal static class Consts
   public const string PREF_MIN_ACCURACY = "settings.report.min-accuracy";
   public const string PREF_MAP_OPEN_BEHAVIOR = "settings.appearance.map-open-behavior";
   public const string PREF_MAP_CACHE_ENABLED = "settings.appearance.map-cache-enabled";
+  public const string PREF_NOTIFY_NEW_USER = "settings.notifications.on-new-user";
+
   public const string JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
   public const string JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
+  public const string JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
 
 }

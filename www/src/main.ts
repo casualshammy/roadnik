@@ -54,6 +54,12 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     const usersMap = groupBy(data.Entries, _ => _.Nickname);
     const users = Object.keys(usersMap);
 
+    // notify about new users
+    if (p_firstDataReceived)
+        for (let user of users)
+            if (p_paths.get(user) === undefined)
+                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_NEW_TRACK, data: user });
+
     // init users controls
     for (let user of users)
         initControlsForUser(user);
@@ -72,7 +78,7 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
             setViewToAllTracks();
         }
         else {
-            sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {}});
+            sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {} });
         }
     }
 
@@ -196,7 +202,7 @@ function sendDataToHost(_msg: JsToCSharpMsg): void {
 
 // exports for C#
 function setLocation(_x: number, _y: number, _zoom?: number | undefined): boolean {
-    p_map.flyTo([_x, _y], _zoom, {duration: 0.5});
+    p_map.flyTo([_x, _y], _zoom, { duration: 0.5 });
     return true;
 }
 (window as any).setLocation = setLocation;
@@ -235,4 +241,4 @@ function getMapViewState(): MapViewState {
 }
 (window as any).getState = getMapViewState;
 
-sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {}});
+sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

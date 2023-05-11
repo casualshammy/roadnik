@@ -1,7 +1,7 @@
-﻿using Microsoft.Maui.Controls;
-using Roadnik.Common.Toolkit;
+﻿using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using System.Windows.Input;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.ViewModels;
@@ -33,6 +33,15 @@ internal class OptionsPageViewModel : BaseViewModel
     p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
     p_mapCacheEnabled = p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
     p_notificationOnNewUser = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
+
+    ServerAddressCommand = new Command(OnServerAddressCommand);
+    RoomIdCommand = new Command(OnRoomIdCommand);
+    UsernameCommand = new Command(OnUsernameCommand);
+    MinimumIntervalCommand = new Command(OnMinimumInterval);
+    MinimumDistanceCommand = new Command(OnMinimumDistance);
+    TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
+    MinAccuracyCommand = new Command(OnMinAccuracy);
+    MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
   }
 
   public string Title { get; } = "Options";
@@ -159,6 +168,139 @@ internal class OptionsPageViewModel : BaseViewModel
       SetProperty(ref p_notificationOnNewUser, value);
       p_storage.SetValue(PREF_NOTIFY_NEW_USER, p_notificationOnNewUser);
     }
+  }
+
+  public ICommand ServerAddressCommand { get; }
+  public ICommand RoomIdCommand { get; }
+  public ICommand UsernameCommand { get; }
+  public ICommand MinimumIntervalCommand { get; }
+  public ICommand MinimumDistanceCommand { get; }
+  public ICommand TrackpointReportingConditionCommand { get; }
+  public ICommand MinAccuracyCommand { get; }
+  public ICommand MapOpenBehaviorCommand { get; }
+
+  private async void OnServerAddressCommand(object _arg)
+  {
+    var serverName = await Application.Current.MainPage.DisplayPromptAsync(
+        "Server address",
+        null,
+        "Save",
+        placeholder: "http://example.com:5544/",
+        initialValue: ServerName,
+        keyboard: Microsoft.Maui.Keyboard.Url);
+
+    if (serverName == null)
+      return;
+
+    ServerName = serverName;
+  }
+
+  private async void OnRoomIdCommand(object _arg)
+  {
+    var serverKey = await Application.Current.MainPage.DisplayPromptAsync(
+      "Room ID",
+      $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
+      "Save",
+      initialValue: RoomId,
+      maxLength: ReqResUtil.MaxKeyKength);
+
+    if (serverKey == null)
+      return;
+
+    RoomId = serverKey;
+  }
+
+  private async void OnUsernameCommand(object _arg)
+  {
+    var nicknameRaw = await Application.Current.MainPage.DisplayPromptAsync(
+      "Nickname:",
+      $"Empty nickname is not allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
+      "Save",
+      initialValue: Nickname,
+      maxLength: ReqResUtil.MaxKeyKength);
+
+    if (nicknameRaw == null)
+      return;
+
+    Nickname = nicknameRaw;
+  }
+
+  private async void OnMinimumInterval(object _arg)
+  {
+    var mimimalIntervalRaw = await Application.Current.MainPage.DisplayPromptAsync(
+      "Interval in seconds:",
+      "Minimum interval for anonymous user is 10 sec, for registered user is 1 sec. Maximum interval is 1 hour (3600 sec)",
+      initialValue: MinimumTime.ToString(),
+      keyboard: Microsoft.Maui.Keyboard.Numeric);
+
+    if (mimimalIntervalRaw != null &&
+      int.TryParse(mimimalIntervalRaw, out var mimimalInterval) &&
+      mimimalInterval >= 1 &&
+      mimimalInterval <= 3600)
+      MinimumTime = mimimalInterval;
+  }
+
+  private async void OnMinimumDistance(object _arg)
+  {
+    var mimimalDistanceRaw = await Application.Current.MainPage.DisplayPromptAsync(
+      "Distance in metres:",
+      "0 to disable limit. Maximum value - 10 km (10000 metres)",
+      initialValue: MinimumDistance.ToString(),
+      keyboard: Microsoft.Maui.Keyboard.Numeric);
+
+    if (mimimalDistanceRaw != null &&
+      int.TryParse(mimimalDistanceRaw, out var mimimalDistance) &&
+      mimimalDistance <= 10000)
+      MinimumDistance = mimimalDistance;
+  }
+
+  private async void OnTrackpointReportingCondition(object _arg)
+  {
+    var and = "Time AND distance";
+    var or = "Time OR distance";
+    var result = await Application.Current.MainPage.DisplayActionSheet("Trackpoint reporting condition", null, null, and, or);
+    if (result == null)
+      return;
+
+    if (result == and)
+      TrackpointReportingConditionText = TrackpointReportingConditionType.TimeAndDistance.ToString();
+    else if (result == or)
+      TrackpointReportingConditionText = TrackpointReportingConditionType.TimeOrDistance.ToString();
+  }
+
+  private async void OnMinAccuracy(object _arg)
+  {
+    var minAccuracyRaw = await Application.Current.MainPage.DisplayPromptAsync(
+      "Accuracy in metres:",
+      "Minimum value - 1 meter. Sane value is between 10 and 30 metres",
+      initialValue: MinAccuracy.ToString(),
+      keyboard: Microsoft.Maui.Keyboard.Numeric);
+
+    if (minAccuracyRaw == null)
+      return;
+    if (!int.TryParse(minAccuracyRaw, out var minAccuracy))
+      return;
+    if (minAccuracy < 1)
+      minAccuracy = 1;
+    if (minAccuracy > 1000)
+      minAccuracy = 1000;
+
+    MinAccuracy = minAccuracy;
+  }
+
+  private async void OnMapOpenBehavior(object _arg)
+  {
+    var allTracks = "Show all tracks";
+    var lastPosition = "Show last viewed location";
+
+    var result = await Application.Current.MainPage.DisplayActionSheet("What to show on map opening:", null, null, allTracks, lastPosition);
+    if (result == null)
+      return;
+
+    if (result == allTracks)
+      MapOpenBehavior = MapOpeningBehavior.AllTracks.ToString();
+    else if (result == lastPosition)
+      MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
   }
 
 }

@@ -13,6 +13,9 @@ public partial class OptionsPage : ContentPage
   {
     InitializeComponent();
     p_bindingCtx = (OptionsPageViewModel)BindingContext;
+
+    p_mapCacheToggle.SwitchIsToggled = p_bindingCtx.MapCacheEnabled;
+    p_notifyNewUser.SwitchIsToggled = p_bindingCtx.NotificationOnNewUser;
   }
 
   private async void ServerAddress_Tapped(object _sender, EventArgs _e)
@@ -152,5 +155,15 @@ public partial class OptionsPage : ContentPage
       p_bindingCtx.MapCacheEnabled = true;
     else if (result == disable)
       p_bindingCtx.MapCacheEnabled = false;
+  }
+
+  private void OptionsItem_SwitchToggled(object _sender, ToggledEventArgs _e)
+  {
+    p_bindingCtx.MapCacheEnabled = _e.Value;
+  }
+
+  private void NotifyNewUser_SwitchToggled(object _sender, ToggledEventArgs _e)
+  {
+    p_bindingCtx.NotificationOnNewUser = _e.Value;
   }
 }

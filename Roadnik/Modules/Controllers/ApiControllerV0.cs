@@ -4,12 +4,14 @@ using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Attributes;
+using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace Roadnik.Modules.Controllers;
 
@@ -19,11 +21,13 @@ public class ApiControllerV0 : JsonNetController
 {
   record DeleteUserReq(string Key);
 
-  private static long p_wsSessionsCount = 0;
   private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
   private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
   private static readonly HttpClient p_httpClient = new();
+  private static readonly Regex p_apkRegex = new(@"^roadnik\.(\d+)\.(\d+)\.(\d+)\.apk$", RegexOptions.Compiled);
+  private static long p_wsSessionsCount = 0;
+
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
@@ -262,6 +266,30 @@ public class ApiControllerV0 : JsonNetController
     p_logger.Info($"WS connection '{sessionIndex}' for key '{_key}' is closed");
 
     return new EmptyResult();
+  }
+
+  [HttpGet(ReqPaths.CHECK_UPDATE_APK)]
+  public async Task<IActionResult> CheckGithubApkAsync(CancellationToken _ct = default)
+  {
+    var distrDir = new DirectoryInfo(Path.Combine(p_settings.WebrootDirPath, "distr"));
+    if (!distrDir.Exists)
+      return Json(CheckUpdateRes.Fail);
+
+    foreach (var fileInfo in distrDir.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
+    {
+      var match = p_apkRegex.Match(fileInfo.Name);
+      if (match.Success)
+      {
+        var version = new Ax.Fw.SerializableVersion(
+          int.Parse(match.Groups[1].Value),
+          int.Parse(match.Groups[2].Value),
+          int.Parse(match.Groups[3].Value));
+
+        return Json(new CheckUpdateRes(true, version, $"{{server-name}}/{distrDir.Name}/{fileInfo.Name}"));
+      }
+    }
+
+    return await Task.FromResult(Json(CheckUpdateRes.Fail));
   }
 
   [ApiKeyRequired]

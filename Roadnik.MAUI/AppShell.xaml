@@ -27,6 +27,7 @@
 
     <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
         <ShellContent 
+            x:Name="p_mainPageFlyoutItem"
             Title="Map" 
             Icon="map.svg"
             ContentTemplate="{DataTemplate pages:MainPage}" />

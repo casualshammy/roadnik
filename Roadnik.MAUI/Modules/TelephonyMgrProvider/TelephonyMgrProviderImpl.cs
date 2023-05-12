@@ -2,6 +2,7 @@
 using Android.Telephony;
 using Ax.Fw;
 using Ax.Fw.Attributes;
+using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System;
@@ -29,6 +30,7 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider
     {
       return Observable
         .Interval(TimeSpan.FromMinutes(1), scheduler)
+        .StartWithDefault()
         .Subscribe(_ =>
         {
           var signalStrengh = GetSignalStrength();

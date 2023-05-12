@@ -9,7 +9,6 @@ using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Diagnostics;
 using System.Globalization;
-using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -26,11 +25,14 @@ public partial class MainPage : CContentPage
   private readonly ILogger p_log;
   private readonly Subject<bool> p_pageVisibleChangeFlow = new();
   private readonly MainPageViewModel p_bindingCtx;
-  private volatile bool p_webViewReadyToJsSubs = false;
 
   public MainPage()
   {
     InitializeComponent();
+
+    var pageController = Container.Locate<IPagesController>();
+    pageController.OnMainPage(this);
+
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
@@ -93,24 +95,11 @@ public partial class MainPage : CContentPage
       }, scheduler)
       .Subscribe(p_lifetime);
 
-    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var webViewReadyForJsSubsScheduler));
+    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var webAppDataScheduler));
 
     p_webView.JsonData
-      .ObserveOn(webViewReadyForJsSubsScheduler)
-      .Where(_ => p_webViewReadyToJsSubs)
-      .DistinctUntilChanged(_ => _.First)
-      .Sample(TimeSpan.FromSeconds(1), webViewReadyForJsSubsScheduler)
-      .Select(_jToken =>
-      {
-        if (_jToken == null)
-          return;
-
-        var webAppState = _jToken.ToObject<WebAppState>();
-        if (webAppState == null)
-          return;
-
-        p_storage.SetValue(PREF_WEB_APP_STATE, webAppState);
-      })
+      .ObserveOn(webAppDataScheduler)
+      .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
   }
 
@@ -160,6 +149,89 @@ public partial class MainPage : CContentPage
     return url;
   }
 
+  private async Task OnMsgFromWebAppAsync(JsToCSharpMsg? _msg, CancellationToken _ct)
+  {
+    if (_msg == null)
+      return;
+
+    if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
+    {
+      var layer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
+      if (layer == null)
+        return;
+
+      var command = $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+      await MainThread.InvokeOnMainThreadAsync(async () =>
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result == null)
+          p_log.Error($"Commands returned an error: '{command}'");
+      });
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
+    {
+      var layer = _msg.Data.ToObject<string>();
+      if (layer == null)
+        return;
+
+      p_storage.SetValue(PREF_MAP_LAYER, layer);
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
+    {
+      var mapViewState = _msg.Data.ToObject<MapViewState>();
+      if (mapViewState == null)
+        return;
+
+      p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED)
+    {
+      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
+      if (webAppState == null)
+        return;
+
+      var command = (string?)null;
+      var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
+      if (mapOpenBehavior == MapOpeningBehavior.LastPosition)
+        command = $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});";
+      else if (mapOpenBehavior == MapOpeningBehavior.AllTracks)
+        command = $"setViewToAllTracks();";
+
+      if (command == null)
+        return;
+
+      await MainThread.InvokeOnMainThreadAsync(async () =>
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result == null)
+          p_log.Error($"Commands returned an error: '{command}'");
+      });
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_NEW_TRACK)
+    {
+      var notificationEnabled = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
+      if (!notificationEnabled)
+        return;
+
+      var newUser = _msg.Data.ToObject<string>();
+      if (string.IsNullOrWhiteSpace(newUser))
+        return;
+
+      var myName = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
+      if (newUser.Equals(myName, StringComparison.InvariantCultureIgnoreCase))
+        return;
+
+      var hash = newUser.GetHashCode();
+
+      SimpleNotification.Show(
+        hash, 
+        "New Track Added",
+        "Notify when new user has started transmitting their location",
+        $"{newUser} has started transmitting their location",
+        $"Event time: {DateTimeOffset.Now:f}");
+    }
+  }
+
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
     var locationReporter = Container.Locate<ILocationReporter>();
@@ -188,56 +260,14 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e)
-  {
-    p_bindingCtx.IsSpinnerRequired = true;
-    p_webViewReadyToJsSubs = false;
-  }
+  private void MainWebView_Navigating(object _sender, WebNavigatingEventArgs _e) => p_bindingCtx.IsSpinnerRequired = true;
 
-  private async void MainWebView_Navigated(object _sender, WebNavigatedEventArgs _e)
+  private void MainWebView_Navigated(object _sender, WebNavigatedEventArgs _e)
   {
     if (_e.Result != WebNavigationResult.Success)
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
 
     p_bindingCtx.IsSpinnerRequired = false;
-
-    if (_e.Url.EndsWith(p_loadingPageUrl) || _e.Url == "about:blank")
-      return;
-
-    var webAppState = p_storage.GetValueOrDefault<WebAppState>(PREF_WEB_APP_STATE);
-    if (webAppState == null)
-    {
-      p_webViewReadyToJsSubs = true;
-      return;
-    }
-
-    var commands = new List<string> {
-      $"setMapLayer({Serialization.SerializeToCamelCaseJson(webAppState.MapLayer)});"
-    };
-
-    var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-    if (mapOpenBehavior == MapOpeningBehavior.LastPosition)
-      commands.Add($"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});");
-    else if (mapOpenBehavior == MapOpeningBehavior.AllTracks)
-      commands.Add($"setViewToAllTracks();");
-
-    await MainThread.InvokeOnMainThreadAsync(async () =>
-    {
-      var counter = 0;
-      foreach (var command in commands)
-      {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result != null)
-          ++counter;
-        else
-          p_log.Error($"Commands returned an error: '{command}'");
-      }
-
-      if (counter == commands.Count)
-        p_webViewReadyToJsSubs = true;
-      else
-        p_log.Error($"Can't complete all commands! Commands: {commands.Count}, done: {counter}");
-    });
   }
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)

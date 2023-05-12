@@ -2,7 +2,7 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
-import { WebAppState } from "./modules/api";
+import { JsToCSharpMsg, MapViewState } from "./modules/api";
 import { groupBy } from "./modules/toolkit";
 
 const p_storageApi = new Api.StorageApi();
@@ -16,7 +16,7 @@ const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
 
-let p_firstCentered = false;
+let p_firstDataReceived = false;
 let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
@@ -31,13 +31,13 @@ const p_map = new L.Map('map', {
 });
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
-    sendDataToHost(JSON.stringify(getState()));
+    sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED, data: p_currentLayer });
 });
 p_map.on('zoomend', function (_e) {
-    sendDataToHost(JSON.stringify(getState()));
+    sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED, data: getMapViewState() });
 });
 p_map.on('moveend', function (_e) {
-    sendDataToHost(JSON.stringify(getState()));
+    sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED, data: getMapViewState() });
 });
 p_currentLayer = p_mapsData.array[0].name;
 
@@ -54,6 +54,12 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     const usersMap = groupBy(data.Entries, _ => _.Nickname);
     const users = Object.keys(usersMap);
 
+    // notify about new users
+    if (p_firstDataReceived)
+        for (let user of users)
+            if (p_paths.get(user) === undefined)
+                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_NEW_TRACK, data: user });
+
     // init users controls
     for (let user of users)
         initControlsForUser(user);
@@ -65,10 +71,15 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
     }
 
     const userAgent = navigator.userAgent;
-    if (!p_firstCentered && !userAgent.includes("RoadnikApp")) {
-        p_firstCentered = true;
-        console.log("Not roadnik app, setting default view...");
-        setViewToAllTracks();
+    if (!p_firstDataReceived) {
+        p_firstDataReceived = true;
+        if (!userAgent.includes("RoadnikApp")) {
+            console.log("Not roadnik app, setting default view...");
+            setViewToAllTracks();
+        }
+        else {
+            sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {} });
+        }
     }
 
     document.title = `Roadnik: ${_key} (${p_paths.size})`;
@@ -182,16 +193,16 @@ if (key !== null) {
 }
 
 // C# interaction
-function sendDataToHost(_data: string): void {
+function sendDataToHost(_msg: JsToCSharpMsg): void {
     try {
-        (window as any).jsBridge.invokeAction(_data);
+        (window as any).jsBridge.invokeAction(JSON.stringify(_msg));
     }
     catch { }
 }
 
 // exports for C#
 function setLocation(_x: number, _y: number, _zoom?: number | undefined): boolean {
-    p_map.flyTo([_x, _y], _zoom);
+    p_map.flyTo([_x, _y], _zoom, { duration: 0.5 });
     return true;
 }
 (window as any).setLocation = setLocation;
@@ -222,11 +233,12 @@ function setMapLayer(_mapLayer?: string | undefined | null): boolean {
 }
 (window as any).setMapLayer = setMapLayer;
 
-function getState(): WebAppState {
+function getMapViewState(): MapViewState {
     return {
         location: p_map.getCenter(),
         zoom: p_map.getZoom(),
-        mapLayer: p_currentLayer
     };
 }
-(window as any).getState = getState;
+(window as any).getState = getMapViewState;
+
+sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

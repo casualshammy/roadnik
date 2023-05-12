@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<tookit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
              xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
              xmlns:converters="clr-namespace:Roadnik.MAUI.Toolkit.XamlConverters"
              xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
@@ -113,17 +114,18 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Connection settings"
+                FontAttributes="Bold"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
                 <Rectangle 
-                Grid.Column="0"
-                Grid.Row="1"
-                Grid.ColumnSpan="2"
-                VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Margin="-20, 0"
-                HeightRequest="2"/>
+                    Grid.Column="0"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    VerticalOptions="End"
+                    Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                    Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                    Margin="-20, 0"
+                    HeightRequest="2"/>
             </Grid>
             <controls:OptionsItem
                 Grid.Row="1"
@@ -155,6 +157,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Tracking settings"
+                    FontAttributes="Bold"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
                 <Rectangle 
@@ -202,6 +205,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Map appearance"
+                    FontAttributes="Bold"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
                 <Rectangle 
@@ -225,7 +229,7 @@
                 Title="Map data caching"
                 DetailsText="Greatly increases map loading speed"
                 ShowSwitch="True"
-                SwitchToggled="OptionsItem_SwitchToggled"
+                SwitchTapped="{Binding MapCacheCommand}"
                 ShowBottomLine="False"/>
 
             <!-- NOTIFICATIONS -->
@@ -241,6 +245,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Notifications"
+                    FontAttributes="Bold"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
                 <Rectangle 
@@ -259,7 +264,7 @@
                 Title="A new user has appeared"
                 DetailsText="New user has started to record their way"
                 ShowSwitch="True"
-                SwitchToggled="NotifyNewUser_SwitchToggled"
+                SwitchTapped="{Binding NotifyNewUserCommand}"
                 ShowBottomLine="False"/>
 
         </Grid>
@@ -267,4 +272,4 @@
 
 
 
-</ContentPage>
+</tookit:CContentPage>

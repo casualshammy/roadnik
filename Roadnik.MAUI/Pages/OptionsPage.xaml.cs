@@ -1,11 +1,11 @@
 ﻿using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System.Globalization;
 
 namespace Roadnik.MAUI.Pages;
 
-public partial class OptionsPage : ContentPage
+public partial class OptionsPage : CContentPage
 {
   private readonly OptionsPageViewModel p_bindingCtx;
 
@@ -157,13 +157,5 @@ public partial class OptionsPage : ContentPage
       p_bindingCtx.MapCacheEnabled = false;
   }
 
-  private void OptionsItem_SwitchToggled(object _sender, ToggledEventArgs _e)
-  {
-    p_bindingCtx.MapCacheEnabled = _e.Value;
-  }
-
-  private void NotifyNewUser_SwitchToggled(object _sender, ToggledEventArgs _e)
-  {
-    p_bindingCtx.NotificationOnNewUser = _e.Value;
-  }
+  
 }

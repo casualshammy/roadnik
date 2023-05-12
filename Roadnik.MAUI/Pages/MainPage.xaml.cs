@@ -29,6 +29,10 @@ public partial class MainPage : CContentPage
   public MainPage()
   {
     InitializeComponent();
+
+    var pageController = Container.Locate<IPagesController>();
+    pageController.OnMainPage(this);
+
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();

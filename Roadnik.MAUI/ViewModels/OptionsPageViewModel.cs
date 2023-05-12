@@ -42,6 +42,8 @@ internal class OptionsPageViewModel : BaseViewModel
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
     MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
+    MapCacheCommand = new Command(OnMapCache);
+    NotifyNewUserCommand = new Command(OnNotifyNewUser);
   }
 
   public string Title { get; } = "Options";
@@ -178,6 +180,8 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
   public ICommand MapOpenBehaviorCommand { get; }
+  public ICommand MapCacheCommand { get; }
+  public ICommand NotifyNewUserCommand { get; }
 
   private async void OnServerAddressCommand(object _arg)
   {
@@ -301,6 +305,22 @@ internal class OptionsPageViewModel : BaseViewModel
       MapOpenBehavior = MapOpeningBehavior.AllTracks.ToString();
     else if (result == lastPosition)
       MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
+  }
+
+  private void OnMapCache(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    MapCacheEnabled = toggled;
+  }
+
+  private void OnNotifyNewUser(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    NotificationOnNewUser = toggled;
   }
 
 }

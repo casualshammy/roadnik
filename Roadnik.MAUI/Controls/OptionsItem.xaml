@@ -22,7 +22,7 @@
             <Label
                 x:Name="DetailsTextLabel"
                 TextColor="Grey"
-                FontSize="Caption"/>
+                FontSize="14"/>
         </VerticalStackLayout>
         <Switch
             x:Name="Switch"

@@ -39,6 +39,8 @@ public partial class OptionsItem : ContentView
     control.Switch.IsVisible = (bool)_new;
   });
 
+  public static readonly BindableProperty SwitchTappedProperty = BindableProperty.Create(nameof(SwitchTapped), typeof(ICommand), typeof(OptionsItem));
+
 
   public string Title
   {
@@ -76,8 +78,12 @@ public partial class OptionsItem : ContentView
     set => Switch.IsToggled = value;
   }
 
-  public event EventHandler<ToggledEventArgs> SwitchToggled;
+  public ICommand SwitchTapped
+  {
+    get => (ICommand)GetValue(SwitchTappedProperty);
+    set => SetValue(SwitchTappedProperty, value);
+  }
 
-  private void Switch_Toggled(object _sender, ToggledEventArgs _e) => SwitchToggled?.Invoke(this, _e);
+  private void Switch_Toggled(object _sender, ToggledEventArgs _e) => SwitchTapped.Execute(_e.Value);
 
 }

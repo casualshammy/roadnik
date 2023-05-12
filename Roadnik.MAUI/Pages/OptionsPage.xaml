@@ -227,7 +227,7 @@
                 x:Name="p_mapCacheToggle"
                 Grid.Row="11"
                 Title="Map data caching"
-                DetailsText="Greatly increases map loading speed"
+                DetailsText="Will help in case of slow internet connection"
                 ShowSwitch="True"
                 SwitchTapped="{Binding MapCacheCommand}"
                 ShowBottomLine="False"/>

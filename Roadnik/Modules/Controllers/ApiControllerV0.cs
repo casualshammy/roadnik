@@ -21,11 +21,13 @@ public class ApiControllerV0 : JsonNetController
 {
   record DeleteUserReq(string Key);
 
-  private static long p_wsSessionsCount = 0;
   private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
   private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
   private static readonly HttpClient p_httpClient = new();
+  private static readonly Regex p_apkRegex = new(@"^roadnik\.(\d+)\.(\d+)\.(\d+)\.apk$", RegexOptions.Compiled);
+  private static long p_wsSessionsCount = 0;
+
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
@@ -266,17 +268,16 @@ public class ApiControllerV0 : JsonNetController
     return new EmptyResult();
   }
 
-  [HttpGet("/check-github-update-apk")]
+  [HttpGet(ReqPaths.CHECK_UPDATE_APK)]
   public async Task<IActionResult> CheckGithubApkAsync(CancellationToken _ct = default)
   {
-    var apkRegex = new Regex(@"^roadnik\.(\d+)\.(\d+)\.(\d+)\.apk$");
-    var distrDir = new DirectoryInfo( Path.Combine(p_settings.WebrootDirPath, "distr"));
+    var distrDir = new DirectoryInfo(Path.Combine(p_settings.WebrootDirPath, "distr"));
     if (!distrDir.Exists)
       return Json(CheckUpdateRes.Fail);
 
     foreach (var fileInfo in distrDir.EnumerateFiles("*", SearchOption.TopDirectoryOnly))
     {
-      var match = apkRegex.Match(fileInfo.Name);
+      var match = p_apkRegex.Match(fileInfo.Name);
       if (match.Success)
       {
         var version = new Ax.Fw.SerializableVersion(
@@ -288,7 +289,7 @@ public class ApiControllerV0 : JsonNetController
       }
     }
 
-    return Json(CheckUpdateRes.Fail);
+    return await Task.FromResult(Json(CheckUpdateRes.Fail));
   }
 
   [ApiKeyRequired]

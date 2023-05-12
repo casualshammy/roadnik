@@ -49,7 +49,7 @@ public partial class AboutPage : CContentPage
           if (string.IsNullOrWhiteSpace(serverAddress))
             return;
 
-          var res = await p_httpClientProvider.Value.GetStringAsync($"{serverAddress.TrimEnd('/')}/check-github-update-apk", _ct);
+          var res = await p_httpClientProvider.Value.GetStringAsync($"{serverAddress.TrimEnd('/')}/{ReqPaths.CHECK_UPDATE_APK}", _ct);
           if (string.IsNullOrWhiteSpace(res))
             return;
 
@@ -77,7 +77,7 @@ public partial class AboutPage : CContentPage
       if (string.IsNullOrWhiteSpace(serverAddress))
         return;
 
-      var versionRes = await p_httpClientProvider.Value.GetStringAsync($"{serverAddress.TrimEnd('/')}/check-github-update-apk", p_lifetime.Token);
+      var versionRes = await p_httpClientProvider.Value.GetStringAsync($"{serverAddress.TrimEnd('/')}/{ReqPaths.CHECK_UPDATE_APK}", p_lifetime.Token);
       if (string.IsNullOrWhiteSpace(versionRes))
         return;
 

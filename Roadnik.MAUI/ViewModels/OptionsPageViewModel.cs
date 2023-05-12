@@ -9,6 +9,7 @@ namespace Roadnik.MAUI.ViewModels;
 internal class OptionsPageViewModel : BaseViewModel
 {
   private readonly IPreferencesStorage p_storage;
+  private readonly IPagesController p_pagesController;
   private string? p_serverName;
   private string? p_roomId;
   private string? p_nickname;
@@ -23,6 +24,8 @@ internal class OptionsPageViewModel : BaseViewModel
   public OptionsPageViewModel()
   {
     p_storage = Container.Locate<IPreferencesStorage>();
+    p_pagesController = Container.Locate<IPagesController>();
+
     p_serverName = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     p_roomId = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
     p_nickname = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
@@ -185,7 +188,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnServerAddressCommand(object _arg)
   {
-    var serverName = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var serverName = await currentPage.DisplayPromptAsync(
         "Server address",
         null,
         "Save",
@@ -201,7 +208,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnRoomIdCommand(object _arg)
   {
-    var serverKey = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var serverKey = await currentPage.DisplayPromptAsync(
       "Room ID",
       $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
       "Save",
@@ -216,7 +227,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnUsernameCommand(object _arg)
   {
-    var nicknameRaw = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var nicknameRaw = await currentPage.DisplayPromptAsync(
       "Nickname:",
       $"Empty nickname is not allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
       "Save",
@@ -231,7 +246,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnMinimumInterval(object _arg)
   {
-    var mimimalIntervalRaw = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var mimimalIntervalRaw = await currentPage.DisplayPromptAsync(
       "Interval in seconds:",
       "Minimum interval for anonymous user is 10 sec, for registered user is 1 sec. Maximum interval is 1 hour (3600 sec)",
       initialValue: MinimumTime.ToString(),
@@ -246,7 +265,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnMinimumDistance(object _arg)
   {
-    var mimimalDistanceRaw = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var mimimalDistanceRaw = await currentPage.DisplayPromptAsync(
       "Distance in metres:",
       "0 to disable limit. Maximum value - 10 km (10000 metres)",
       initialValue: MinimumDistance.ToString(),
@@ -260,9 +283,13 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnTrackpointReportingCondition(object _arg)
   {
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
     var and = "Time AND distance";
     var or = "Time OR distance";
-    var result = await Application.Current.MainPage.DisplayActionSheet("Trackpoint reporting condition", null, null, and, or);
+    var result = await currentPage.DisplayActionSheet("Trackpoint reporting condition", null, null, and, or);
     if (result == null)
       return;
 
@@ -274,7 +301,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnMinAccuracy(object _arg)
   {
-    var minAccuracyRaw = await Application.Current.MainPage.DisplayPromptAsync(
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var minAccuracyRaw = await currentPage.DisplayPromptAsync(
       "Accuracy in metres:",
       "Minimum value - 1 meter. Sane value is between 10 and 30 metres",
       initialValue: MinAccuracy.ToString(),
@@ -294,10 +325,14 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private async void OnMapOpenBehavior(object _arg)
   {
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
     var allTracks = "Show all tracks";
     var lastPosition = "Show last viewed location";
 
-    var result = await Application.Current.MainPage.DisplayActionSheet("What to show on map opening:", null, null, allTracks, lastPosition);
+    var result = await currentPage.DisplayActionSheet("What to show on map opening:", null, null, allTracks, lastPosition);
     if (result == null)
       return;
 

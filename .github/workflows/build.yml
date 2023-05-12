@@ -51,7 +51,8 @@ jobs:
         prerelease: false
         files: |
           *.zip
-          *.apk
+          artifacts/*.apk
+          artifacts/*.aab
         name: "Release ${{ env.tag }}"
         tag_name: "${{ env.tag }}"
         fail_on_unmatched_files: false

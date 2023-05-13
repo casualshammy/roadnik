@@ -85,20 +85,20 @@
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="45" />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
                 <RowDefinition Height="45" />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
                 <RowDefinition Height="45" />
+                <RowDefinition />
+                <RowDefinition />
                 <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
-                <RowDefinition Height="45" />
+                <RowDefinition />
+                <RowDefinition />
             </Grid.RowDefinitions>
 
             <!-- SERVER SETTINGS  -->

@@ -1,4 +1,5 @@
-﻿using Android.App;
+﻿using Android;
+using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
@@ -21,6 +22,7 @@ namespace Roadnik.MAUI.Platforms.Android.Services;
 public class LocationReporterService : CAndroidService, ILocationReporterService
 {
   private const int NOTIFICATION_ID = 100;
+  private const int REQUEST_POST_NOTIFICATIONS = 1000;
   private ILifetime? p_lifetime;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -105,7 +107,15 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
   {
     var context = global::Android.App.Application.Context;
     var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
-    var activity = PendingIntent.GetActivity(context, 0, Platform.CurrentActivity?.Intent, 0);
+    var activity = PendingIntent.GetActivity(context, 0, Platform.CurrentActivity?.Intent, PendingIntentFlags.Immutable);
+
+    if (Build.VERSION.SdkInt > BuildVersionCodes.SV2)
+    {
+      if (ActivityCompat.ShouldShowRequestPermissionRationale(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS"))
+      {
+        ActivityCompat.RequestPermissions(Platform.CurrentActivity, new[] { "android.permission.POST_NOTIFICATIONS" }, REQUEST_POST_NOTIFICATIONS);
+      }
+    }
 
     Notification notification;
     if (Build.VERSION.SdkInt >= BuildVersionCodes.O)

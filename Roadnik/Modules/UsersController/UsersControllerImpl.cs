@@ -57,9 +57,9 @@ internal class UsersControllerImpl : IUsersController
       .Subscribe(_lifetime);
   }
 
-  public async Task AddUserAsync(string _key, string _email, CancellationToken _ct)
+  public async Task RegisterRoomAsync(string _roomId, string _email, CancellationToken _ct)
   {
-    await p_storage.WriteSimpleDocumentAsync(_key, new User(_key, _email, null), _ct);
+    await p_storage.WriteSimpleDocumentAsync(_roomId, new User(_roomId, _email, null), _ct);
   }
 
   public async Task DeleteUserAsync(string _key, CancellationToken _ct)

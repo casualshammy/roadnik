@@ -293,19 +293,19 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [ApiKeyRequired]
-  [HttpPost("add-user")]
+  [HttpPost("register-room")]
   public async Task<IActionResult> AddUserAsync(CancellationToken _ct)
   {
     var req = await GetJsonRequest<User>();
     if (req == null)
       return BadRequest("User is null");
 
-    await p_usersController.AddUserAsync(req.Key, req.Email, _ct);
+    await p_usersController.RegisterRoomAsync(req.RoomId, req.Email, _ct);
     return Ok();
   }
 
   [ApiKeyRequired]
-  [HttpPost("delete-user")]
+  [HttpPost("unregister-room")]
   public async Task<IActionResult> DeleteUserAsync(CancellationToken _ct)
   {
     var req = await GetJsonRequest<DeleteUserReq>();
@@ -317,7 +317,7 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [ApiKeyRequired]
-  [HttpGet("list-users")]
+  [HttpGet("list-registered-rooms")]
   public async Task<IActionResult> ListUsersAsync(CancellationToken _ct)
   {
     var users = await p_usersController.ListUsersAsync(_ct);

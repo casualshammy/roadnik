@@ -14,6 +14,10 @@ public static class MauiProgram
   public static MauiApp CreateMauiApp()
   {
     var lifetime = new Lifetime();
+    lifetime.DoOnCompleted(() =>
+    {
+      Application.Current?.Quit();
+    });
 
     var logsFolder = Path.Combine(FileSystem.Current.AppDataDirectory, "logs");
     if (!Directory.Exists(logsFolder))

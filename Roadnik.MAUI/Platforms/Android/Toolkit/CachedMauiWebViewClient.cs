@@ -54,15 +54,15 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     if (url == null)
       return base.ShouldInterceptRequest(_view, _request);
 
+    var cachedStream = p_tilesCache.Cache.Get(url);
+    if (cachedStream != null)
+      return new WebResourceResponse(null, null, cachedStream);
+
     if (p_cacheRegexes.All(_ => !_.IsMatch(url)))
       return base.ShouldInterceptRequest(_view, _request);
 
     try
     {
-      var cachedStream = p_tilesCache.Cache.Get(url);
-      if (cachedStream != null)
-        return new WebResourceResponse(null, null, cachedStream);
-
       byte[] dataBytes;
       lock (p_webClientLock)
       {

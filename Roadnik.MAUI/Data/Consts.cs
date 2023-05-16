@@ -5,6 +5,8 @@ internal static class Consts
   public const string PREF_INITIALIZED = "settings.initialized";
   public const string PREF_MAP_VIEW_STATE = "page.main.map-view-state";
   public const string PREF_MAP_LAYER = "page.main.map-layer";
+  public const string PREF_MAP_SELECTED_TRACK = "page.main.map-selected-track";
+
   public const string PREF_SERVER_ADDRESS = "settings.network.server-address";
   public const string PREF_SERVER_KEY = "settings.network.server-key";
   public const string PREF_NICKNAME = "settings.network.nickname";
@@ -22,5 +24,7 @@ internal static class Consts
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
   public const string JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
+  public const string JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED = "js-msg-popup-opened";
+  public const string JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
 
 }

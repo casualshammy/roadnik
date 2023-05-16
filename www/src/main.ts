@@ -92,15 +92,19 @@ function initControlsForUser(_user: string): void {
     if (p_lastAlts.get(_user) === undefined)
         p_lastAlts.set(_user, 0);
     if (p_markers.get(_user) === undefined) {
-        var icon = L.icon({
+        const icon = L.icon({
             iconUrl: colorFile,
             iconSize: [40, 40],
             iconAnchor: [20, 40],
             popupAnchor: [0, -40]
         });
-        p_markers.set(_user, L.marker([51.4768, 0.0006], { title: _user, icon: icon })
+        const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
-            .bindPopup("<b>Unknown track!</b>"));
+            .bindPopup("<b>Unknown track!</b>")
+            .addEventListener('popupopen', () => sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user}))
+            .addEventListener('popupclose', () => sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user}));
+
+        p_markers.set(_user, marker);
     }
     if (p_circles.get(_user) === undefined)
         p_circles.set(_user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })

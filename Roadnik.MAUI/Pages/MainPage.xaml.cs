@@ -46,11 +46,6 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx = bindingCtx;
 
-    //Observable
-    //  .Return(Unit.Default)
-    //  .SelectAsync(async (_, _ct) => await IsLocationPermissionOkAsync())
-    //  .Subscribe(p_lifetime);
-
     p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     p_storage.PreferencesChanged
@@ -224,11 +219,19 @@ public partial class MainPage : CContentPage
       var hash = newUser.GetHashCode();
 
       SimpleNotification.Show(
-        hash, 
+        hash,
         "New Track Added",
         "Notify when new user has started transmitting their location",
         $"{newUser} has started transmitting their location",
         $"Event time: {DateTimeOffset.Now:f}");
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
+    {
+      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, _msg.Data.ToObject<string>());
+    }
+    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
+    {
+      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, (string?)null);
     }
   }
 

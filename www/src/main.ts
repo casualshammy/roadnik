@@ -101,8 +101,8 @@ function initControlsForUser(_user: string): void {
         const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
             .bindPopup("<b>Unknown track!</b>")
-            .addEventListener('popupopen', () => sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user}))
-            .addEventListener('popupclose', () => sendDataToHost({msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user}));
+            .addEventListener('popupopen', () => sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user }))
+            .addEventListener('popupclose', () => sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user }));
 
         p_markers.set(_user, marker);
     }
@@ -244,5 +244,19 @@ function getMapViewState(): MapViewState {
     };
 }
 (window as any).getState = getMapViewState;
+
+function setViewToTrack(_pathName: string, _zoom: number): boolean {
+    if (p_markers.size > 0) {
+        const marker = p_markers.get(_pathName);
+        if (marker === undefined)
+            return false;
+
+        p_map.flyTo(marker.getLatLng(), _zoom, { duration: 0.5 });
+        marker.openPopup();
+    }
+
+    return true;
+}
+(window as any).setViewToTrack = setViewToTrack;
 
 sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

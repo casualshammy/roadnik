@@ -185,12 +185,15 @@ public partial class MainPage : CContentPage
       if (webAppState == null)
         return;
 
-      var command = (string?)null;
       var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-      if (mapOpenBehavior == MapOpeningBehavior.LastPosition)
-        command = $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});";
-      else if (mapOpenBehavior == MapOpeningBehavior.AllTracks)
-        command = $"setViewToAllTracks();";
+      var lastTrackedRoute = p_storage.GetValueOrDefault<string>(PREF_MAP_SELECTED_TRACK);
+      var command = mapOpenBehavior switch
+      {
+        MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
+        MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
+        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom})" : $"setViewToAllTracks();",
+        _ => $"setViewToAllTracks();"
+      };
 
       if (command == null)
         return;

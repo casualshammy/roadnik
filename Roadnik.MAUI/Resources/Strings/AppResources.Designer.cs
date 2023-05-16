@@ -88,6 +88,33 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Show all tracks.
+        /// </summary>
+        internal static string page_options_mapOpenBehavior_allTracks {
+            get {
+                return ResourceManager.GetString("page.options.mapOpenBehavior.allTracks", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the last viewed location.
+        /// </summary>
+        internal static string page_options_mapOpenBehavior_lastPosition {
+            get {
+                return ResourceManager.GetString("page.options.mapOpenBehavior.lastPosition", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show the last tracked route.
+        /// </summary>
+        internal static string page_options_mapOpenBehavior_lastTrack {
+            get {
+                return ResourceManager.GetString("page.options.mapOpenBehavior.lastTrack", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Room ID.
         /// </summary>
         internal static string page_options_roomId {

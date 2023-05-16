@@ -143,9 +143,11 @@ internal class OptionsPageViewModel : BaseViewModel
     get
     {
       if (p_mapOpeningBehavior == MapOpeningBehavior.AllTracks)
-        return "Show all tracks";
+        return Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks;
+      else if (p_mapOpeningBehavior == MapOpeningBehavior.LastPosition)
+        return Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition;
       else
-        return "Show last viewed location";
+        return Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack;
     }
     set
     {
@@ -329,17 +331,23 @@ internal class OptionsPageViewModel : BaseViewModel
     if (currentPage == null)
       return;
 
-    var allTracks = "Show all tracks";
-    var lastPosition = "Show last viewed location";
+    var result = await currentPage.DisplayActionSheet(
+      "What to show on map opening:",
+      null,
+      null,
+      Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks,
+      Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition,
+      Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack);
 
-    var result = await currentPage.DisplayActionSheet("What to show on map opening:", null, null, allTracks, lastPosition);
     if (result == null)
       return;
 
-    if (result == allTracks)
+    if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks)
       MapOpenBehavior = MapOpeningBehavior.AllTracks.ToString();
-    else if (result == lastPosition)
+    else if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition)
       MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
+    else if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack)
+      MapOpenBehavior = MapOpeningBehavior.LastTrackedRoute.ToString();
   }
 
   private void OnMapCache(object? _arg)

@@ -126,6 +126,15 @@
   <data name="page.options.connectionSettings" xml:space="preserve">
     <value>Connection settings</value>
   </data>
+  <data name="page.options.mapOpenBehavior.allTracks" xml:space="preserve">
+    <value>Show all tracks</value>
+  </data>
+  <data name="page.options.mapOpenBehavior.lastPosition" xml:space="preserve">
+    <value>Show the last viewed location</value>
+  </data>
+  <data name="page.options.mapOpenBehavior.lastTrack" xml:space="preserve">
+    <value>Show the last tracked route</value>
+  </data>
   <data name="page.options.roomId" xml:space="preserve">
     <value>Room ID</value>
   </data>

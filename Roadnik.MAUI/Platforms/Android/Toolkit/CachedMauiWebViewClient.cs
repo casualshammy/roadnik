@@ -1,9 +1,9 @@
 ﻿using Android.Webkit;
+using HeyRed.Mime;
 using JustLogger.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;
-using System.Net;
 using System.Text.RegularExpressions;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -11,8 +11,6 @@ namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 public class CachedMauiWebViewClient : MauiWebViewClient
 {
-  private readonly WebClient p_webClient;
-  private readonly object p_webClientLock = new();
   private readonly Regex[] p_cacheRegexes = {
     new Regex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$", RegexOptions.Compiled),
     new Regex(@"img/map_icon_\d+\.png$", RegexOptions.Compiled),
@@ -34,9 +32,6 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     p_tilesCache = _tilesCache;
     p_storage = _storage;
     p_log = _log?["cached-web-view-client"];
-#pragma warning disable SYSLIB0014 // Type or member is obsolete
-    p_webClient = new WebClient();
-#pragma warning restore SYSLIB0014 // Type or member is obsolete
   }
 
   public override WebResourceResponse? ShouldInterceptRequest(
@@ -54,33 +49,24 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     if (url == null)
       return base.ShouldInterceptRequest(_view, _request);
 
-    var cachedStream = p_tilesCache.Cache.Get(url);
-    if (cachedStream != null)
-      return new WebResourceResponse(null, null, cachedStream);
+    try
+    {
+      var cachedStream = p_tilesCache.Cache.Get(url);
+      if (cachedStream != null)
+      {
+        var mime = MimeTypesMap.GetMimeType(url);
+        return new WebResourceResponse(mime, null, cachedStream);
+      }
+    }
+    catch (Exception ex)
+    {
+      p_log?.Error($"Can't get cached resource for url '{url}'", ex);
+    }
 
     if (p_cacheRegexes.All(_ => !_.IsMatch(url)))
       return base.ShouldInterceptRequest(_view, _request);
 
-    try
-    {
-      byte[] dataBytes;
-      lock (p_webClientLock)
-      {
-        p_webClient.Headers.Add(HttpRequestHeader.UserAgent, $"RoadnikApp/{AppInfo.Current.VersionString}");
-        dataBytes = p_webClient.DownloadData(url);
-      }
-
-      var ms = new MemoryStream(dataBytes);
-
-      p_tilesCache.Cache.Store(url, ms);
-      ms.Position = 0;
-
-      return new WebResourceResponse(null, null, ms);
-    }
-    catch (Exception ex)
-    {
-      p_log?.Error($"Can't cache url '{url}'", ex);
-      return base.ShouldInterceptRequest(_view, _request);
-    }
+    p_tilesCache.EnqueueDownload(url);
+    return base.ShouldInterceptRequest(_view, _request);
   }
 }

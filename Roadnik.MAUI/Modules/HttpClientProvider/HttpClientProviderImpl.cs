@@ -11,6 +11,7 @@ internal class HttpClientProviderImpl : IHttpClientProvider
   public HttpClientProviderImpl()
   {
     p_httpClient.Timeout = TimeSpan.FromSeconds(10);
+    p_httpClient.DefaultRequestHeaders.Add("User-Agent", $"RoadnikApp/{AppInfo.Current.VersionString}");
     Value = p_httpClient;
   }
 

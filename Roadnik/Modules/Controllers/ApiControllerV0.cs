@@ -114,7 +114,7 @@ public class ApiControllerV0 : JsonNetController
 
     if (p_settings.ThunderforestCacheSize > 0)
     {
-      var cachedStream = await p_tilesCache.GetOrDefaultAsync(_x.Value, _y.Value, _z.Value, _type, _ct);
+      var cachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
       if (cachedStream != null)
       {
         p_logger.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");

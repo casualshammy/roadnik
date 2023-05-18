@@ -2,6 +2,7 @@
 using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using JustLogger;
 using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Concurrency;
@@ -14,13 +15,14 @@ namespace Roadnik.MAUI.Modules.TilesCache;
 internal class TilesCacheImpl : ITilesCache
 {
   private readonly Subject<string> p_workFlow = new();
+  private readonly ILogger p_log;
 
   public TilesCacheImpl(
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
     ILogger _logger)
   {
-    var log = _logger["tiles-cache"];
+    p_log = _logger["tiles-cache"];
 
     var cacheDir = Path.Combine(FileSystem.Current.CacheDirectory, "tiles-cache");
     var cache = new FileCache(_lifetime, cacheDir, TimeSpan.FromDays(1), 50 * 1024 * 1024, null);
@@ -36,22 +38,26 @@ internal class TilesCacheImpl : ITilesCache
       {
         var workRemain = Interlocked.Increment(ref workCounter);
         if (workRemain > 100)
-          log.Warn($"Work in queue: '{workRemain}'");
+          p_log.Warn($"Work in queue: '{workRemain}'");
       })
       .ObserveOn(scheduler)
       .SelectAsync(async (_url, _ct) =>
       {
         if (_url == null)
           return;
+        if (cache.IsKeyExists(_url, out _))
+          return;
 
         try
         {
           using (var networkStream = await _httpClientProvider.Value.GetStreamAsync(_url, _ct))
             await cache.StoreAsync(_url, networkStream, _ct);
+
+          p_log.Info($"Url is downloaded: '{_url}'");
         }
         catch (Exception ex)
         {
-          log.Error($"Can't download tile '{_url}'", ex);
+          p_log.Error($"Can't download tile '{_url}'", ex);
         }
       }, scheduler)
       .Do(_ => Interlocked.Decrement(ref workCounter))
@@ -60,6 +66,9 @@ internal class TilesCacheImpl : ITilesCache
 
   public FileCache Cache { get; }
 
-  public void EnqueueDownload(string _url) => p_workFlow.OnNext(_url);
-
+  public void EnqueueDownload(string _url)
+  {
+    p_log.Info($"New url for downloading: '{_url}'");
+    p_workFlow.OnNext(_url);
+  }
 }

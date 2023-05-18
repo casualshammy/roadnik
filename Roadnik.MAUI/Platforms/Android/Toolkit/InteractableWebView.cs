@@ -36,7 +36,7 @@ public partial class InteractableWebView
     nativeWebView.Settings.JavaScriptEnabled = true;
     nativeWebView.Settings.UserAgentString += $" RoadnikApp/{AppInfo.Current.VersionString}";
 
-    nativeWebView.SetWebChromeClient(new ConsoleWebChromeClient(this));
+    nativeWebView.SetWebChromeClient(new ConsoleWebChromeClient(this, p_log));
     nativeWebView.AddJavascriptInterface(new JsBridge(this), "jsBridge");
   }
 

@@ -2,11 +2,12 @@
 using JustLogger;
 using JustLogger.Interfaces;
 using JustLogger.Toolkit;
+using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
-internal class AndroidLogger : ILoggerDisposable
+internal class AndroidLogger : ILogger
 {
   private readonly string p_tag;
   private readonly ConcurrentDictionary<LogEntryType, long> p_stats = new();
@@ -42,6 +43,12 @@ internal class AndroidLogger : ILoggerDisposable
     Log.Info(p_tag, _text);
   }
 
+  public void InfoJson(string _text, JToken _object, string? _name = null)
+  {
+    p_stats.AddOrUpdate(LogEntryType.INFO, 1, (_, _prevValue) => ++_prevValue);
+    Log.Info(p_tag, $"{_text}{Environment.NewLine}{_object.ToString(Newtonsoft.Json.Formatting.Indented)}");
+  }
+
   public long GetEntriesCount(LogEntryType _type)
   {
     if (p_stats.TryGetValue(_type, out var count))
@@ -63,6 +70,5 @@ internal class AndroidLogger : ILoggerDisposable
   }
 
   public void Flush() { }
-  public void Dispose() { }
 
 }

@@ -30,10 +30,10 @@ internal class TilesCacheImpl : ITilesCache
     await p_cache.StoreAsync(key, _tileStream, _ct);
   }
 
-  public async Task<Stream?> GetOrDefaultAsync(int _x, int _y, int _z, string _type, CancellationToken _ct)
+  public Stream? GetOrDefault(int _x, int _y, int _z, string _type)
   {
     var key = GetKey(_x, _y, _z, _type);
-    return await p_cache.GetAsync(key, _ct);
+    return p_cache.Get(key);
   }
 
   private static string GetKey(int _x, int _y, int _z, string _type)

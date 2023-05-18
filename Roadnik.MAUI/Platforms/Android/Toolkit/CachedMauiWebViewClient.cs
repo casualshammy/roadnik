@@ -1,5 +1,4 @@
 ﻿using Android.Webkit;
-using HeyRed.Mime;
 using JustLogger.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
@@ -24,7 +23,7 @@ public class CachedMauiWebViewClient : MauiWebViewClient
   private readonly ILogger? p_log;
 
   public CachedMauiWebViewClient(
-    WebViewHandler _handler, 
+    WebViewHandler _handler,
     ITilesCache? _tilesCache,
     ILogger? _log,
     IPreferencesStorage? _storage) : base(_handler)
@@ -53,10 +52,7 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     {
       var cachedStream = p_tilesCache.Cache.Get(url);
       if (cachedStream != null)
-      {
-        var mime = MimeTypesMap.GetMimeType(url);
-        return new WebResourceResponse(mime, null, cachedStream);
-      }
+        return new WebResourceResponse(null, null, cachedStream);
     }
     catch (Exception ex)
     {

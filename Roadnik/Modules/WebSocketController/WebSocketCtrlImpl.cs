@@ -34,12 +34,12 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
   public IObservable<object> IncomingMessages => p_incomingMsgs;
   public IObservable<WebSocketSession> ClientConnected => p_clientConnectedFlow;
 
-  public async Task<bool> AcceptSocket(string _key, WebSocket _webSocket)
+  public async Task<bool> AcceptSocket(string _roomId, WebSocket _webSocket)
   {
     if (_webSocket.State != WebSocketState.Open)
       return false;
 
-    var session = new WebSocketSession(_key, _webSocket);
+    var session = new WebSocketSession(_roomId, _webSocket);
     var mre = new ManualResetEvent(false);
 
     await Task.Factory.StartNew(async () => await CreateNewLoopAsync(session, mre), TaskCreationOptions.LongRunning);
@@ -97,11 +97,11 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
   }
 
-  public async Task SendMsgByKeyAsync<T>(string _key, T _msg, CancellationToken _ct) where T : notnull
+  public async Task SendMsgByRoomIdAsync<T>(string _roomId, T _msg, CancellationToken _ct) where T : notnull
   {
     foreach (var (_, session) in p_sessions)
     {
-      if (session.Key != _key)
+      if (session.RoomId != _roomId)
         continue;
 
       await SendMsgAsync(session, _msg, _ct);
@@ -150,7 +150,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
     catch (WebSocketException wsEx) when (wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
     {
-      p_log.Info($"WS connection '{sessionIndex}' was closed prematurely for key '{session.Key}'");
+      p_log.Info($"WS connection '{sessionIndex}' was closed prematurely for room '{session.RoomId}'");
     }
     catch (Exception ex)
     {

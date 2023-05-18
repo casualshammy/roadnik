@@ -12,7 +12,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private readonly IPagesController p_pagesController;
   private string? p_serverName;
   private string? p_roomId;
-  private string? p_nickname;
+  private string? p_username;
   private int p_minimumTime;
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
@@ -27,8 +27,8 @@ internal class OptionsPageViewModel : BaseViewModel
     p_pagesController = Container.Locate<IPagesController>();
 
     p_serverName = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    p_roomId = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
-    p_nickname = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
+    p_roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    p_username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
     p_minimumTime = p_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL);
     p_minimumDistance = p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL);
     p_trackpointReportingCondition = p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION);
@@ -65,17 +65,17 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_roomId;
     set
     {
-      if (value == null || !ReqResUtil.IsKeySafe(value))
+      if (value == null || !ReqResUtil.IsRoomIdSafe(value))
         return;
 
       SetProperty(ref p_roomId, value);
       if (p_roomId != null)
-        p_storage.SetValue(PREF_SERVER_KEY, p_roomId);
+        p_storage.SetValue(PREF_ROOM, p_roomId);
     }
   }
   public string? Nickname
   {
-    get => p_nickname;
+    get => p_username;
     set
     {
       if (value == null)
@@ -88,9 +88,9 @@ internal class OptionsPageViewModel : BaseViewModel
       if (!ReqResUtil.IsUserDefinedStringSafe(v))
         return;
 
-      SetProperty(ref p_nickname, v);
-      if (p_nickname != null && !string.IsNullOrWhiteSpace(p_nickname))
-        p_storage.SetValue(PREF_NICKNAME, p_nickname);
+      SetProperty(ref p_username, v);
+      if (p_username != null && !string.IsNullOrWhiteSpace(p_username))
+        p_storage.SetValue(PREF_USERNAME, p_username);
     }
   }
   public int MinimumTime
@@ -214,17 +214,17 @@ internal class OptionsPageViewModel : BaseViewModel
     if (currentPage == null)
       return;
 
-    var serverKey = await currentPage.DisplayPromptAsync(
+    var roomId = await currentPage.DisplayPromptAsync(
       "Room ID",
-      $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
+      $"Only alphanumeric characters and hyphens are allowed. Minimum length - {ReqResUtil.MinRoomIdLength} characters, maximum - {ReqResUtil.MaxRoomIdLength} characters",
       "Save",
       initialValue: RoomId,
-      maxLength: ReqResUtil.MaxKeyKength);
+      maxLength: ReqResUtil.MaxRoomIdLength);
 
-    if (serverKey == null)
+    if (roomId == null)
       return;
 
-    RoomId = serverKey;
+    RoomId = roomId;
   }
 
   private async void OnUsernameCommand(object _arg)
@@ -233,17 +233,17 @@ internal class OptionsPageViewModel : BaseViewModel
     if (currentPage == null)
       return;
 
-    var nicknameRaw = await currentPage.DisplayPromptAsync(
-      "Nickname:",
-      $"Empty nickname is not allowed. Minimum length - {ReqResUtil.MinKeyKength} characters, maximum - {ReqResUtil.MaxKeyKength} characters",
+    var usernameRaw = await currentPage.DisplayPromptAsync(
+      "Username:",
+      $"Empty username is not allowed. Minimum length - {ReqResUtil.MinRoomIdLength} characters, maximum - {ReqResUtil.MaxRoomIdLength} characters",
       "Save",
       initialValue: Nickname,
-      maxLength: ReqResUtil.MaxKeyKength);
+      maxLength: ReqResUtil.MaxRoomIdLength);
 
-    if (nicknameRaw == null)
+    if (usernameRaw == null)
       return;
 
-    Nickname = nicknameRaw;
+    Nickname = usernameRaw;
   }
 
   private async void OnMinimumInterval(object _arg)

@@ -8,8 +8,8 @@ internal static class Consts
   public const string PREF_MAP_SELECTED_TRACK = "page.main.map-selected-track";
 
   public const string PREF_SERVER_ADDRESS = "settings.network.server-address";
-  public const string PREF_SERVER_KEY = "settings.network.server-key";
-  public const string PREF_NICKNAME = "settings.network.nickname";
+  public const string PREF_ROOM = "settings.network.room";
+  public const string PREF_USERNAME = "settings.network.username";
   public const string PREF_TIME_INTERVAL = "settings.report.time-interval";
   public const string PREF_DISTANCE_INTERVAL = "settings.report.distance-interval";
   public const string PREF_TRACKPOINT_REPORTING_CONDITION = "settings.report.trackpoint-reporting-condition";

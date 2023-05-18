@@ -4,8 +4,8 @@ namespace Roadnik.Data;
 
 internal record TimedStorageEntry(
   long UnixTimeMs,
-  string Key,
-  string Nickname,
+  string RoomId,
+  string Username,
   float Latitude,
   float Longitude,
   float Altitude,
@@ -21,8 +21,8 @@ internal record TimedStorageEntry(
     var data = _document.Data;
     return new TimedStorageEntry(
       _document.Created.ToUnixTimeMilliseconds(),
-      data.Key,
-      data.Nickname,
+      data.RoomId,
+      data.Username,
       data.Latitude,
       data.Longitude,
       data.Altitude,

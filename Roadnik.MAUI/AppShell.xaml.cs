@@ -1,8 +1,6 @@
 ﻿using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
-using Microsoft.Maui.Dispatching;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Pages;
 
 namespace Roadnik.MAUI;
 
@@ -14,6 +12,7 @@ public partial class NavigationAppShell : Shell
 
   public NavigationAppShell()
   {
+    Console.WriteLine("NavigationAppShell is started");
     InitializeComponent();
     if (Application.Current is not IMauiApp app)
       throw new ApplicationException($"App is not '{nameof(IMauiApp)}'");

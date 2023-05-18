@@ -13,6 +13,7 @@ public static class MauiProgram
 {
   public static MauiApp CreateMauiApp()
   {
+    Console.WriteLine("MauiApp is started");
     var lifetime = new Lifetime();
     lifetime.DoOnCompleted(() =>
     {
@@ -23,7 +24,14 @@ public static class MauiProgram
     if (!Directory.Exists(logsFolder))
       Directory.CreateDirectory(logsFolder);
 
-    var logger = lifetime.DisposeOnCompleted(new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 1000));
+    var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 1000);
+#if ANDROID
+    var androidLogger = new Roadnik.MAUI.Platforms.Android.Toolkit.AndroidLogger("roadnik");
+    var logger = lifetime.DisposeOnCompleted(new CompositeLogger(androidLogger, fileLogger));
+#else
+    var logger = lifetime.DisposeOnCompleted(fileLogger);
+#endif
+
     lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30)));
 
     logger.Info("=======================================");

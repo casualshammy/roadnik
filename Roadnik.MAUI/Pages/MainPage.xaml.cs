@@ -28,6 +28,7 @@ public partial class MainPage : CContentPage
 
   public MainPage()
   {
+    Console.WriteLine($"MainPage is started");
     InitializeComponent();
 
     var pageController = Container.Locate<IPagesController>();
@@ -136,11 +137,11 @@ public partial class MainPage : CContentPage
   private string? GetFullServerUrl()
   {
     var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    var serverKey = p_storage.GetValueOrDefault<string>(PREF_SERVER_KEY);
-    if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(serverKey))
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(roomId))
       return null;
 
-    var url = $"{serverAddress.TrimEnd('/')}/?key={serverKey}";
+    var url = $"{serverAddress.TrimEnd('/')}/?roomId={roomId}";
     return url;
   }
 
@@ -191,7 +192,7 @@ public partial class MainPage : CContentPage
       {
         MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
         MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
-        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom})" : $"setViewToAllTracks();",
+        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom}) || setViewToAllTracks();" : $"setViewToAllTracks();",
         _ => $"setViewToAllTracks();"
       };
 
@@ -215,7 +216,7 @@ public partial class MainPage : CContentPage
       if (string.IsNullOrWhiteSpace(newUser))
         return;
 
-      var myName = p_storage.GetValueOrDefault<string>(PREF_NICKNAME);
+      var myName = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
       if (newUser.Equals(myName, StringComparison.InvariantCultureIgnoreCase))
         return;
 
@@ -324,7 +325,7 @@ public partial class MainPage : CContentPage
     var url = GetFullServerUrl();
     if (url == null)
     {
-      await DisplayAlert("Server address or server key is invalid", null, "Ok");
+      await DisplayAlert("Server address or room id is invalid", null, "Ok");
       return;
     }
 

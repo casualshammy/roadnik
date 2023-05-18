@@ -9,10 +9,10 @@ public static class ReqResUtil
   private static readonly Regex p_safeUserMessageRegex = new(@"^[\d\w\-_\s\!\,\.\:\?]*$", RegexOptions.Compiled);
 
   public static int MaxUserMsgLength { get; } = 1024;
-  public static int MaxKeyKength { get; } = 16;
-  public static int MinKeyKength { get; } = 4;
+  public static int MaxRoomIdLength { get; } = 16;
+  public static int MinRoomIdLength { get; } = 4;
 
-  public static bool IsKeySafe(string _data) => _data.Length >= MinKeyKength && _data.Length <= MaxKeyKength && p_safeStringRegex.IsMatch(_data);
+  public static bool IsRoomIdSafe(string _data) => _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_safeStringRegex.IsMatch(_data);
   public static bool IsUserDefinedStringSafe(string _data) => _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
   public static string ClearUserMsg(string _data)
   {

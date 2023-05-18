@@ -19,7 +19,7 @@ namespace Roadnik.Modules.Controllers;
 [Route("/")]
 public class ApiControllerV0 : JsonNetController
 {
-  record DeleteUserReq(string Key);
+  record DeleteRoomReq(string RoomId);
 
   private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
@@ -31,7 +31,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
-  private readonly IUsersController p_usersController;
+  private readonly IRoomsController p_usersController;
   private readonly ITilesCache p_tilesCache;
   private readonly ILogger p_logger;
 
@@ -40,7 +40,7 @@ public class ApiControllerV0 : JsonNetController
     IDocumentStorage _documentStorage,
     ILogger _logger,
     IWebSocketCtrl _webSocketCtrl,
-    IUsersController _usersController,
+    IRoomsController _usersController,
     ITilesCache _tilesCache)
   {
     p_settings = _settings;
@@ -53,9 +53,9 @@ public class ApiControllerV0 : JsonNetController
 
   [HttpGet("/")]
   public async Task<IActionResult> GetIndexFileAsync(
-    [FromQuery(Name = "key")] string? _key = null)
+    [FromQuery(Name = "roomId")] string? _roomId = null)
   {
-    if (_key == null)
+    if (_roomId == null)
       return Redirect("landing.html");
 
     return await GetStaticFileAsync("/");
@@ -107,7 +107,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Z is null!");
     if (string.IsNullOrWhiteSpace(_type))
       return BadRequest("Type is null!");
-    if (!ReqResUtil.IsKeySafe(_type))
+    if (!ReqResUtil.IsRoomIdSafe(_type))
       return BadRequest("Type is incorrect!");
     if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
@@ -141,8 +141,8 @@ public class ApiControllerV0 : JsonNetController
 
   [HttpGet("/store")]
   public async Task<IActionResult> StoreAsync(
-    [FromQuery(Name = "key")] string? _key = null,
-    [FromQuery(Name = "nickname")] string? _nickname = null,
+    [FromQuery(Name = "roomId")] string? _roomId = null,
+    [FromQuery(Name = "username")] string? _username = null,
     [FromQuery(Name = "lat")] float? _lat = null,
     [FromQuery(Name = "lon")] float? _lon = null,
     [FromQuery(Name = "alt")] float? _alt = null, // metres
@@ -154,10 +154,10 @@ public class ApiControllerV0 : JsonNetController
     [FromQuery(Name = "var")] string? _message = null,
     CancellationToken _ct = default)
   {
-    if (string.IsNullOrWhiteSpace(_key))
-      return BadRequest("Key is null!");
-    if (!ReqResUtil.IsKeySafe(_key))
-      return BadRequest("Key is incorrect!");
+    if (string.IsNullOrWhiteSpace(_roomId))
+      return BadRequest("Room Id is null!");
+    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+      return BadRequest("Room Id is incorrect!");
     if (_lat == null)
       return BadRequest("Latitude is null!");
     if (_lon == null)
@@ -166,62 +166,62 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Altitude is null!");
     if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserDefinedStringSafe(_message))
       return BadRequest("Message is incorrect!");
-    if (!string.IsNullOrWhiteSpace(_nickname) && !ReqResUtil.IsUserDefinedStringSafe(_nickname))
-      return BadRequest("Nickname is incorrect!");
+    if (!string.IsNullOrWhiteSpace(_username) && !ReqResUtil.IsUserDefinedStringSafe(_username))
+      return BadRequest("Username is incorrect!");
 
-    p_logger.Info($"Requested to store geo data, key: '{_key}'");
+    p_logger.Info($"Requested to store geo data, room: '{_roomId}'");
 
-    var user = await p_usersController.GetUserAsync(_key, _ct);
+    var user = await p_usersController.GetRoomAsync(_roomId, _ct);
     if (!p_settings.AllowAnonymousPublish && user == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
     var timeLimit = user != null ? p_settings.RegisteredMinInterval : p_settings.AnonymousMinInterval;
     var now = DateTimeOffset.UtcNow;
-    var compositeKey = $"{_key}{_nickname ?? ""}";
+    var compositeKey = $"{_roomId}{_username ?? ""}";
     if (p_storeLimiter.TryGetValue(compositeKey, out var lastStoredTime) && now - lastStoredTime < timeLimit)
     {
-      p_logger.Warn($"Too many requests for storing geo data, key '{_key}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
+      p_logger.Warn($"Too many requests for storing geo data, room '{_roomId}', username: '{_username}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    var record = new StorageEntry(_key, _nickname ?? _key, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
-    await p_documentStorage.WriteSimpleDocumentAsync($"{_key}.{now.ToUnixTimeMilliseconds()}", record, _ct);
+    var record = new StorageEntry(_roomId, _username ?? _roomId, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
+    await p_documentStorage.WriteSimpleDocumentAsync($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, _ct);
     p_storeLimiter[compositeKey] = now;
-    await p_webSocketCtrl.SendMsgByKeyAsync(_key, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
   }
 
   [HttpGet("/get")]
   public async Task<IActionResult> GetAsync(
-    [FromQuery(Name = "key")] string? _key = null,
+    [FromQuery(Name = "roomId")] string? _roomId = null,
     [FromQuery(Name = "limit")] int? _limit = null,
     [FromQuery(Name = "offset")] long? _offsetUnixTimeMs = null,
     CancellationToken _ct = default)
   {
-    if (string.IsNullOrWhiteSpace(_key))
-      return BadRequest("Key is null!");
-    if (!ReqResUtil.IsKeySafe(_key))
-      return BadRequest("Key is incorrect!");
+    if (string.IsNullOrWhiteSpace(_roomId))
+      return BadRequest("Room Id is null!");
+    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+      return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (ip == null)
     {
-      p_logger.Error($"Ip is null, key: '{_key}'");
+      p_logger.Error($"Ip is null, room: '{_roomId}'");
       return BadRequest("Ip is null!");
     }
     var now = DateTimeOffset.UtcNow;
     if (p_getLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_getTooFastLimitTime)
     {
-      p_logger.Warn($"Too many requests from ip '{ip}', key: '{_key}'");
+      p_logger.Warn($"Too many requests from ip '{ip}', room: '{_roomId}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    p_logger.Info($"Requested to get geo data, key: '{_key}'");
+    p_logger.Info($"Requested to get geo data, room: '{_roomId}'");
 
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
-      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_key}.%"), _from: offset ?? null, _ct: _ct)
+      .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct)
       .OrderByDescending(_ => _.Created)
       .Take(_limit != null ? Math.Min(_limit.Value, 1000) : 1000)
       .ToListAsync(_ct);
@@ -247,23 +247,23 @@ public class ApiControllerV0 : JsonNetController
 
   [HttpGet("/ws")]
   public async Task<IActionResult> StartWebSocketAsync(
-    [FromQuery(Name = "key")] string? _key = null,
+    [FromQuery(Name = "roomId")] string? _roomId = null,
     CancellationToken _ct = default)
   {
-    if (string.IsNullOrWhiteSpace(_key))
-      return BadRequest("Key is null!");
-    if (!ReqResUtil.IsKeySafe(_key))
-      return BadRequest("Key is incorrect!");
+    if (string.IsNullOrWhiteSpace(_roomId))
+      return BadRequest("Room Id is null!");
+    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+      return BadRequest("Room Id is incorrect!");
 
     if (!HttpContext.WebSockets.IsWebSocketRequest)
       return StatusCode((int)HttpStatusCode.BadRequest, $"Expected web socket request");
 
     var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
-    p_logger.Info($"Establishing WS connection '{sessionIndex}' for key '{_key}'...");
+    p_logger.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
 
     using var websocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-    _ = await p_webSocketCtrl.AcceptSocket(_key, websocket);
-    p_logger.Info($"WS connection '{sessionIndex}' for key '{_key}' is closed");
+    _ = await p_webSocketCtrl.AcceptSocket(_roomId, websocket);
+    p_logger.Info($"WS connection '{sessionIndex}' for room '{_roomId}' is closed");
 
     return new EmptyResult();
   }
@@ -308,11 +308,11 @@ public class ApiControllerV0 : JsonNetController
   [HttpPost("unregister-room")]
   public async Task<IActionResult> DeleteUserAsync(CancellationToken _ct)
   {
-    var req = await GetJsonRequest<DeleteUserReq>();
-    if (req == null || req.Key == null)
-      return BadRequest("Key is null");
+    var req = await GetJsonRequest<DeleteRoomReq>();
+    if (req == null || req.RoomId == null)
+      return BadRequest("Room Id is null");
 
-    await p_usersController.DeleteUserAsync(req.Key, _ct);
+    await p_usersController.UnregisterRoomAsync(req.RoomId, _ct);
     return Ok();
   }
 
@@ -320,7 +320,7 @@ public class ApiControllerV0 : JsonNetController
   [HttpGet("list-registered-rooms")]
   public async Task<IActionResult> ListUsersAsync(CancellationToken _ct)
   {
-    var users = await p_usersController.ListUsersAsync(_ct);
+    var users = await p_usersController.ListRegisteredRoomsAsync(_ct);
     return Json(users, true);
   }
 

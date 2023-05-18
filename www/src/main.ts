@@ -9,7 +9,7 @@ const p_storageApi = new Api.StorageApi();
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
-const key = urlParams.get('key');
+const p_roomId = urlParams.get('roomId');
 
 const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();
@@ -44,14 +44,14 @@ p_currentLayer = p_mapsData.array[0].name;
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
 p_map.addControl(p_layersControl);
 
-async function refreshPositionFullAsync(_key: string, _offset: number | undefined = undefined) {
-    const data = await p_storageApi.getDataAsync(_key, undefined, _offset);
+async function refreshPositionFullAsync(_roomId: string, _offset: number | undefined = undefined) {
+    const data = await p_storageApi.getDataAsync(_roomId, undefined, _offset);
     if (data === null || !data.Success)
         return;
 
     p_lastOffset = data.LastUpdateUnixMs;
 
-    const usersMap = groupBy(data.Entries, _ => _.Nickname);
+    const usersMap = groupBy(data.Entries, _ => _.Username);
     const users = Object.keys(usersMap);
 
     // notify about new users
@@ -82,7 +82,7 @@ async function refreshPositionFullAsync(_key: string, _offset: number | undefine
         }
     }
 
-    document.title = `Roadnik: ${_key} (${p_paths.size})`;
+    document.title = `Roadnik: ${_roomId} (${p_paths.size})`;
 }
 
 function initControlsForUser(_user: string): void {
@@ -189,10 +189,10 @@ function updateControlsForUser(
     }
 }
 
-if (key !== null) {
-    const ws = p_storageApi.setupWs(key, (_ws, _data) => {
+if (p_roomId !== null) {
+    const ws = p_storageApi.setupWs(p_roomId, (_ws, _data) => {
         if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
-            refreshPositionFullAsync(key, p_lastOffset);
+            refreshPositionFullAsync(p_roomId, p_lastOffset);
     });
 }
 

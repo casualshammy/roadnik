@@ -13,8 +13,8 @@ export const JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
 
 export interface TimedStorageEntry {
     UnixTimeMs: number;
-    Key: string;
-    Nickname: string;
+    RoomId: string;
+    Username: string;
     Latitude: number;
     Longitude: number;
     Altitude: number;
@@ -52,17 +52,17 @@ export class StorageApi {
         
     }
 
-    public async getDataAsync(_key: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
-        const response = await fetch(`get?key=${_key}&limit=${_entriesLimit}&offset=${_offset}`);
+    public async getDataAsync(_roomId: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
+        const response = await fetch(`get?roomId=${_roomId}&limit=${_entriesLimit}&offset=${_offset}`);
         const data: GetResData = await response.json();
         return data;
     }
 
-    public setupWs(_key: string, _listener: (ws: Websocket, msg: WsBaseMsg) => any): Websocket {
+    public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => any): Websocket {
         const host = window.document.location.host.replace(/\/+$/, "");
         const path = window.document.location.pathname.replace(/\/+$/, "");
         const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebsocketBuilder(`${protocol}//${host}${path}/ws?key=${_key}`)
+        const ws = new WebsocketBuilder(`${protocol}//${host}${path}/ws?roomId=${_roomId}`)
             .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
             .withBackoff(new ConstantBackoff(10000))
             .build();

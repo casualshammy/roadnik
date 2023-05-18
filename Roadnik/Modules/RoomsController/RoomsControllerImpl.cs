@@ -9,14 +9,14 @@ using Roadnik.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 
-namespace Roadnik.Modules.UsersController;
+namespace Roadnik.Modules.RoomsController;
 
-[ExportClass(typeof(IUsersController), Singleton: true)]
-internal class UsersControllerImpl : IUsersController
+[ExportClass(typeof(IRoomsController), Singleton: true)]
+internal class RoomsControllerImpl : IRoomsController
 {
   private readonly IDocumentStorage p_storage;
 
-  public UsersControllerImpl(
+  public RoomsControllerImpl(
     IDocumentStorage _storage,
     IReadOnlyLifetime _lifetime,
     ISettings _settings,
@@ -34,24 +34,23 @@ internal class UsersControllerImpl : IUsersController
       .ObserveOn(scheduler)
       .SelectAsync(async (_, _ct) =>
       {
-        var entries = await AsyncEnumerable.ToListAsync(
-          p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct), _ct);
+        var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct);
 
-        foreach (var keyGroup in entries.GroupBy(_ => _.Data.Key))
+        await foreach (var roomGroup in entries.GroupBy(_ => _.Data.RoomId))
         {
           var limit = _settings.AnonymousMaxPoints;
-          var user = await GetUserAsync(keyGroup.Key, _ct);
+          var user = await GetRoomAsync(roomGroup.Key, _ct);
           if (user != null)
             limit = _settings.RegisteredMaxPoints;
 
           var counter = 0;
-          foreach (var entry in keyGroup.OrderByDescending(_ => _.Created))
+          await foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
             if (++counter > limit)
               await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
 
           var deleted = counter - limit;
           if (deleted > 0)
-            log.Warn($"Removed '{deleted}' geo entries of room id '{keyGroup.Key}'");
+            log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
         }
       }, scheduler)
       .Subscribe(_lifetime);
@@ -62,18 +61,18 @@ internal class UsersControllerImpl : IUsersController
     await p_storage.WriteSimpleDocumentAsync(_roomId, new User(_roomId, _email, null), _ct);
   }
 
-  public async Task DeleteUserAsync(string _key, CancellationToken _ct)
+  public async Task UnregisterRoomAsync(string _roomId, CancellationToken _ct)
   {
-    await p_storage.DeleteSimpleDocumentAsync<User>(_key.ToString(), _ct);
+    await p_storage.DeleteSimpleDocumentAsync<User>(_roomId.ToString(), _ct);
   }
 
-  public async Task<User?> GetUserAsync(string _key, CancellationToken _ct)
+  public async Task<User?> GetRoomAsync(string _roomId, CancellationToken _ct)
   {
-    var doc = await p_storage.ReadSimpleDocumentAsync<User>(_key, _ct);
+    var doc = await p_storage.ReadSimpleDocumentAsync<User>(_roomId, _ct);
     return doc?.Data;
   }
 
-  public async Task<IReadOnlyList<User>> ListUsersAsync(CancellationToken _ct)
+  public async Task<IReadOnlyList<User>> ListRegisteredRoomsAsync(CancellationToken _ct)
   {
     var users = await p_storage
       .ListSimpleDocumentsAsync<User>(_ct: _ct)

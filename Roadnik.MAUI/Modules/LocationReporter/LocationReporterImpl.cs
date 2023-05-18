@@ -45,13 +45,13 @@ internal class LocationReporterImpl : ILocationReporter
       .Select(_ => new
       {
         ServerAddress = _storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS),
-        ServerKey = _storage.GetValueOrDefault<string>(PREF_SERVER_KEY),
+        RoomId = _storage.GetValueOrDefault<string>(PREF_ROOM),
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
-        Nickname = _storage.GetValueOrDefault<string>(PREF_NICKNAME)
+        Username = _storage.GetValueOrDefault<string>(PREF_USERNAME)
       })
       .Replay(1)
       .RefCount();
@@ -118,7 +118,7 @@ internal class LocationReporterImpl : ILocationReporter
         var now = DateTimeOffset.UtcNow;
         try
         {
-          if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
+          if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.RoomId))
             return _acc;
 
           var distance = _acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
@@ -139,11 +139,11 @@ internal class LocationReporterImpl : ILocationReporter
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.Nickname, prefs.UserMsg, location, batteryStat, signalStrength);
+          var url = GetUrl(prefs.ServerAddress, prefs.RoomId, prefs.Username, prefs.UserMsg, location, batteryStat, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.Nickname, prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.RoomId}-f", prefs.Username, prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
           var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
           resFiltered.EnsureSuccessStatusCode();
 
@@ -216,8 +216,8 @@ internal class LocationReporterImpl : ILocationReporter
 
   private static string GetUrl(
     string _serverAddress,
-    string _serverKey,
-    string? _nickname,
+    string _roomId,
+    string? _username,
     string? _userMsg,
     Location _location,
     BatteryInfoChangedEventArgs _batteryInfo,
@@ -226,10 +226,10 @@ internal class LocationReporterImpl : ILocationReporter
     var culture = CultureInfo.InvariantCulture;
     var sb = new StringBuilder();
     sb.Append(_serverAddress.TrimEnd('/'));
-    sb.Append("/store?key=");
-    sb.Append(_serverKey);
-    sb.Append("&nickname=");
-    sb.Append(_nickname ?? _serverKey);
+    sb.Append("/store?roomId=");
+    sb.Append(_roomId);
+    sb.Append("&username=");
+    sb.Append(_username ?? _roomId);
     sb.Append("&lat=");
     sb.Append(_location.Latitude.ToString(culture));
     sb.Append("&lon=");

@@ -28,7 +28,13 @@ internal class DeepLinksControllerImpl : IDeepLinksController
   {
     var match = p_urlRegex.Match(_url);
     if (!match.Success)
+    {
+      await Toast
+        .Make("Incorrect room id", CommunityToolkit.Maui.Core.ToastDuration.Long)
+        .Show(_ct);
+
       return;
+    }
 
     if (p_pagesController.CurrentPage == null && !p_mainPageStarted)
     {

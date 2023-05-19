@@ -29,6 +29,7 @@ const p_map = new L.Map('map', {
     zoom: 14,
     layers: [p_mapsData.array[0].tileLayer]
 });
+p_map.attributionControl.setPrefix(false);
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED, data: p_currentLayer });
@@ -78,6 +79,7 @@ async function refreshPositionFullAsync(_roomId: string, _offset: number | undef
             setViewToAllTracks();
         }
         else {
+            p_map.attributionControl.remove();
             sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {} });
         }
     }

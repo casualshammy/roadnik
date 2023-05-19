@@ -83,16 +83,17 @@ export function GetMapLayers(): MapLayersData {
 		osm = new L.TileLayer(osmUrl, { maxZoom: 18, attribution: osmAttribution });
 	// OpenCycleMap
 	var cyclemapUrl = 'thunderforest?type=cycle&x={x}&y={y}&z={z}',
-		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: undefined });
+		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
+		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Landscape Map
 	var landscapeMapUrl = 'thunderforest?type=landscape&x={x}&y={y}&z={z}',
-		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: undefined });
+		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
 	var outdoorsMapUrl = 'thunderforest?type=outdoors&x={x}&y={y}&z={z}',
-		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: undefined });
+		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-		googleAttribution = "(c)2023 Google",
+		googleAttribution = "© 2023 Google",
 		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
 
 	var resultArray = Array<MapLayerWithName>(5);

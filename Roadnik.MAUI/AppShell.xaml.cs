@@ -1,5 +1,6 @@
 ﻿using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
+using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI;
@@ -12,10 +13,12 @@ public partial class NavigationAppShell : Shell
 
   public NavigationAppShell()
   {
-    Console.WriteLine("NavigationAppShell is started");
     InitializeComponent();
     if (Application.Current is not IMauiApp app)
       throw new ApplicationException($"App is not '{nameof(IMauiApp)}'");
+
+    var log = app.Container.Locate<ILogger>();
+    log.Info($"App shell is started");
 
     p_lifetime = app.Container.Locate<ILifetime>();
     p_pageController = app.Container.Locate<IPagesController>();

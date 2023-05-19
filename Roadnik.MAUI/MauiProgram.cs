@@ -5,6 +5,9 @@ using CommunityToolkit.Maui;
 using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
+using System.Diagnostics;
+using System.Net.WebSockets;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace Roadnik.MAUI;
@@ -13,7 +16,6 @@ public static class MauiProgram
 {
   public static MauiApp CreateMauiApp()
   {
-    Console.WriteLine("MauiApp is started");
     var lifetime = new Lifetime();
     lifetime.DoOnCompleted(() =>
     {
@@ -34,22 +36,27 @@ public static class MauiProgram
 
     lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30)));
 
-    logger.Info("=======================================");
-    logger.Info("============= app started =============");
-    logger.Info("=======================================");
+    var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
+    var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
+    logger.Info(line);
+    logger.Info(appStartedVersionStr);
+    logger.Info(line);
     lifetime.DoOnCompleted(() =>
     {
-      logger.Info("=======================================");
-      logger.Info("============= app stopped =============");
-      logger.Info("=======================================");
+      logger.Info("=========================================");
+      logger.Info("============= app is closed =============");
+      logger.Info("=========================================");
     });
 
+    var assembly = Assembly.GetExecutingAssembly();
     var containerBuilder = DependencyManagerBuilder
-      .Create(lifetime)
+      .Create(lifetime, assembly)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ILogger>(logger)
       .Build();
+
+    logger.Info($"Dependencies are installed");
 
     Container = containerBuilder.ServiceProvider;
 
@@ -62,6 +69,8 @@ public static class MauiProgram
         _fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
         _fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
       });
+
+    logger.Info($"MauiApp is building...");
 
     return builder.Build();
   }

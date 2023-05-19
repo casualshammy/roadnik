@@ -2,7 +2,6 @@
 using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger;
 using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Concurrency;
@@ -26,11 +25,14 @@ internal class TilesCacheImpl : ITilesCache
 
     var cacheDir = Path.Combine(FileSystem.Current.CacheDirectory, "tiles-cache");
     var cache = new FileCache(_lifetime, cacheDir, TimeSpan.FromDays(1), 50 * 1024 * 1024, null);
-    cache.CleanFiles();
-    Cache = cache;
+    _ = Task.Run(async () =>
+    {
+      await Task.Delay(TimeSpan.FromSeconds(10), _lifetime.Token);
+      if (!_lifetime.Token.IsCancellationRequested)
+        cache.CleanFiles();
+    });
 
     var scheduler = new EventLoopScheduler();
-
     var workCounter = 0;
 
     p_workFlow
@@ -62,6 +64,8 @@ internal class TilesCacheImpl : ITilesCache
       }, scheduler)
       .Do(_ => Interlocked.Decrement(ref workCounter))
       .Subscribe(_lifetime);
+
+    Cache = cache;
   }
 
   public FileCache Cache { get; }

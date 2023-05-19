@@ -1,6 +1,4 @@
-﻿using Roadnik.Common.Toolkit;
-using Roadnik.MAUI.Data;
-using Roadnik.MAUI.Toolkit;
+﻿using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 
 namespace Roadnik.MAUI.Pages;

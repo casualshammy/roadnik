@@ -28,7 +28,9 @@ public partial class MainPage : CContentPage
 
   public MainPage()
   {
-    Console.WriteLine($"MainPage is started");
+    p_log = Container.Locate<ILogger>()["main-page"];
+    p_log.Info($"Main page is opening...");
+
     InitializeComponent();
 
     var pageController = Container.Locate<IPagesController>();
@@ -37,7 +39,6 @@ public partial class MainPage : CContentPage
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
-    p_log = Container.Locate<ILogger>()["main-page"];
 
     if (BindingContext is not MainPageViewModel bindingCtx)
     {
@@ -97,6 +98,8 @@ public partial class MainPage : CContentPage
       .ObserveOn(webAppDataScheduler)
       .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
+
+    p_log.Info($"Main page is opened");
   }
 
   protected override void OnAppearing()

@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using JustLogger.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
@@ -10,9 +11,12 @@ public partial class App : CMauiApplication
 {
   public App()
   {
-    Console.WriteLine("App is started");
+    var log = Container.Locate<ILogger>();
+
+    log.Info($"App is starting...");
     InitializeComponent();
     SetupDefaultPreferences();
+    log.Info($"App is started");
 
     MainPage = new NavigationAppShell();
   }

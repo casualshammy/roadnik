@@ -66,3 +66,4 @@ jobs:
         packageName: com.axiolab.roadnik
         releaseFiles: artifacts/*.aab
         track: internal
+        whatsNewDirectory: whats-new

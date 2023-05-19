@@ -61,21 +61,14 @@ internal class LocationReporterImpl : ILocationReporter
       {
         if (_prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
           return Observable
-            .Interval(_prefs.TimeInterval, reportScheduler)
+            .Interval(_prefs.TimeInterval)
             .StartWithDefault();
 
         return Observable
-          .Return(Unit.Default)
-          .Select(_ => 0L);
+          .Return(0L);
       })
       .Switch()
       .ToUnit();
-
-    var batteryStatsFlow = Observable
-      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.Default.BatteryInfoChanged += _, _ => Battery.Default.BatteryInfoChanged -= _)
-      .Select(_ => _.EventArgs)
-      .Do(_ => p_log.Info($"Battery level: {_.ChargeLevel*100}"))
-      .StartWith(new BatteryInfoChangedEventArgs(Battery.Default.ChargeLevel, Battery.Default.State, Battery.Default.PowerSource));
 
     var locationFlow = _locationProvider.Location
       .CombineLatest(prefsFlow)
@@ -99,7 +92,7 @@ internal class LocationReporterImpl : ILocationReporter
     var stats = LocationReporterSessionStats.Empty;
     
     var reportFlow = timerFlow
-      .CombineLatest(batteryStatsFlow, _telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow, filteredLocationFlow)
+      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow, filteredLocationFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
@@ -114,7 +107,7 @@ internal class LocationReporterImpl : ILocationReporter
       .ObserveOn(reportScheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
-        var (_, batteryStat, signalStrength, prefs, location, filteredLocation) = _entry;
+        var (_, signalStrength, prefs, location, filteredLocation) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
@@ -136,14 +129,16 @@ internal class LocationReporterImpl : ILocationReporter
               return _acc;
           }
 
+          var batteryCharge = Battery.Default.ChargeLevel;
+
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          var url = GetUrl(prefs.ServerAddress, prefs.RoomId, prefs.Username, prefs.UserMsg, location, batteryStat, signalStrength);
+          var url = GetUrl(prefs.ServerAddress, prefs.RoomId, prefs.Username, prefs.UserMsg, location, batteryCharge, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.RoomId}-f", prefs.Username, prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
+          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.RoomId}-f", prefs.Username, prefs.UserMsg, filteredLocation, batteryCharge, signalStrength);
           var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
           resFiltered.EnsureSuccessStatusCode();
 
@@ -220,7 +215,7 @@ internal class LocationReporterImpl : ILocationReporter
     string? _username,
     string? _userMsg,
     Location _location,
-    BatteryInfoChangedEventArgs _batteryInfo,
+    double _batteryCharge,
     double? _signalStrength)
   {
     var culture = CultureInfo.InvariantCulture;
@@ -243,7 +238,7 @@ internal class LocationReporterImpl : ILocationReporter
     sb.Append("&bearing=");
     sb.Append(_location.Course?.ToString(culture) ?? "0");
     sb.Append("&battery=");
-    sb.Append(((float)(_batteryInfo.ChargeLevel * 100)).ToString(culture));
+    sb.Append(((float)(_batteryCharge * 100)).ToString(culture));
     if (_signalStrength != null)
     {
       sb.Append("&gsm_signal=");

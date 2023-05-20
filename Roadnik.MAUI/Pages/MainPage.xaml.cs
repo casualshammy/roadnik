@@ -51,6 +51,13 @@ public partial class MainPage : CContentPage
     p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     p_storage.PreferencesChanged
+      .Select(_ =>
+      {
+        var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+        var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+        return (serverAddress, roomId);
+      })
+      .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
       .Sample(TimeSpan.FromSeconds(1), scheduler)
       .CombineLatest(p_pageVisibleChangeFlow)
       .ObserveOn(scheduler)

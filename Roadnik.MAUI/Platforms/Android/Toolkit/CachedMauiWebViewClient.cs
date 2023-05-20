@@ -14,7 +14,7 @@ public class CachedMauiWebViewClient : MauiWebViewClient
     new Regex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$", RegexOptions.Compiled),
     new Regex(@"img/map_icon_\d+\.png$", RegexOptions.Compiled),
     new Regex(@"favicon\.ico$", RegexOptions.Compiled),
-    new Regex(@"\?roomId=[\w\-_]+$", RegexOptions.Compiled),
+    new Regex(@"/r/\?id=[\w\-_]+$", RegexOptions.Compiled),
     new Regex(@"\.js$", RegexOptions.Compiled),
     new Regex(@"openstreetmap\.org/\d+/\d+/\d+\.png$", RegexOptions.Compiled),
   };

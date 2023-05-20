@@ -30,4 +30,13 @@ public static class ReqResUtil
     return sb.ToString();
   }
 
+  public static string? GetMapAddress(string? _serverAddress, string? _roomId)
+  {
+    if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
+      return null;
+
+    var url = $"{_serverAddress.TrimEnd('/')}/r/?id={_roomId}";
+    return url;
+  }
+
 }

@@ -53,7 +53,7 @@ export class StorageApi {
     }
 
     public async getDataAsync(_roomId: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
-        const response = await fetch(`get?roomId=${_roomId}&limit=${_entriesLimit}&offset=${_offset}`);
+        const response = await fetch(`../get?roomId=${_roomId}&limit=${_entriesLimit}&offset=${_offset}`);
         const data: GetResData = await response.json();
         return data;
     }
@@ -62,7 +62,7 @@ export class StorageApi {
         const host = window.document.location.host.replace(/\/+$/, "");
         const path = window.document.location.pathname.replace(/\/+$/, "");
         const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebsocketBuilder(`${protocol}//${host}${path}/ws?roomId=${_roomId}`)
+        const ws = new WebsocketBuilder(`${protocol}//${host}${path}/../ws?roomId=${_roomId}`)
             .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
             .withBackoff(new ConstantBackoff(10000))
             .build();

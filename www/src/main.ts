@@ -9,7 +9,7 @@ const p_storageApi = new Api.StorageApi();
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
-const p_roomId = urlParams.get('roomId');
+const p_roomId = urlParams.get('id');
 
 const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();

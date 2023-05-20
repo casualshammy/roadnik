@@ -10,7 +10,7 @@ namespace Roadnik.MAUI.Modules.DeepLinksController;
 internal class DeepLinksControllerImpl : IDeepLinksController
 {
   public const string AndroidExtraKey = "open-link";
-  private static readonly Regex p_urlRegex = new(@"^(.+?)/\?roomId=([\w\-_]+)$");
+  private static readonly Regex p_urlRegex = new(@"^(.+?)/r/\?id=([\w\-_]+)$");
 
   private readonly IPagesController p_pagesController;
   private readonly IPreferencesStorage p_preferencesStorage;

@@ -9,7 +9,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, './'),
-    filename: "dist/bundle.js" // <--- Will be compiled to this single file
+    filename: "dist/room/bundle.js" // <--- Will be compiled to this single file
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js"],

@@ -82,11 +82,11 @@ export function GetMapLayers(): MapLayersData {
 		osmAttribution = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)',
 		osm = new L.TileLayer(osmUrl, { maxZoom: 18, attribution: osmAttribution });
 	// OpenCycleMap
-	var cyclemapUrl = 'thunderforest?type=cycle&x={x}&y={y}&z={z}',
+	var cyclemapUrl = '../thunderforest?type=cycle&x={x}&y={y}&z={z}',
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Landscape Map
-	var landscapeMapUrl = 'thunderforest?type=landscape&x={x}&y={y}&z={z}',
+	var landscapeMapUrl = '../thunderforest?type=landscape&x={x}&y={y}&z={z}',
 		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
 	var outdoorsMapUrl = 'thunderforest?type=outdoors&x={x}&y={y}&z={z}',

@@ -65,7 +65,9 @@ public partial class MainPage : CContentPage
           return;
         }
 
-        var url = GetFullServerUrl();
+        var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+        var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+        var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
         if (url == null)
         {
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
@@ -75,7 +77,7 @@ public partial class MainPage : CContentPage
 
         try
         {
-          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
           using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
           using var req = new HttpRequestMessage(HttpMethod.Head, url);
           using var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
@@ -96,6 +98,7 @@ public partial class MainPage : CContentPage
 
     p_webView.JsonData
       .ObserveOn(webAppDataScheduler)
+      .WithLatestFrom(p_pageVisibleChangeFlow)
       .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
 
@@ -137,23 +140,15 @@ public partial class MainPage : CContentPage
     throw new NotImplementedException();
   }
 
-  private string? GetFullServerUrl()
+  private async Task OnMsgFromWebAppAsync((JsToCSharpMsg?, bool) _tuple, CancellationToken _ct)
   {
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
-    if (string.IsNullOrWhiteSpace(serverAddress) || string.IsNullOrWhiteSpace(roomId))
-      return null;
-
-    var url = $"{serverAddress.TrimEnd('/')}/?roomId={roomId}";
-    return url;
-  }
-
-  private async Task OnMsgFromWebAppAsync(JsToCSharpMsg? _msg, CancellationToken _ct)
-  {
-    if (_msg == null)
+    var (msg, isPageVisible) = _tuple;
+    if (msg == null)
+      return;
+    if (!isPageVisible)
       return;
 
-    if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
+    if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
     {
       var layer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
       if (layer == null)
@@ -167,23 +162,23 @@ public partial class MainPage : CContentPage
           p_log.Error($"Commands returned an error: '{command}'");
       });
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
     {
-      var layer = _msg.Data.ToObject<string>();
+      var layer = msg.Data.ToObject<string>();
       if (layer == null)
         return;
 
       p_storage.SetValue(PREF_MAP_LAYER, layer);
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
     {
-      var mapViewState = _msg.Data.ToObject<MapViewState>();
+      var mapViewState = msg.Data.ToObject<MapViewState>();
       if (mapViewState == null)
         return;
 
       p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED)
     {
       var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
       if (webAppState == null)
@@ -209,13 +204,13 @@ public partial class MainPage : CContentPage
           p_log.Error($"Commands returned an error: '{command}'");
       });
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_NEW_TRACK)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_NEW_TRACK)
     {
       var notificationEnabled = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
       if (!notificationEnabled)
         return;
 
-      var newUser = _msg.Data.ToObject<string>();
+      var newUser = msg.Data.ToObject<string>();
       if (string.IsNullOrWhiteSpace(newUser))
         return;
 
@@ -232,11 +227,11 @@ public partial class MainPage : CContentPage
         $"{newUser} has started transmitting their location",
         $"Event time: {DateTimeOffset.Now:f}");
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, _msg.Data.ToObject<string>());
+      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.ToObject<string>());
     }
-    else if (_msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
     {
       p_storage.SetValue(PREF_MAP_SELECTED_TRACK, (string?)null);
     }
@@ -325,7 +320,9 @@ public partial class MainPage : CContentPage
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
-    var url = GetFullServerUrl();
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
     if (url == null)
     {
       await DisplayAlert("Server address or room id is invalid", null, "Ok");

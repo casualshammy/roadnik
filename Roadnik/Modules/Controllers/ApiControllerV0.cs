@@ -52,17 +52,7 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [HttpGet("/")]
-  public async Task<IActionResult> GetIndexFileAsync(
-    [FromQuery(Name = "roomId")] string? _roomId = null)
-  {
-    if (_roomId == null)
-      return Redirect("landing.html");
-
-    return await GetStaticFileAsync("/");
-  }
-
-  [HttpHead("/")]
-  public async Task<IActionResult> GetIndexFileHeadAsync() => await Task.FromResult(Ok());
+  public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
 
   [HttpGet("{**path}")]
   public async Task<IActionResult> GetStaticFileAsync(
@@ -83,6 +73,36 @@ public class ApiControllerV0 : JsonNetController
     if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
     {
       p_logger.Error($"Tried to get file not from webroot: '{_path}'");
+      return StatusCode(403);
+    }
+
+    var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
+    var stream = System.IO.File.OpenRead(path);
+    return File(stream, mime);
+  }
+
+  [HttpHead("/r/")]
+  public async Task<IActionResult> GetIndexFileHeadAsync() => await Task.FromResult(Ok());
+
+  [HttpGet("/r/{**path}")]
+  public async Task<IActionResult> GetRoomAsync(
+    [FromRoute(Name = "path")] string? _path)
+  {
+    p_logger.Info($"Requested static path '/room/{_path}'");
+
+    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
+      _path = "index.html";
+
+    var path = Path.Combine(p_settings.WebrootDirPath!, "room", _path);
+    if (!System.IO.File.Exists(path))
+    {
+      p_logger.Warn($"File '{path}' is not found");
+      return await Task.FromResult(StatusCode(404));
+    }
+
+    if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
+    {
+      p_logger.Error($"Tried to get file not from webroot: '{path}'");
       return StatusCode(403);
     }
 

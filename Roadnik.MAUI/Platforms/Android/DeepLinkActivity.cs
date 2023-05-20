@@ -8,7 +8,7 @@ namespace Roadnik.MAUI;
 
 [Activity(Exported = true)]
 [IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.ActionView, Intent.CategoryDefault, Intent.CategoryBrowsable },
-  DataScheme = "https", DataHost = "roadnik.app", DataPathPrefix = "/")]
+  DataScheme = "https", DataHost = "roadnik.app", DataPathPattern = "/r/")]
 public class DeepLinkActivity : AppCompatActivity
 {
   protected override void OnCreate(Bundle? _savedInstanceState)

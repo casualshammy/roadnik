@@ -131,7 +131,17 @@
                 </Label>
                 <Label 
                     Margin="20, 10, 0, 0"
-                    Text="3. Leaflet library"
+                    Text="3. Google Maps"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://www.google.com/maps/" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label 
+                    Margin="20, 10, 0, 0"
+                    Text="4. Leaflet library"
                     TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 

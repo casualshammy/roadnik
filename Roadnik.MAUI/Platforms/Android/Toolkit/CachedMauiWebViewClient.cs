@@ -10,7 +10,7 @@ namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 public class CachedMauiWebViewClient : MauiWebViewClient
 {
-  private readonly Regex[] p_cacheRegexes = {
+  private static readonly Regex[] p_cacheRegexes = {
     new Regex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$", RegexOptions.Compiled),
     new Regex(@"img/map_icon_\d+\.png$", RegexOptions.Compiled),
     new Regex(@"favicon\.ico$", RegexOptions.Compiled),

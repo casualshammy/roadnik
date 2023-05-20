@@ -2,7 +2,7 @@
 const path = require('path');
 
 module.exports = {
-  mode: "development",
+  mode: "production", // development production https://webpack.js.org/configuration/mode/
   devtool: "inline-source-map",
   entry: {
     main: "./src/main.ts",
@@ -21,5 +21,9 @@ module.exports = {
         loader: "ts-loader"
       }
     ]
-  }
+  },
+  performance: {
+    maxEntrypointSize: 2*1024*1024,
+    maxAssetSize: 2*1024*1024
+  },
 };

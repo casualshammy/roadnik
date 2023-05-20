@@ -76,7 +76,7 @@
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
-                        CommandParameter="https://github.com/casualshammy/roadnik/issues" />
+                        CommandParameter="https://github.com/casualshammy/roadnik-public/issues" />
                     </Label.GestureRecognizers>
                 </Label>
                 <Label Margin="20, 10, 0, 0"

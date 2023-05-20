@@ -1,1 +1,3 @@
-  - Fixed battery level not updating
+  - map attributions moved to `About` page
+  - removed unnecessary requests to server on preferences changed
+  - fixed issue tracker link

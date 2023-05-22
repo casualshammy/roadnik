@@ -48,7 +48,7 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx = bindingCtx;
 
-    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
+    p_lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     p_storage.PreferencesChanged
       .Select(_ =>
@@ -101,7 +101,7 @@ public partial class MainPage : CContentPage
       }, scheduler)
       .Subscribe(p_lifetime);
 
-    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var webAppDataScheduler));
+    p_lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var webAppDataScheduler));
 
     p_webView.JsonData
       .ObserveOn(webAppDataScheduler)

@@ -39,7 +39,7 @@ internal class LocationReporterImpl : ILocationReporter
   {
     p_log = _log["location-reporter"];
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var reportScheduler));
+    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var reportScheduler));
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
@@ -79,20 +79,11 @@ internal class LocationReporterImpl : ILocationReporter
       })
       .Select(_ => _.First);
 
-    var filteredLocationFlow = _locationProvider.FilteredLocation
-      .CombineLatest(prefsFlow)
-      .Where(_ =>
-      {
-        var (location, prefs) = _;
-        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
-      })
-      .Select(_ => _.First);
-
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
     
     var reportFlow = timerFlow
-      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow, filteredLocationFlow)
+      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
@@ -107,7 +98,7 @@ internal class LocationReporterImpl : ILocationReporter
       .ObserveOn(reportScheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
-        var (_, signalStrength, prefs, location, filteredLocation) = _entry;
+        var (_, signalStrength, prefs, location) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
@@ -138,10 +129,6 @@ internal class LocationReporterImpl : ILocationReporter
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.RoomId}-f", prefs.Username, prefs.UserMsg, filteredLocation, batteryCharge, signalStrength);
-          var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
-          resFiltered.EnsureSuccessStatusCode();
-
           stats = stats with { Successful = stats.Successful + 1 };
           p_statsFlow.OnNext(stats);
 
@@ -171,7 +158,7 @@ internal class LocationReporterImpl : ILocationReporter
       })
       .Do(_ => Interlocked.Decrement(ref counter));
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
+    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
 
     p_enableFlow
       .ObserveOn(locationProviderStateScheduler)
@@ -180,8 +167,8 @@ internal class LocationReporterImpl : ILocationReporter
         if (!_enable)
           return;
 
-        _life.DoOnCompleted(() => stats = LocationReporterSessionStats.Empty);
-        _life.DoOnCompleted(_locationProvider.Disable);
+        _life.DoOnEnding(() => stats = LocationReporterSessionStats.Empty);
+        _life.DoOnEnding(_locationProvider.Disable);
         _locationProvider.Enable();
         reportFlow.Subscribe(_life);
       });

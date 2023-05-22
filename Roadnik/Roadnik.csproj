@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Ax.Fw" Version="12.1.0" />
-		<PackageReference Include="Ax.Fw.Storage" Version="12.1.0" />
+		<PackageReference Include="Ax.Fw" Version="12.1.157" />
+		<PackageReference Include="Ax.Fw.Storage" Version="12.1.157" />
 		<PackageReference Include="Grace.AspNetCore.Hosting" Version="7.1.0" />
 		<PackageReference Include="JustLogger" Version="2.2.2" />
 		<PackageReference Include="MimeMapping" Version="2.0.0" />

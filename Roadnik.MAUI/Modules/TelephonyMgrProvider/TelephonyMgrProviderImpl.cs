@@ -24,7 +24,7 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider
   {
     p_telephonyManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
+    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     SignalLevel = Observable.Create<double?>(_observer =>
     {

@@ -5,9 +5,7 @@ using Android.OS;
 using Android.Runtime;
 using Ax.Fw.Attributes;
 using JustLogger.Interfaces;
-using Org.Apache.Commons.Logging;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Toolkit;
 using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -19,10 +17,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 {
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
-  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_filteredLocationFlow = new(1);
   private readonly ILogger p_logger;
   private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
-  private readonly KalmanLocationFilter p_kalmanFilter;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
   private long p_enabled = 0;
@@ -32,17 +28,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_logger = _logger["location-provider"];
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
 
-    p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
-
     Location = p_locationFlow
-      .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
-
-    FilteredLocation = p_filteredLocationFlow
       .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
   }
 
   public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation { get; }
 
   public void Enable()
   {
@@ -118,7 +108,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 #pragma warning restore CA1416 // Validate platform compatibility
 
       p_locationFlow.OnNext(location);
-      p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, timeStamp));
     }
     finally
     {
@@ -166,53 +155,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     catch (PermissionException)
     {
       return null;
-    }
-  }
-
-  private string GetBestProviderByAccuracy(string _provider1, string _provider2)
-  {
-    // const int ACCURACY_FINE = 1;
-    // const int ACCURACY_COARSE = 2;
-
-    if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
-    {
-#pragma warning disable CA1416 // Validate platform compatibility
-      using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
-      using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
-      if (providerInfo1 == null && providerInfo2 == null)
-        return _provider1;
-      if (providerInfo1 == null)
-        return _provider2;
-      if (providerInfo2 == null)
-        return _provider1;
-
-      if (providerInfo1.Accuracy <= providerInfo2.Accuracy)
-        return _provider1;
-
-      return _provider2;
-#pragma warning restore CA1416 // Validate platform compatibility
-    }
-    else
-    {
-#pragma warning disable CS0618 // Type or member is obsolete
-      using var providerInfo1 = p_locationManager.GetProvider(_provider1);
-      using var providerInfo2 = p_locationManager.GetProvider(_provider2);
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
-      if (providerInfo1 == null && providerInfo2 == null)
-        return _provider1;
-      if (providerInfo1 == null)
-        return _provider2;
-      if (providerInfo2 == null)
-        return _provider1;
-
-      if ((int)providerInfo1.Accuracy <= (int)providerInfo2.Accuracy)
-        return _provider1;
-
-      return _provider2;
-#pragma warning restore CS0618 // Type or member is obsolete
     }
   }
 

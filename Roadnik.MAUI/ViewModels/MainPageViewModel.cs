@@ -77,4 +77,9 @@ internal class MainPageViewModel : BaseViewModel
     "It seems like the app is in the background.\n" +
     "The map is not being shown in the background to prevent battery draining.";
 
+  public string ShareButtonDescription { get; } = "Click to share the link to this room";
+  public string MsgButtonDescription { get; } = "Click to set message to publish";
+  public string GoToMyLocationButtonDescription { get; } = "Click to go to my location";
+  public string StartPublishButtonDescription { get; } = "Click to start or stop publishing location";
+
 }

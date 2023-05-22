@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Roadnik", "Roadnik\Roadnik.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Roadnik.MAUI", "Roadnik.MAUI\Roadnik.MAUI.csproj", "{56DAC349-DE4A-4A60-ADD6-12BF5BD09A63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Roadnik.Common", "Roadnik.Common\Roadnik.Common.csproj", "{CEC916B2-74B3-4470-A6A6-8FA0D876AE5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Roadnik.Common", "Roadnik.Common\Roadnik.Common.csproj", "{CEC916B2-74B3-4470-A6A6-8FA0D876AE5C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

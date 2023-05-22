@@ -33,7 +33,7 @@ public partial class NavigationAppShell : Shell
       var now = DateTimeOffset.UtcNow;
       if (now - p_lastTimeBackClicked < TimeSpan.FromSeconds(3))
       {
-        p_lifetime.Complete();
+        p_lifetime.End();
         return false;
       }
 

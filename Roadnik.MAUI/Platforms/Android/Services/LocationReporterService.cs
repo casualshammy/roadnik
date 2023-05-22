@@ -1,11 +1,8 @@
-﻿using Android;
-using Android.App;
+﻿using Android.App;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
-using Android.Webkit;
 using AndroidX.Core.App;
-using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
@@ -13,7 +10,6 @@ using Grace.DependencyInjection.Attributes;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
-using static Android.Icu.Text.CaseMap;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
@@ -59,7 +55,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
         .Sample(TimeSpan.FromSeconds(1))
         .Subscribe(_ => GetNotification("Your location is being recorded...", $"Success: {_.Successful}; total: {_.Total}", true), p_lifetime);
 
-      p_lifetime.DoOnCompleted(() =>
+      p_lifetime.DoOnEnding(() =>
       {
         StopForeground(true);
         StopSelfResult(_startId);

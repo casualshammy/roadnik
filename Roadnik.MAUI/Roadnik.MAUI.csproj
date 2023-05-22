@@ -42,7 +42,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Ax.Fw" Version="12.1.0" />
 	  <PackageReference Include="CommunityToolkit.Maui" Version="2.0.0" />
 	  <PackageReference Include="JustLogger" Version="2.2.2" />
 	</ItemGroup>

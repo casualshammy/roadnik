@@ -5,8 +5,6 @@ using CommunityToolkit.Maui;
 using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
-using System.Diagnostics;
-using System.Net.WebSockets;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -17,7 +15,7 @@ public static class MauiProgram
   public static MauiApp CreateMauiApp()
   {
     var lifetime = new Lifetime();
-    lifetime.DoOnCompleted(() =>
+    lifetime.DoOnEnded(() =>
     {
       Application.Current?.Quit();
     });
@@ -29,19 +27,19 @@ public static class MauiProgram
     var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 1000);
 #if ANDROID
     var androidLogger = new Roadnik.MAUI.Platforms.Android.Toolkit.AndroidLogger("roadnik");
-    var logger = lifetime.DisposeOnCompleted(new CompositeLogger(androidLogger, fileLogger));
+    var logger = lifetime.ToDisposeOnEnded(new CompositeLogger(androidLogger, fileLogger));
 #else
-    var logger = lifetime.DisposeOnCompleted(fileLogger);
+    var logger = lifetime.ToDisposeOnEnded(fileLogger);
 #endif
 
-    lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30)));
+    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30)));
 
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
     var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
     logger.Info(line);
     logger.Info(appStartedVersionStr);
     logger.Info(line);
-    lifetime.DoOnCompleted(() =>
+    lifetime.DoOnEnded(() =>
     {
       logger.Info("=========================================");
       logger.Info("============= app is closed =============");

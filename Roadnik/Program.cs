@@ -4,9 +4,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Extensions;
-using Ax.Fw.Storage.Interfaces;
 using CommandLine;
-using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Builder;
@@ -28,7 +26,7 @@ public class Program
 {
   public static void Main(string[] _args)
   {
-    var assembly = Assembly.GetEntryAssembly() ?? throw new Exception("Can't get assembly!");
+    var assembly = Assembly.GetExecutingAssembly() ?? throw new Exception("Can't get assembly!");
     var workingDir = Path.GetDirectoryName(assembly.Location) ?? throw new Exception("Can't get working dir!");
 
     var configFilePath = Parser.Default
@@ -51,12 +49,12 @@ public class Program
       Directory.CreateDirectory(settings.LogDirPath);
 
     using var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
-    lifetime.DisposeOnCompleted(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30)));
+    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30)));
 
     var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
       .WithCache(1000, TimeSpan.FromHours(1));
 
-    lifetime.DisposeOnCompleted(docStorage);
+    lifetime.ToDisposeOnEnding(docStorage);
 
     Observable
       .Interval(TimeSpan.FromHours(6))
@@ -65,7 +63,7 @@ public class Program
       .Subscribe(lifetime);
 
     var depMgr = DependencyManagerBuilder
-      .Create(lifetime)
+      .Create(lifetime, assembly)
       .AddSingleton<JustLogger.Interfaces.ILogger>(logger)
       .AddSingleton<ILoggerDisposable>(logger)
       .AddSingleton(docStorage)
@@ -84,7 +82,7 @@ public class Program
     logger.Info($"-------------------------------------------");
 
     host.Run();
-    lifetime.Complete();
+    lifetime.End();
 
     logger.Info($"-------------------------------------------");
     logger.Info($"Server stopped");

@@ -25,7 +25,7 @@ internal class RoomsControllerImpl : IRoomsController
     p_storage = _storage;
     var log = _log["users-controller"];
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
+    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
 
     Observable
       .Interval(TimeSpan.FromHours(1), scheduler)

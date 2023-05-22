@@ -32,7 +32,7 @@ public partial class AboutPage : CContentPage
     p_httpClientProvider = Container.Locate<IHttpClientProvider>();
     p_log = Container.Locate<ILogger>()["about-page"];
 
-    p_lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var checkUpdateScheduler));
+    p_lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var checkUpdateScheduler));
 
     p_prefStorage.PreferencesChanged
       .Throttle(TimeSpan.FromSeconds(3), checkUpdateScheduler)

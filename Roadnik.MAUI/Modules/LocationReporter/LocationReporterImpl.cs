@@ -19,7 +19,7 @@ using Microsoft.Maui.Controls.Shapes;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
-[ExportClass(typeof(ILocationReporter), Singleton: true, ActivateOnStart: true)]
+[ExportClass(typeof(ILocationReporter), Singleton: true)]
 internal class LocationReporterImpl : ILocationReporter
 {
   record ForceReqData(DateTimeOffset DateTime, bool Ok);

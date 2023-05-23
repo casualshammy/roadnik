@@ -23,11 +23,11 @@
             "justMyCode": true
         },
         {
-            "name": "Build client: net7.0-android",
+            "name": "Build client: net6.0-android",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["--framework", "net7.0-android"],
+            "args": ["--framework", "net6.0-android"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

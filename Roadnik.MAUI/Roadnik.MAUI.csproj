@@ -30,6 +30,8 @@
 		<AndroidKeyStore>True</AndroidKeyStore>
 		<AndroidSigningKeyStore>com.axiolab.roadnik</AndroidSigningKeyStore>
 		<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
+		<RunAOTCompilation>true</RunAOTCompilation>
+		<EnableLLVM>true</EnableLLVM>
 	</PropertyGroup>
 
 	<ItemGroup>

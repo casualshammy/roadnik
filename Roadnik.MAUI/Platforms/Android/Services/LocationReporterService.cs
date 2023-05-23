@@ -13,7 +13,7 @@ using System.Reactive.Linq;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
-[Service]
+[Service(ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeLocation)]
 [ExportClass(typeof(ILocationReporterService), Singleton: true)]
 public class LocationReporterService : CAndroidService, ILocationReporterService
 {
@@ -57,7 +57,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
 
       p_lifetime.DoOnEnding(() =>
       {
-        StopForeground(true);
+        StopForeground(StopForegroundFlags.Remove);
         StopSelfResult(_startId);
         LocationReporter.SetState(false);
       });
@@ -96,7 +96,12 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
   private void RegisterNotification()
   {
     var notification = GetNotification("Your location is being recorded...", "");
-    StartForeground(NOTIFICATION_ID, notification);
+    if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
+#pragma warning disable CA1416 // Validate platform compatibility
+      StartForeground(NOTIFICATION_ID, notification, global::Android.Content.PM.ForegroundService.TypeLocation);
+#pragma warning restore CA1416 // Validate platform compatibility
+    else
+      StartForeground(NOTIFICATION_ID, notification);
   }
 
   private Notification GetNotification(string _title, string _text, bool _notify = false)
@@ -105,7 +110,7 @@ public class LocationReporterService : CAndroidService, ILocationReporterService
     var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
     var activity = PendingIntent.GetActivity(context, 0, Platform.CurrentActivity?.Intent, PendingIntentFlags.Immutable);
 
-    if (Build.VERSION.SdkInt > BuildVersionCodes.SV2)
+    if (Build.VERSION.SdkInt > BuildVersionCodes.SV2 && Platform.CurrentActivity != null)
     {
       if (ActivityCompat.ShouldShowRequestPermissionRationale(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS"))
       {

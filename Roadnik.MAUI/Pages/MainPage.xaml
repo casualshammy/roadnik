@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<tookit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
-             xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
-             x:Class="Roadnik.MAUI.Pages.MainPage"
-             Title="{Binding Title}">
+<tookit:CContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+    x:Class="Roadnik.MAUI.Pages.MainPage"
+    Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:MainPageViewModel />

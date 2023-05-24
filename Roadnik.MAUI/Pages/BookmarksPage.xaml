@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:CContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
+    xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
+    xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
+    xmlns:data="clr-namespace:Roadnik.MAUI.Data"
+    x:Class="Roadnik.MAUI.Pages.BookmarksPage">
+
+    <AbsoluteLayout>
+        <VerticalStackLayout
+            AbsoluteLayout.LayoutFlags="All"
+            AbsoluteLayout.LayoutBounds="0,0,1,1">
+            <ListView 
+                x:Name="p_listView"
+                x:DataType="data:BookmarkEntry"
+                HasUnevenRows="True"
+                ItemTapped="ListView_ItemTapped"
+                SelectionMode="None"
+                SeparatorVisibility="None">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <SwipeView 
+                                Threshold="60">
+                                <SwipeView.RightItems>
+                                    <SwipeItems 
+                                        Mode="Execute">
+                                        <SwipeItem
+                                            Text="Delete"
+                                            BackgroundColor="OrangeRed"
+                                            IconImageSource="trash_bin.svg"
+                                            Command="{Binding Source={x:Reference p_listView}, Path=BindingContext.OnDeleteCommand}"
+                                            CommandParameter="{Binding}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
+                                <Border 
+                                    BackgroundColor="{AppThemeBinding Light=LightGray, Dark=DarkGray}"
+                                    Margin="6, 0"
+                                    VerticalOptions="Fill">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10,10,10,10" />
+                                    </Border.StrokeShape>
+                                    <VerticalStackLayout
+                                        Margin="10, 0"
+                                        VerticalOptions="Center">
+                                        <Label 
+                                            Text="{Binding RoomId, StringFormat='Room: {0}'}"
+                                            TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
+                                        <Label 
+                                            Text="{Binding Username, StringFormat='Username: {0}'}"
+                                            TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
+                                        <Label
+                                            TextColor="{AppThemeBinding Light=Gray, Dark=IndianRed}"
+                                            FontSize="14"
+                                            Text="{Binding ServerAddress}"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </SwipeView>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <HorizontalStackLayout
+                HorizontalOptions="Center"
+                Margin="0, 20, 0, 0"
+                x:Name="p_pullRightLabel">
+                <Image
+                    BackgroundColor="{AppThemeBinding Dark=White}"
+                    Source="left_arrow.svg"
+                    HeightRequest="14"/>
+                <Label 
+                    Margin="10, 0"
+                    Text="Pull left to delete"/>
+                <Image
+                    BackgroundColor="{AppThemeBinding Dark=White}"
+                    Source="left_arrow.svg"
+                    HeightRequest="14"/>
+            </HorizontalStackLayout>
+            
+        </VerticalStackLayout>
+        
+        
+        <Grid 
+            Grid.Row="1"
+            Grid.Column="1"
+            AbsoluteLayout.LayoutFlags="PositionProportional"
+            AbsoluteLayout.LayoutBounds="0.95, 0.95, 70, 70">
+            <Button
+                WidthRequest="70"
+                HeightRequest="70"
+                CornerRadius="45"
+                Background="{StaticResource PrimaryBrush}"
+                Clicked="AddCurrentCredentials_Clicked">
+            </Button>
+            <ImageButton 
+                WidthRequest="70"
+                HeightRequest="70"
+                Source="plus_circle.svg"
+                InputTransparent="True"/>
+        </Grid>
+    </AbsoluteLayout>
+</toolkit:CContentPage>

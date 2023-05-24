@@ -54,6 +54,9 @@
 	  <Compile Update="Pages\MainPage.xaml.cs">
 	    <DependentUpon>MainPage.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Pages\BookmarksPage.xaml.cs">
+	    <DependentUpon>BookmarksPage.xaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Pages\OptionsPage.xaml.cs">
 	    <DependentUpon>OptionsPage.xaml</DependentUpon>
 	  </Compile>
@@ -85,6 +88,9 @@
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Pages\MainPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Pages\BookmarksPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

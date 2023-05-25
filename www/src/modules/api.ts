@@ -64,7 +64,7 @@ export class StorageApi {
         const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";
         const ws = new WebsocketBuilder(`${protocol}//${host}${path}/../ws?roomId=${_roomId}`)
             .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
-            .withBackoff(new ConstantBackoff(10000))
+            .withBackoff(new ConstantBackoff(1000))
             .build();
         return ws;
     }

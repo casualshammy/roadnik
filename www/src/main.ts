@@ -45,8 +45,11 @@ p_currentLayer = p_mapsData.array[0].name;
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
 p_map.addControl(p_layersControl);
 
-async function refreshPositionFullAsync(_roomId: string, _offset: number | undefined = undefined) {
-    const data = await p_storageApi.getDataAsync(_roomId, undefined, _offset);
+async function updateViewAsync(_offset: number | undefined = undefined) {
+    if (p_roomId === null)
+        return;
+
+    const data = await p_storageApi.getDataAsync(p_roomId, undefined, _offset);
     if (data === null || !data.Success)
         return;
 
@@ -84,7 +87,7 @@ async function refreshPositionFullAsync(_roomId: string, _offset: number | undef
         }
     }
 
-    document.title = `Roadnik: ${_roomId} (${p_paths.size})`;
+    document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
 }
 
 function initControlsForUser(_user: string): void {
@@ -194,7 +197,7 @@ function updateControlsForUser(
 if (p_roomId !== null) {
     const ws = p_storageApi.setupWs(p_roomId, (_ws, _data) => {
         if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
-            refreshPositionFullAsync(p_roomId, p_lastOffset);
+            updateViewAsync(p_lastOffset);
     });
 }
 

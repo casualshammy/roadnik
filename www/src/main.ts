@@ -4,6 +4,7 @@ import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
 import { JsToCSharpMsg, MapViewState } from "./modules/api";
 import { groupBy } from "./modules/toolkit";
+import { LeafletMouseEvent } from "leaflet";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -15,6 +16,7 @@ const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
+const p_geoEntries = new Map<string, Api.TimedStorageEntry[]>();
 
 let p_firstDataReceived = false;
 let p_lastOffset = 0;
@@ -114,9 +116,40 @@ function initControlsForUser(_user: string): void {
     if (p_circles.get(_user) === undefined)
         p_circles.set(_user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })
             .addTo(p_map));
-    if (p_paths.get(_user) === undefined)
-        p_paths.set(_user, L.polyline([], { color: color, smoothFactor: 1, weight: 5 })
-            .addTo(p_map));
+    if (p_paths.get(_user) === undefined) {
+        function onMouseIteract(_ev: LeafletMouseEvent) {
+            const entries = p_geoEntries.get(_user);
+            if (entries === undefined)
+                return;
+
+            let nearestLatLng: L.LatLng | undefined = undefined;
+            let nearestEntry: Api.TimedStorageEntry | undefined = undefined;
+            for (let entry of entries) {
+                const latLng = new L.LatLng(entry.Latitude, entry.Longitude, entry.Altitude);
+                if (nearestLatLng === undefined || _ev.latlng.distanceTo(latLng) < _ev.latlng.distanceTo(nearestLatLng)) {
+                    nearestLatLng = latLng;
+                    nearestEntry = entry;
+                }
+            }
+
+            if (nearestLatLng !== undefined && nearestEntry !== undefined) {
+                const popupText = buildPathPointPopup(_user, nearestEntry);
+                path.setPopupContent(popupText);
+                path.openPopup(nearestLatLng);
+            }
+        }
+
+        const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6 })
+            .addTo(p_map)
+            .bindPopup("")
+            .addEventListener("mouseover", onMouseIteract)
+            .addEventListener("click", onMouseIteract);
+
+        p_paths.set(_user, path);
+    }
+
+    if (p_geoEntries.get(_user) === undefined)
+        p_geoEntries.set(_user, []);
 
     p_userColorIndex++;
 }
@@ -128,6 +161,14 @@ function updateControlsForUser(
     const lastEntry = _entries[_entries.length - 1];
     if (lastEntry === undefined)
         return;
+
+    var geoEntries = p_geoEntries.get(_user);
+    if (geoEntries !== undefined) {
+        geoEntries.push(..._entries);
+        const geoEntriesExcessiveCount = geoEntries.length - 1000;
+        if (geoEntriesExcessiveCount > 0)
+            geoEntries.splice(0, geoEntriesExcessiveCount);
+    }
 
     const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
 
@@ -192,6 +233,35 @@ function updateControlsForUser(
             for (let point of points)
                 path.addLatLng(point);
     }
+}
+
+function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): string {
+    const kmh = (_entry.Speed ?? 0) * 3.6;
+
+    const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - _entry.UnixTimeMs);
+    let elapsedString = "now";
+    if (Math.abs(elapsedSinceLastUpdate.totalSeconds) > 5)
+        elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
+
+    const popUpText =
+        `<b>${_user}</b>: ${_entry.Message ?? "Hi!"}
+        </br>
+        <p>
+        Speed: ${kmh.toFixed(2)} km/h
+        </br>
+        Altitude: ${Math.ceil(_entry.Altitude)} m
+        </br>
+        Heading: ${Math.round(_entry.Bearing ?? -1)}°
+        </p>
+        <p>
+        Battery: ${_entry.Battery}%
+        </br>
+        GSM power: ${_entry.GsmSignal}%
+        <br/>
+        Updated ${elapsedString}
+        </p>`;
+
+    return popUpText;
 }
 
 if (p_roomId !== null) {

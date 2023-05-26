@@ -42,6 +42,8 @@ public class Program
 
     var lifetime = new Lifetime();
 
+    var settingsController = new SettingsController(configFilePath, lifetime);
+
     var settings = JsonConvert.DeserializeObject<SettingsImpl>(File.ReadAllText(configFilePath, Encoding.UTF8))
       ?? throw new FormatException($"Settings file is corrupted!");
 
@@ -70,6 +72,7 @@ public class Program
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ISettings>(settings)
+      .AddSingleton<ISettingsController>(settingsController)
       .Build();
 
     var host = CreateHostBuilder(_args, depMgr).Build();

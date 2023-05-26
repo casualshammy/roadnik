@@ -52,8 +52,8 @@ export class StorageApi {
         
     }
 
-    public async getDataAsync(_roomId: string, _entriesLimit: number | undefined = 100, _offset: number | undefined = 0): Promise<GetResData> {
-        const response = await fetch(`../get?roomId=${_roomId}&limit=${_entriesLimit}&offset=${_offset}`);
+    public async getDataAsync(_roomId: string, _offset: number | undefined = 0): Promise<GetResData> {
+        const response = await fetch(`../get?roomId=${_roomId}&offset=${_offset}`);
         const data: GetResData = await response.json();
         return data;
     }

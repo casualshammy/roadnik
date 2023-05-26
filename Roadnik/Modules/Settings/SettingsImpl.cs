@@ -18,7 +18,8 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(AnonymousMaxPoints))] int? _anonymousMaxPoints,
     [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints,
     [JsonProperty(nameof(AnonymousMinInterval))] TimeSpan? _anonymousMinInterval,
-    [JsonProperty(nameof(RegisteredMinInterval))] TimeSpan? _registeredMinInterval)
+    [JsonProperty(nameof(RegisteredMinInterval))] TimeSpan? _registeredMinInterval,
+    [JsonProperty(nameof(GetRequestReturnsEntriesCount))] int? _getRequestReturnsEntriesCount)
   {
     WebrootDirPath = _webrootDirPath ?? "www";
     LogDirPath = _logDirPath ?? "logs";
@@ -33,6 +34,7 @@ internal class SettingsImpl : ISettings
     RegisteredMaxPoints = _registeredMaxPoints ?? 1000;
     AnonymousMinInterval = _anonymousMinInterval ?? TimeSpan.FromSeconds(9.9);
     RegisteredMinInterval = _registeredMinInterval ?? TimeSpan.FromSeconds(0.9);
+    GetRequestReturnsEntriesCount = _getRequestReturnsEntriesCount ?? 10000;
   }
 
   public string WebrootDirPath { get; }
@@ -48,5 +50,6 @@ internal class SettingsImpl : ISettings
   public int RegisteredMaxPoints { get; }
   public TimeSpan AnonymousMinInterval { get; }
   public TimeSpan RegisteredMinInterval { get; }
+  public int GetRequestReturnsEntriesCount { get; }
 
 }

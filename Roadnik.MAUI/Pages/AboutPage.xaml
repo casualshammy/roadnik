@@ -160,13 +160,8 @@
                 Margin="0, 0, 0, 5">
 
                 <Label 
-                HorizontalOptions="Center"
-                Text="{Binding AppVersion}"/>
-                <Button 
-                HorizontalOptions="Center"
-                IsVisible="{Binding UpdateAvailable}"
-                Text="{Binding UpdateButtonText}"
-                Clicked="UpdateAvailable_Clicked"/>
+                    HorizontalOptions="Center"
+                    Text="{Binding AppVersion}"/>
             </VerticalStackLayout>
 
         </Grid>

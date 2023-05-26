@@ -15,4 +15,5 @@ public interface ISettings
   int RegisteredMaxPoints { get; }
   TimeSpan AnonymousMinInterval { get; }
   TimeSpan RegisteredMinInterval { get; }
+  int GetRequestReturnsEntriesCount { get; }
 }

@@ -2,8 +2,8 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
-import { JsToCSharpMsg, MapViewState } from "./modules/api";
-import { groupBy } from "./modules/toolkit";
+import { JsToCSharpMsg, MapViewState, TimedStorageEntry } from "./modules/api";
+import { StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 
 const p_storageApi = new Api.StorageApi();
@@ -16,7 +16,7 @@ const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
-const p_geoEntries = new Map<string, Api.TimedStorageEntry[]>();
+const p_geoEntries: StringDictionary<TimedStorageEntry[]> = {};
 
 let p_firstDataReceived = false;
 let p_lastOffset = 0;
@@ -51,7 +51,7 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
     if (p_roomId === null)
         return;
 
-    const data = await p_storageApi.getDataAsync(p_roomId, undefined, _offset);
+    const data = await p_storageApi.getDataAsync(p_roomId, _offset);
     if (data === null || !data.Success)
         return;
 
@@ -117,39 +117,36 @@ function initControlsForUser(_user: string): void {
         p_circles.set(_user, L.circle([51.4768, 0.0006], 100, { color: color, fillColor: '*', fillOpacity: 0.3 })
             .addTo(p_map));
     if (p_paths.get(_user) === undefined) {
-        function onMouseIteract(_ev: LeafletMouseEvent) {
-            const entries = p_geoEntries.get(_user);
-            if (entries === undefined)
-                return;
-
-            let nearestLatLng: L.LatLng | undefined = undefined;
-            let nearestEntry: Api.TimedStorageEntry | undefined = undefined;
-            for (let entry of entries) {
-                const latLng = new L.LatLng(entry.Latitude, entry.Longitude, entry.Altitude);
-                if (nearestLatLng === undefined || _ev.latlng.distanceTo(latLng) < _ev.latlng.distanceTo(nearestLatLng)) {
-                    nearestLatLng = latLng;
-                    nearestEntry = entry;
-                }
-            }
-
-            if (nearestLatLng !== undefined && nearestEntry !== undefined) {
-                const popupText = buildPathPointPopup(_user, nearestEntry);
-                path.setPopupContent(popupText);
-                path.openPopup(nearestLatLng);
-            }
-        }
-
         const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6 })
             .addTo(p_map)
             .bindPopup("")
-            .addEventListener("mouseover", onMouseIteract)
-            .addEventListener("click", onMouseIteract);
+            .addEventListener("click", (_ev: LeafletMouseEvent) => {
+                const entries = p_geoEntries[_user];
+                if (entries === undefined)
+                    return;
+
+                let nearestLatLng: L.LatLng | undefined = undefined;
+                let nearestEntry: Api.TimedStorageEntry | undefined = undefined;
+                for (let entry of entries) {
+                    const latLng = new L.LatLng(entry.Latitude, entry.Longitude, entry.Altitude);
+                    if (nearestLatLng === undefined || _ev.latlng.distanceTo(latLng) < _ev.latlng.distanceTo(nearestLatLng)) {
+                        nearestLatLng = latLng;
+                        nearestEntry = entry;
+                    }
+                }
+
+                if (nearestLatLng !== undefined && nearestEntry !== undefined) {
+                    const popupText = buildPathPointPopup(_user, nearestEntry);
+                    path.setPopupContent(popupText);
+                    path.openPopup(nearestLatLng);
+                }
+            });
 
         p_paths.set(_user, path);
     }
 
-    if (p_geoEntries.get(_user) === undefined)
-        p_geoEntries.set(_user, []);
+    if (p_geoEntries[_user] === undefined)
+        p_geoEntries[_user] = [];
 
     p_userColorIndex++;
 }
@@ -162,12 +159,14 @@ function updateControlsForUser(
     if (lastEntry === undefined)
         return;
 
-    var geoEntries = p_geoEntries.get(_user);
+    var geoEntries = p_geoEntries[_user];
     if (geoEntries !== undefined) {
         geoEntries.push(..._entries);
         const geoEntriesExcessiveCount = geoEntries.length - 1000;
-        if (geoEntriesExcessiveCount > 0)
-            geoEntries.splice(0, geoEntriesExcessiveCount);
+        if (geoEntriesExcessiveCount > 0) {
+            const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
+            console.log(`${removedEntries.length} geo entries were removed for user ${_user}`);
+        }
     }
 
     const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);

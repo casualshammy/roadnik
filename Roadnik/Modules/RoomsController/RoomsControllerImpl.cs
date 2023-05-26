@@ -8,6 +8,7 @@ using Roadnik.Data;
 using Roadnik.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Runtime;
 
 namespace Roadnik.Modules.RoomsController;
 
@@ -19,7 +20,7 @@ internal class RoomsControllerImpl : IRoomsController
   public RoomsControllerImpl(
     IDocumentStorage _storage,
     IReadOnlyLifetime _lifetime,
-    ISettings _settings,
+    ISettingsController _settingsController,
     ILogger _log)
   {
     p_storage = _storage;
@@ -27,33 +28,38 @@ internal class RoomsControllerImpl : IRoomsController
 
     _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
 
-    Observable
-      .Interval(TimeSpan.FromHours(1), scheduler)
-      .StartWithDefault()
-      .Delay(TimeSpan.FromMinutes(10), scheduler)
-      .ObserveOn(scheduler)
-      .SelectAsync(async (_, _ct) =>
+    _settingsController.Value
+      .WhereNotNull()
+      .HotAlive(_lifetime, (_conf, _life) =>
       {
-        var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct);
+        Observable
+          .Interval(TimeSpan.FromHours(1), scheduler)
+          .StartWithDefault()
+          .Delay(TimeSpan.FromMinutes(10), scheduler)
+          .ObserveOn(scheduler)
+          .SelectAsync(async (_, _ct) =>
+          {
+            var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct);
 
-        await foreach (var roomGroup in entries.GroupBy(_ => _.Data.RoomId))
-        {
-          var limit = _settings.AnonymousMaxPoints;
-          var user = await GetRoomAsync(roomGroup.Key, _ct);
-          if (user != null)
-            limit = _settings.RegisteredMaxPoints;
+            await foreach (var roomGroup in entries.GroupBy(_ => _.Data.RoomId))
+            {
+              var limit = _conf.AnonymousMaxPoints;
+              var user = await GetRoomAsync(roomGroup.Key, _ct);
+              if (user != null)
+                limit = _conf.RegisteredMaxPoints;
 
-          var counter = 0;
-          await foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
-            if (++counter > limit)
-              await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+              var counter = 0;
+              await foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
+                if (++counter > limit)
+                  await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
 
-          var deleted = counter - limit;
-          if (deleted > 0)
-            log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
-        }
-      }, scheduler)
-      .Subscribe(_lifetime);
+              var deleted = counter - limit;
+              if (deleted > 0)
+                log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
+            }
+          }, scheduler)
+          .Subscribe(_life);
+      });
   }
 
   public async Task RegisterRoomAsync(string _roomId, string _email, CancellationToken _ct)

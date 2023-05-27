@@ -8,4 +8,5 @@ public interface IRoomsController
   Task UnregisterRoomAsync(string _roomId, CancellationToken _ct);
   Task<User?> GetRoomAsync(string _roomId, CancellationToken _ct);
   Task<IReadOnlyList<User>> ListRegisteredRoomsAsync(CancellationToken _ct);
+  void EnqueueUserWipe(string _roomId, string _username, long _upToDateTimeUnixMs);
 }

@@ -2,12 +2,14 @@
 using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Runtime;
 
 namespace Roadnik.Modules.RoomsController;
@@ -15,12 +17,16 @@ namespace Roadnik.Modules.RoomsController;
 [ExportClass(typeof(IRoomsController), Singleton: true)]
 internal class RoomsControllerImpl : IRoomsController
 {
+  record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
+
   private readonly IDocumentStorage p_storage;
+  private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
 
   public RoomsControllerImpl(
     IDocumentStorage _storage,
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
+    IWebSocketCtrl _webSocketCtrl,
     ILogger _log)
   {
     p_storage = _storage;
@@ -60,6 +66,40 @@ internal class RoomsControllerImpl : IRoomsController
           }, scheduler)
           .Subscribe(_life);
       });
+
+    var wipeCounter = 0L;
+    p_userWipeFlow
+      .ObserveOn(scheduler)
+      .SelectAsync(async (_data, _ct) =>
+      {
+        var to = DateTimeOffset.FromUnixTimeMilliseconds(_data.UpToDateTimeUnixMs);
+        log.Info($"[{wipeCounter}] Removing all entries for '{_data.RoomId}/{_data.Username}' up to '{to}'");
+
+        try
+        {
+          var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"), _to: to, _ct: _ct);
+
+          var entriesDeleted = 0L;
+          await foreach (var entry in entries)
+          {
+            if (entry.Data.Username != _data.Username)
+              continue;
+
+            await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+            ++entriesDeleted;
+          }
+
+          await _webSocketCtrl.SendMsgByRoomIdAsync(_data.RoomId, new WsMsgPathWiped(_data.Username), _ct);
+
+          log.Info($"[{wipeCounter}] Removed '{entriesDeleted}' entries for {_data.RoomId}/{_data.Username}");
+        }
+        catch (Exception ex)
+        {
+          log.Error($"[{wipeCounter}] Can't delete entries for {_data.RoomId}/{_data.Username}", ex);
+        }
+      }, scheduler)
+      .Do(_ => Interlocked.Increment(ref wipeCounter))
+      .Subscribe(_lifetime);
   }
 
   public async Task RegisterRoomAsync(string _roomId, string _email, CancellationToken _ct)
@@ -86,6 +126,12 @@ internal class RoomsControllerImpl : IRoomsController
       .ToListAsync(_ct: _ct);
 
     return users;
+  }
+
+  public void EnqueueUserWipe(string _roomId, string _username, long _upToDateTimeUnixMs)
+  {
+    var data = new UserWipeInfo(_roomId, _username, _upToDateTimeUnixMs);
+    p_userWipeFlow.OnNext(data);
   }
 
 }

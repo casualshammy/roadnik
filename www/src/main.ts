@@ -2,7 +2,7 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
-import { JsToCSharpMsg, MapViewState, TimedStorageEntry } from "./modules/api";
+import { JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 
@@ -265,8 +265,24 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
 
 if (p_roomId !== null) {
     const ws = p_storageApi.setupWs(p_roomId, (_ws, _data) => {
-        if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED)
+        if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
             updateViewAsync(p_lastOffset);
+        }
+        else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
+            const msgData: WsMsgPathWiped = _data.Payload;
+            const user = msgData.Username;
+
+            if (p_lastAlts.get(user) !== undefined)
+                p_lastAlts.set(user, 0);
+
+            const path = p_paths.get(user);
+            if (path !== undefined)
+                path.setLatLngs([]);
+
+            const geoEntries = p_geoEntries[user];
+            if (geoEntries !== undefined)
+                geoEntries.length = 0;
+        }
     });
 }
 

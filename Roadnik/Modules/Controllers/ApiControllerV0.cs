@@ -4,6 +4,7 @@ using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Attributes;
+using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
@@ -259,6 +260,16 @@ public class ApiControllerV0 : JsonNetController
 
     p_getLimiter[ip] = now;
     return Json(result);
+  }
+
+  [HttpPost(ReqPaths.WIPE_USER_PATH_DATA)]
+  public async Task<IActionResult> GetAsync(
+    [FromBody] WipeUserPathDataReq _req,
+    CancellationToken _ct = default)
+  {
+    p_logger.Info($"Requested to wipe user path data, room '{_req.RoomId}', username '{_req.Username}'");
+    p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+    return Ok();
   }
 
   [HttpGet("/ws")]

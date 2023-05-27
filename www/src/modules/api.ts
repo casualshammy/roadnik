@@ -2,6 +2,7 @@ import {WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 
 export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";
 export const WS_MSG_TYPE_DATA_UPDATED: string = "ws-msg-data-updated";
+export const WS_MSG_PATH_WIPED: string = "ws-msg-path-wiped";
 
 export const JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
 export const JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
@@ -35,6 +36,10 @@ export interface GetResData {
 export interface WsBaseMsg {
     Type: string;
     Payload: any;
+}
+
+export interface WsMsgPathWiped {
+    Username: string;
 }
 
 export interface MapViewState {

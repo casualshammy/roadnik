@@ -2,6 +2,7 @@
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
@@ -9,6 +10,7 @@ using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -259,6 +261,7 @@ public partial class MainPage : CContentPage
       else
         p_log.Error($"Resource 'DangerLowBrush' is not found!");
 
+      _ = Task.Run(SendWipeUserPathReqAsync);
       locationReporterService.Start();
     }
     else
@@ -352,6 +355,36 @@ public partial class MainPage : CContentPage
       return;
 
     p_storage.SetValue(PREF_USER_MSG, ReqResUtil.ClearUserMsg(msg));
+  }
+
+  private async Task SendWipeUserPathReqAsync()
+  {
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    if (serverAddress.IsNullOrWhiteSpace())
+      return;
+
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    if (roomId.IsNullOrWhiteSpace())
+      return;
+
+    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+    if (username.IsNullOrWhiteSpace())
+      return;
+
+    try
+    {
+      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.WIPE_USER_PATH_DATA}");
+      using var content = JsonContent.Create(new WipeUserPathDataReq(roomId, username));
+      req.Content = content;
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      using var res = await p_httpClient.Value.SendAsync(req, cts.Token);
+      res.EnsureSuccessStatusCode();
+      p_log.Info($"Sent request to wipe user's path in room '{roomId}'");
+    }
+    catch (Exception ex)
+    {
+      p_log.Error($"Request to wipe path data '{roomId}/{username}' was completed with error", ex);
+    }
   }
 
 }

@@ -21,8 +21,10 @@ public class ApiControllerV0 : JsonNetController
   record DeleteRoomReq(string RoomId);
 
   private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
+  private static readonly TimeSpan p_wipePathTooFastLimitTime = TimeSpan.FromSeconds(10);
   private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
   private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
+  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_wipePathLimiter = new();
   private static readonly HttpClient p_httpClient = new();
   private static long p_wsSessionsCount = 0;
 
@@ -263,19 +265,32 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [HttpPost(ReqPaths.WIPE_USER_PATH_DATA)]
-  public async Task<IActionResult> GetAsync(
-    [FromBody] WipeUserPathDataReq _req,
-    CancellationToken _ct = default)
+  public async Task<IActionResult> WipeUserPathAsync(
+    [FromBody] WipeUserPathDataReq _req)
   {
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (ip == null)
+    {
+      p_logger.Error($"Wipe path: ip is null");
+      return BadRequest("Ip is null!");
+    }
+
+    var now = DateTimeOffset.UtcNow;
+    if (p_wipePathLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_wipePathTooFastLimitTime)
+    {
+      p_logger.Warn($"Wipe path: too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+    p_wipePathLimiter[ip] = now;
+
     p_logger.Info($"Requested to wipe user path data, room '{_req.RoomId}', username '{_req.Username}'");
-    p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-    return Ok();
+    p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
+    return await Task.FromResult(Ok());
   }
 
   [HttpGet("/ws")]
   public async Task<IActionResult> StartWebSocketAsync(
-    [FromQuery(Name = "roomId")] string? _roomId = null,
-    CancellationToken _ct = default)
+    [FromQuery(Name = "roomId")] string? _roomId = null)
   {
     if (string.IsNullOrWhiteSpace(_roomId))
       return BadRequest("Room Id is null!");

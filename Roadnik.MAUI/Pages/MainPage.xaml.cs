@@ -326,7 +326,11 @@ public partial class MainPage : CContentPage
     AppInfo.Current.ShowSettingsUI();
   }
 
-  private void Reload_Clicked(object _sender, EventArgs _e) => p_pageVisibleChangeFlow.OnNext(true);
+  private void Reload_Clicked(object _sender, EventArgs _e)
+  {
+    p_bindingCtx.IsRemoteServerNotResponding = false;
+    p_pageVisibleChangeFlow.OnNext(true);
+  }
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {

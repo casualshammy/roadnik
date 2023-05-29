@@ -17,6 +17,7 @@ const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
 const p_geoEntries: StringDictionary<TimedStorageEntry[]> = {};
+const p_pointMarkers: L.Marker[] = [];
 
 let p_firstDataReceived = false;
 let p_lastOffset = 0;
@@ -42,6 +43,11 @@ p_map.on('zoomend', function (_e) {
 p_map.on('moveend', function (_e) {
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED, data: getMapViewState() });
 });
+p_map.on("contextmenu", function (_e) {
+    console.log(`Initializing waypoint in ${_e.latlng}...`);
+    sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, data: _e.latlng });
+});
+
 p_currentLayer = p_mapsData.array[0].name;
 
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
@@ -263,9 +269,51 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
     return popUpText;
 }
 
+async function updatePointsAsync() {
+    for (let marker of p_pointMarkers)
+        marker
+            .remove()
+            .off("contextmenu");
+
+    if (p_roomId === null)
+        return;
+
+    const data = await p_storageApi.listRoomPointsAsync(p_roomId);
+    if (data === null)
+        return;
+
+    for (let i = 0; i < data.length; i++) {
+        const entry = data[i];
+        let marker = p_pointMarkers[i];
+        if (marker === undefined) {
+            marker = L.marker([entry.Lat, entry.Lng])
+                .addTo(p_map)
+                .bindPopup(`<strong>${entry.Username}:</strong><br/>${entry.Description}`)
+                .on("contextmenu", function (_e) {
+                    p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
+                });
+
+            p_pointMarkers[i] = marker;
+        }
+        else {
+            marker
+                .setLatLng([entry.Lat, entry.Lng])
+                .setPopupContent(`<strong>${entry.Username}:</strong><br/>${entry.Description}`)
+                .on("contextmenu", function (_e) {
+                    p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
+                })
+                .addTo(p_map);
+        }
+    }
+}
+
 if (p_roomId !== null) {
     const ws = p_storageApi.setupWs(p_roomId, (_ws, _data) => {
-        if (_data.Type === Api.WS_MSG_TYPE_HELLO || _data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
+        if (_data.Type === Api.WS_MSG_TYPE_HELLO) {
+            updateViewAsync(p_lastOffset);
+            updatePointsAsync();
+        }
+        else if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
             updateViewAsync(p_lastOffset);
         }
         else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
@@ -282,6 +330,10 @@ if (p_roomId !== null) {
             const geoEntries = p_geoEntries[user];
             if (geoEntries !== undefined)
                 geoEntries.length = 0;
+        }
+        else if (_data.Type == Api.WS_MSG_ROOM_POINTS_UPDATED) {
+            console.log("Points were changed, updating markers...");
+            updatePointsAsync();
         }
     });
 }

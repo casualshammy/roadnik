@@ -12,7 +12,7 @@ public static class ReqResUtil
   public static int MaxRoomIdLength { get; } = 16;
   public static int MinRoomIdLength { get; } = 4;
 
-  public static bool IsRoomIdSafe(string _data) => _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_safeStringRegex.IsMatch(_data);
+  public static bool IsRoomIdSafe(string? _data) => _data != null && _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_safeStringRegex.IsMatch(_data);
   public static bool IsUserDefinedStringSafe(string _data) => _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
   public static string ClearUserMsg(string _data)
   {

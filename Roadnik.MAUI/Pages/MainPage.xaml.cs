@@ -1,6 +1,8 @@
 ﻿using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 using JustLogger.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
@@ -57,6 +59,7 @@ public partial class MainPage : CContentPage
       {
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+
         return (serverAddress, roomId);
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
@@ -76,6 +79,7 @@ public partial class MainPage : CContentPage
 
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+        var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
         var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
         if (url == null)
         {
@@ -83,6 +87,8 @@ public partial class MainPage : CContentPage
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
+
+        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Short).Show(_ct));
 
         try
         {
@@ -411,7 +417,10 @@ public partial class MainPage : CContentPage
 
     var latLng = _msg.Data.ToObject<LatLng>();
     if (latLng == null)
+    {
+      p_log.Error($"Tried to create new point, but could not parse location!\n{_msg.Data.ToString(Newtonsoft.Json.Formatting.Indented)}");
       return;
+    }
 
     var dialogResult = await MainThread.InvokeOnMainThreadAsync(() =>
       DisplayPromptAsync($"Add new point at [{(int)latLng.Lat}, {(int)latLng.Lng}]", "Please enter description:", maxLength: 128));

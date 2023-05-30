@@ -9,7 +9,6 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
-using System.Collections.Concurrent;
 using System.Net;
 
 namespace Roadnik.Modules.Controllers;
@@ -20,9 +19,6 @@ public class ApiControllerV0 : JsonNetController
 {
   record DeleteRoomReq(string RoomId);
 
-  private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
-  private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
-  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
   private static readonly HttpClient p_httpClient = new();
   private static long p_wsSessionsCount = 0;
 
@@ -196,24 +192,27 @@ public class ApiControllerV0 : JsonNetController
     if (!p_settings.AllowAnonymousPublish && user == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var timeLimit = user != null ? p_settings.RegisteredMinInterval : p_settings.AnonymousMinInterval;
-    var now = DateTimeOffset.UtcNow;
-    var compositeKey = $"{_roomId}{_username ?? ""}";
-    if (p_storeLimiter.TryGetValue(compositeKey, out var lastStoredTime) && now - lastStoredTime < timeLimit)
+    var timeLimit = user != null ? p_settings.RegisteredMinIntervalMs : p_settings.AnonymousMinIntervalMs;
+    var compositeKey = $"{ReqPaths.GET}/{_roomId}/{_username ?? ""}";
+
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)timeLimit))
     {
-      p_logger.Warn($"Too many requests for storing geo data, room '{_roomId}', username: '{_username}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
+      p_logger.Warn($"[{ReqPaths.GET}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{timeLimit} ms'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
+    var now = DateTimeOffset.UtcNow;
+
     var record = new StorageEntry(_roomId, _username ?? _roomId, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
     await p_documentStorage.WriteSimpleDocumentAsync($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, _ct);
-    p_storeLimiter[compositeKey] = now;
+
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
   }
 
-  [HttpGet("/get")]
+  [HttpGet(ReqPaths.GET)]
   public async Task<IActionResult> GetAsync(
     [FromQuery(Name = "roomId")] string? _roomId = null,
     [FromQuery(Name = "offset")] long? _offsetUnixTimeMs = null,
@@ -225,15 +224,9 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (ip == null)
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.GET, ip, 1000))
     {
-      p_logger.Error($"Ip is null, room: '{_roomId}'");
-      return BadRequest("Ip is null!");
-    }
-    var now = DateTimeOffset.UtcNow;
-    if (p_getLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_getTooFastLimitTime)
-    {
-      p_logger.Warn($"Too many requests from ip '{ip}', room: '{_roomId}'");
+      p_logger.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -261,7 +254,6 @@ public class ApiControllerV0 : JsonNetController
       result = new GetResData(true, lastEntryTime, entries);
     }
 
-    p_getLimiter[ip] = now;
     return Json(result);
   }
 
@@ -363,6 +355,36 @@ public class ApiControllerV0 : JsonNetController
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
+  }
+
+  [HttpPost(ReqPaths.UPLOAD_LOG)]
+  [RequestSizeLimit(10 * 1024 * 1024)]
+  public async Task<IActionResult> UploadLogAsync(
+    [FromHeader(Name = "roomId")] string _roomId,
+    [FromHeader(Name = "username")] string _username,
+    CancellationToken _ct)
+  {
+    var folder = Path.Combine(p_settings.DataDirPath, "user-logs", _roomId, _username);
+    if (!Directory.Exists(folder))
+      Directory.CreateDirectory(folder);
+
+    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+    var filePath = Path.Combine(folder, $"{timestamp}.gzip");
+    p_logger.Info($"Requested to store user log file to '{filePath}'");
+
+    try
+    {
+      using (var file = System.IO.File.OpenWrite(filePath))
+        await Request.Body.CopyToAsync(file, _ct);
+
+      p_logger.Info($"User log file is stored to '{filePath}'");
+      return Ok();
+    }
+    catch (Exception ex)
+    {
+      p_logger.Error($"Error occured while trying to save user log file '{filePath}'", ex);
+      return StatusCode((int)HttpStatusCode.InternalServerError);
+    }
   }
 
   [HttpGet("/ws")]

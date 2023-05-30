@@ -7,6 +7,7 @@ internal class MainPageViewModel : BaseViewModel
   private bool p_permissionViewRequired;
   private bool p_remoteServerIsNotResponding;
   private bool p_isInBackground;
+  private string p_title;
 
   public MainPageViewModel()
   {
@@ -15,9 +16,10 @@ internal class MainPageViewModel : BaseViewModel
     p_permissionViewRequired = false;
     p_remoteServerIsNotResponding = false;
     p_isInBackground = false;
+    p_title = "Roadnik";
   }
 
-  public string Title { get; } = "Roadnik";
+  public string Title { get => p_title; set => SetProperty(ref p_title, value); }
   public bool IsSpinnerRequired { get => p_isSpinnerRequired; set => SetProperty(ref p_isSpinnerRequired, value); }
   public string? WebViewUrl { get => p_webViewUrl; set => SetProperty(ref p_webViewUrl, value); }
 

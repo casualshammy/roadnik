@@ -1,3 +1,3 @@
 namespace Roadnik.MAUI.Data;
 
-internal record MapViewState(LatLon Location, double Zoom);
+internal record MapViewState(LatLng Location, double Zoom);

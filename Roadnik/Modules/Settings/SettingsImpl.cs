@@ -17,8 +17,8 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(AllowAnonymousPublish))] bool? _allowAnonymousPublish,
     [JsonProperty(nameof(AnonymousMaxPoints))] int? _anonymousMaxPoints,
     [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints,
-    [JsonProperty(nameof(AnonymousMinInterval))] TimeSpan? _anonymousMinInterval,
-    [JsonProperty(nameof(RegisteredMinInterval))] TimeSpan? _registeredMinInterval,
+    [JsonProperty(nameof(AnonymousMinIntervalMs))] double? _anonymousMinIntervalMs,
+    [JsonProperty(nameof(RegisteredMinIntervalMs))] double? _registeredMinIntervalMs,
     [JsonProperty(nameof(GetRequestReturnsEntriesCount))] int? _getRequestReturnsEntriesCount)
   {
     WebrootDirPath = _webrootDirPath ?? "www";
@@ -32,8 +32,8 @@ internal class SettingsImpl : ISettings
     AllowAnonymousPublish = _allowAnonymousPublish ?? true;
     AnonymousMaxPoints = _anonymousMaxPoints ?? 100;
     RegisteredMaxPoints = _registeredMaxPoints ?? 1000;
-    AnonymousMinInterval = _anonymousMinInterval ?? TimeSpan.FromSeconds(9.9);
-    RegisteredMinInterval = _registeredMinInterval ?? TimeSpan.FromSeconds(0.9);
+    AnonymousMinIntervalMs = _anonymousMinIntervalMs ?? 9.9d * 1000;
+    RegisteredMinIntervalMs = _registeredMinIntervalMs ?? 0.9 * 1000;
     GetRequestReturnsEntriesCount = _getRequestReturnsEntriesCount ?? 10000;
   }
 
@@ -48,8 +48,8 @@ internal class SettingsImpl : ISettings
   public bool AllowAnonymousPublish { get; }
   public int AnonymousMaxPoints { get; }
   public int RegisteredMaxPoints { get; }
-  public TimeSpan AnonymousMinInterval { get; }
-  public TimeSpan RegisteredMinInterval { get; }
+  public double AnonymousMinIntervalMs { get; }
+  public double RegisteredMinIntervalMs { get; }
   public int GetRequestReturnsEntriesCount { get; }
 
 }

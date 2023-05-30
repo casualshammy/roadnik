@@ -9,7 +9,6 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
-using System.Collections.Concurrent;
 using System.Net;
 
 namespace Roadnik.Modules.Controllers;
@@ -20,11 +19,6 @@ public class ApiControllerV0 : JsonNetController
 {
   record DeleteRoomReq(string RoomId);
 
-  private static readonly TimeSpan p_getTooFastLimitTime = TimeSpan.FromSeconds(1);
-  private static readonly TimeSpan p_wipePathTooFastLimitTime = TimeSpan.FromSeconds(10);
-  private static readonly ConcurrentDictionary<string, DateTimeOffset> p_storeLimiter = new();
-  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_getLimiter = new();
-  private static readonly ConcurrentDictionary<IPAddress, DateTimeOffset> p_wipePathLimiter = new();
   private static readonly HttpClient p_httpClient = new();
   private static long p_wsSessionsCount = 0;
 
@@ -33,6 +27,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_usersController;
   private readonly ITilesCache p_tilesCache;
+  private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly ILogger p_logger;
 
   public ApiControllerV0(
@@ -41,13 +36,15 @@ public class ApiControllerV0 : JsonNetController
     ILogger _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
-    ITilesCache _tilesCache)
+    ITilesCache _tilesCache,
+    IReqRateLimiter _reqRateLimiter)
   {
     p_settings = _settings;
     p_documentStorage = _documentStorage;
     p_webSocketCtrl = _webSocketCtrl;
     p_usersController = _usersController;
     p_tilesCache = _tilesCache;
+    p_reqRateLimiter = _reqRateLimiter;
     p_logger = _logger["api-v0"];
   }
 
@@ -195,24 +192,27 @@ public class ApiControllerV0 : JsonNetController
     if (!p_settings.AllowAnonymousPublish && user == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var timeLimit = user != null ? p_settings.RegisteredMinInterval : p_settings.AnonymousMinInterval;
-    var now = DateTimeOffset.UtcNow;
-    var compositeKey = $"{_roomId}{_username ?? ""}";
-    if (p_storeLimiter.TryGetValue(compositeKey, out var lastStoredTime) && now - lastStoredTime < timeLimit)
+    var timeLimit = user != null ? p_settings.RegisteredMinIntervalMs : p_settings.AnonymousMinIntervalMs;
+    var compositeKey = $"{ReqPaths.GET}/{_roomId}/{_username ?? ""}";
+
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)timeLimit))
     {
-      p_logger.Warn($"Too many requests for storing geo data, room '{_roomId}', username: '{_username}', interval: '{now - lastStoredTime}', time limit: '{timeLimit}'");
+      p_logger.Warn($"[{ReqPaths.GET}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{timeLimit} ms'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
+    var now = DateTimeOffset.UtcNow;
+
     var record = new StorageEntry(_roomId, _username ?? _roomId, _lat.Value, _lon.Value, _alt.Value, _speed, _acc, _battery, _gsmSignal, _bearing, _message);
     await p_documentStorage.WriteSimpleDocumentAsync($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, _ct);
-    p_storeLimiter[compositeKey] = now;
+
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
   }
 
-  [HttpGet("/get")]
+  [HttpGet(ReqPaths.GET)]
   public async Task<IActionResult> GetAsync(
     [FromQuery(Name = "roomId")] string? _roomId = null,
     [FromQuery(Name = "offset")] long? _offsetUnixTimeMs = null,
@@ -224,15 +224,9 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (ip == null)
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.GET, ip, 1000))
     {
-      p_logger.Error($"Ip is null, room: '{_roomId}'");
-      return BadRequest("Ip is null!");
-    }
-    var now = DateTimeOffset.UtcNow;
-    if (p_getLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_getTooFastLimitTime)
-    {
-      p_logger.Warn($"Too many requests from ip '{ip}', room: '{_roomId}'");
+      p_logger.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -260,7 +254,6 @@ public class ApiControllerV0 : JsonNetController
       result = new GetResData(true, lastEntryTime, entries);
     }
 
-    p_getLimiter[ip] = now;
     return Json(result);
   }
 
@@ -269,23 +262,129 @@ public class ApiControllerV0 : JsonNetController
     [FromBody] WipeUserPathDataReq _req)
   {
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (ip == null)
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.WIPE_USER_PATH_DATA, ip, 10 * 1000))
     {
-      p_logger.Error($"Wipe path: ip is null");
-      return BadRequest("Ip is null!");
+      p_logger.Warn($"[{ReqPaths.WIPE_USER_PATH_DATA}] Too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
     var now = DateTimeOffset.UtcNow;
-    if (p_wipePathLimiter.TryGetValue(ip, out var lastGetReq) && now - lastGetReq < p_wipePathTooFastLimitTime)
-    {
-      p_logger.Warn($"Wipe path: too many requests from ip '{ip}'");
-      return StatusCode((int)HttpStatusCode.TooManyRequests);
-    }
-    p_wipePathLimiter[ip] = now;
 
     p_logger.Info($"Requested to wipe user path data, room '{_req.RoomId}', username '{_req.Username}'");
     p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
     return await Task.FromResult(Ok());
+  }
+
+  [HttpPost(ReqPaths.CREATE_NEW_POINT)]
+  public async Task<IActionResult> CreateNewPointAsync(
+    [FromBody] CreateNewPointReq _req,
+    CancellationToken _ct)
+  {
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.CREATE_NEW_POINT, ip, 1000))
+    {
+      p_logger.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+
+    if (!ReqResUtil.IsRoomIdSafe(_req.RoomId))
+      return BadRequest($"Incorrect room id!");
+    if (!ReqResUtil.IsUserDefinedStringSafe(_req.Username))
+      return BadRequest($"Incorrect username!");
+
+    var description = ReqResUtil.ClearUserMsg(_req.Description);
+
+    p_logger.Info($"Got request to save point [{(int)_req.Lat}, {(int)_req.Lng}] for room '{_req.RoomId}'");
+
+    var now = DateTimeOffset.UtcNow;
+    var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
+    await p_documentStorage.WriteSimpleDocumentAsync($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point, _ct);
+
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+
+    return Ok();
+  }
+
+  [HttpGet(ReqPaths.LIST_ROOM_POINTS)]
+  public async Task<IActionResult> GetRoomPointsAsync(
+    [FromQuery(Name = "roomId")] string? _roomId = null,
+    CancellationToken _ct = default)
+  {
+    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+      return BadRequest($"Incorrect room id!");
+
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.LIST_ROOM_POINTS, ip, 1000))
+    {
+      p_logger.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+
+    var entries = new List<ListRoomPointsResData>();
+    await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(new LikeExpr($"{_roomId}.%"), _ct: _ct))
+      entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
+
+    return Json(entries);
+  }
+
+  [HttpPost(ReqPaths.DELETE_ROOM_POINT)]
+  public async Task<IActionResult> RemoveRoomPointAsync(
+    [FromBody] DeleteRoomPointReq _req,
+    CancellationToken _ct)
+  {
+    if (!ReqResUtil.IsRoomIdSafe(_req.RoomId))
+      return BadRequest($"Incorrect room id!");
+
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.DELETE_ROOM_POINT, ip, 1000))
+    {
+      p_logger.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+
+    p_logger.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
+
+    await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%"), _ct: _ct))
+      if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
+      {
+        await p_documentStorage.DeleteSimpleDocumentAsync<GeoPointEntry>(entry.Key, _ct);
+        break;
+      }
+
+    var now = DateTimeOffset.UtcNow;
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+
+    return Ok();
+  }
+
+  [HttpPost(ReqPaths.UPLOAD_LOG)]
+  [RequestSizeLimit(10 * 1024 * 1024)]
+  public async Task<IActionResult> UploadLogAsync(
+    [FromHeader(Name = "roomId")] string _roomId,
+    [FromHeader(Name = "username")] string _username,
+    CancellationToken _ct)
+  {
+    var folder = Path.Combine(p_settings.DataDirPath, "user-logs", _roomId, _username);
+    if (!Directory.Exists(folder))
+      Directory.CreateDirectory(folder);
+
+    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+    var filePath = Path.Combine(folder, $"{timestamp}.gzip");
+    p_logger.Info($"Requested to store user log file to '{filePath}'");
+
+    try
+    {
+      using (var file = System.IO.File.OpenWrite(filePath))
+        await Request.Body.CopyToAsync(file, _ct);
+
+      p_logger.Info($"User log file is stored to '{filePath}'");
+      return Ok();
+    }
+    catch (Exception ex)
+    {
+      p_logger.Error($"Error occured while trying to save user log file '{filePath}'", ex);
+      return StatusCode((int)HttpStatusCode.InternalServerError);
+    }
   }
 
   [HttpGet("/ws")]

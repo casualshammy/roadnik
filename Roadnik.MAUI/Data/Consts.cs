@@ -28,5 +28,6 @@ internal static class Consts
   public const string JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED = "js-msg-popup-opened";
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
+  public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
 
 }

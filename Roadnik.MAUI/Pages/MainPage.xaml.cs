@@ -1,6 +1,8 @@
 ﻿using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 using JustLogger.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
@@ -57,6 +59,7 @@ public partial class MainPage : CContentPage
       {
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+
         return (serverAddress, roomId);
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
@@ -76,6 +79,7 @@ public partial class MainPage : CContentPage
 
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+        var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
         var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
         if (url == null)
         {
@@ -83,6 +87,8 @@ public partial class MainPage : CContentPage
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
         }
+
+        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Short).Show(_ct));
 
         try
         {
@@ -96,7 +102,7 @@ public partial class MainPage : CContentPage
         }
         catch (Exception ex)
         {
-          Debug.WriteLine(ex);
+          p_log.Error($"Remote server probe returned error", ex);
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           bindingCtx.IsRemoteServerNotResponding = true;
         }
@@ -244,6 +250,10 @@ public partial class MainPage : CContentPage
     {
       p_storage.SetValue(PREF_MAP_SELECTED_TRACK, (string?)null);
     }
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
+    {
+      await OnJsMsgPointAddStartedAsync(msg);
+    }
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
@@ -326,7 +336,11 @@ public partial class MainPage : CContentPage
     AppInfo.Current.ShowSettingsUI();
   }
 
-  private void Reload_Clicked(object _sender, EventArgs _e) => p_pageVisibleChangeFlow.OnNext(true);
+  private void Reload_Clicked(object _sender, EventArgs _e)
+  {
+    p_bindingCtx.IsRemoteServerNotResponding = false;
+    p_pageVisibleChangeFlow.OnNext(true);
+  }
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
@@ -384,6 +398,49 @@ public partial class MainPage : CContentPage
     catch (Exception ex)
     {
       p_log.Error($"Request to wipe path data '{roomId}/{username}' was completed with error", ex);
+    }
+  }
+
+  private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)
+  {
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    if (serverAddress.IsNullOrWhiteSpace())
+      return;
+
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    if (roomId.IsNullOrWhiteSpace())
+      return;
+
+    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+    if (username.IsNullOrWhiteSpace())
+      return;
+
+    var latLng = _msg.Data.ToObject<LatLng>();
+    if (latLng == null)
+    {
+      p_log.Error($"Tried to create new point, but could not parse location!\n{_msg.Data.ToString(Newtonsoft.Json.Formatting.Indented)}");
+      return;
+    }
+
+    var dialogResult = await MainThread.InvokeOnMainThreadAsync(() =>
+      DisplayPromptAsync($"Add new point at [{(int)latLng.Lat}, {(int)latLng.Lng}]", "Please enter description:", maxLength: 128));
+    if (dialogResult == null)
+      return;
+
+    try
+    {
+      p_log.Info($"Sending request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}'");
+      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.CREATE_NEW_POINT}");
+      using var content = JsonContent.Create(new CreateNewPointReq(roomId, username, latLng.Lat, latLng.Lng, dialogResult));
+      req.Content = content;
+      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      using var res = await p_httpClient.Value.SendAsync(req, cts.Token);
+      res.EnsureSuccessStatusCode();
+      p_log.Info($"Point [{(int)latLng.Lat}, {(int)latLng.Lng}] is successfully created in room '{roomId}'");
+    }
+    catch (Exception ex)
+    {
+      p_log.Error($"Request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}' was failed", ex);
     }
   }
 

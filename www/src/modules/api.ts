@@ -1,3 +1,4 @@
+import { LatLng } from 'leaflet';
 import { WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 
 export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";
@@ -67,6 +68,14 @@ interface DeleteRoomPointReq {
     PointId: number;
 }
 
+interface CreateNewPointReq {
+    RoomId: string;
+    Username: string;
+    Lat: number;
+    Lng: number;
+    Description: string;
+}
+
 export class StorageApi {
     constructor() {
 
@@ -93,6 +102,25 @@ export class StorageApi {
         const response = await fetch(`../list-room-points?roomId=${_roomId}`);
         const data: ListRoomPointsResData[] = await response.json();
         return data;
+    }
+
+    public async createRoomPointAsync(_roomId: string, _username: string, _latLng: LatLng, _description: string): Promise<boolean> {
+        const data: CreateNewPointReq = {
+            RoomId: _roomId,
+            Username: _username,
+            Lat: _latLng.lat,
+            Lng: _latLng.lng,
+            Description: _description
+        };
+
+        const res = await fetch(`../create-new-point`, {
+            method: "POST",
+            body: JSON.stringify(data),
+            headers: {
+                "Content-type": "application/json; charset=UTF-8"
+            }
+        });
+        return res.ok;
     }
 
     public async deleteRoomPointAsync(_roomId: string, _pointId: number): Promise<boolean> {

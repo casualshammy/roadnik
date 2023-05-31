@@ -21,6 +21,7 @@ public class ApiControllerV0 : JsonNetController
 
   private static readonly HttpClient p_httpClient = new();
   private static long p_wsSessionsCount = 0;
+  private static long p_reqCount = -1;
 
   private readonly ISettings p_settings;
   private readonly IDocumentStorage p_documentStorage;
@@ -45,7 +46,7 @@ public class ApiControllerV0 : JsonNetController
     p_usersController = _usersController;
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
-    p_logger = _logger["api-v0"];
+    p_logger = _logger["api-v0"][Interlocked.Increment(ref p_reqCount).ToString()];
   }
 
   [HttpGet("/")]

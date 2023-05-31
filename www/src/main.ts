@@ -12,6 +12,8 @@ const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 const p_roomId = urlParams.get('id');
 
+const p_isRoadnikApp = navigator.userAgent.includes("RoadnikApp");
+
 const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
@@ -44,8 +46,18 @@ p_map.on('moveend', function (_e) {
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED, data: getMapViewState() });
 });
 p_map.on("contextmenu", function (_e) {
+    if (p_roomId === null)
+        return;
+
     console.log(`Initializing waypoint in ${_e.latlng}...`);
-    sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, data: _e.latlng });
+    if (p_isRoadnikApp) {
+        sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, data: _e.latlng });
+    }
+    else {
+        const msg = prompt("Please enter a description for point:");
+        if (msg !== null)
+            p_storageApi.createRoomPointAsync(p_roomId, "", _e.latlng, msg);
+    }
 });
 
 p_currentLayer = p_mapsData.array[0].name;
@@ -82,10 +94,9 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
         updateControlsForUser(user, userData, _offset === undefined);
     }
 
-    const userAgent = navigator.userAgent;
     if (!p_firstDataReceived) {
         p_firstDataReceived = true;
-        if (!userAgent.includes("RoadnikApp")) {
+        if (!p_isRoadnikApp) {
             console.log("Not roadnik app, setting default view...");
             setViewToAllTracks();
         }
@@ -270,11 +281,6 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
 }
 
 async function updatePointsAsync() {
-    for (let marker of p_pointMarkers)
-        marker
-            .remove()
-            .off("contextmenu");
-
     if (p_roomId === null)
         return;
 
@@ -282,13 +288,25 @@ async function updatePointsAsync() {
     if (data === null)
         return;
 
+    for (let marker of p_pointMarkers)
+        marker
+            .remove()
+            .off("contextmenu");
+
     for (let i = 0; i < data.length; i++) {
         const entry = data[i];
         let marker = p_pointMarkers[i];
+        
+        let text: string;
+        if (entry.Username.length > 0)
+            text = `<strong>${entry.Username}:</strong><br/>${entry.Description}`;
+        else
+            text = entry.Description;
+
         if (marker === undefined) {
             marker = L.marker([entry.Lat, entry.Lng])
                 .addTo(p_map)
-                .bindPopup(`<strong>${entry.Username}:</strong><br/>${entry.Description}`)
+                .bindPopup(text)
                 .on("contextmenu", function (_e) {
                     p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
                 });
@@ -298,7 +316,7 @@ async function updatePointsAsync() {
         else {
             marker
                 .setLatLng([entry.Lat, entry.Lng])
-                .setPopupContent(`<strong>${entry.Username}:</strong><br/>${entry.Description}`)
+                .setPopupContent(text)
                 .on("contextmenu", function (_e) {
                     p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
                 })

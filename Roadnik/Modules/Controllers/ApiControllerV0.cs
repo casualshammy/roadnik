@@ -146,9 +146,9 @@ public class ApiControllerV0 : JsonNetController
     if (p_settings.ThunderforestCacheSize <= 0)
       return File(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
 
-    using var stream = await p_httpClient.GetStreamAsync(url, _ct);
     var ms = new MemoryStream();
-    await stream.CopyToAsync(ms, _ct);
+    using (var stream = await p_httpClient.GetStreamAsync(url, _ct))
+      await stream.CopyToAsync(ms, _ct);
 
     ms.Position = 0;
     await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, ms, _ct);

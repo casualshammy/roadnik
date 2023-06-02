@@ -5,6 +5,7 @@ import { TimeSpan } from "./modules/timespan";
 import { JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
+import Cookies from "js-cookie";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -37,6 +38,7 @@ const p_map = new L.Map('map', {
 p_map.attributionControl.setPrefix(false);
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
+    Cookies.set("map-layer", _e.name);
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED, data: p_currentLayer });
 });
 p_map.on('zoomend', function (_e) {
@@ -60,7 +62,9 @@ p_map.on("contextmenu", function (_e) {
     }
 });
 
-p_currentLayer = p_mapsData.array[0].name;
+const cookieLayout = Cookies.get("map-layer");
+if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
+    p_currentLayer = p_mapsData.array[0].name;
 
 const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
 p_map.addControl(p_layersControl);
@@ -296,7 +300,7 @@ async function updatePointsAsync() {
     for (let i = 0; i < data.length; i++) {
         const entry = data[i];
         let marker = p_pointMarkers[i];
-        
+
         let text: string;
         if (entry.Username.length > 0)
             text = `<strong>${entry.Username}:</strong><br/>${entry.Description}`;
@@ -390,10 +394,11 @@ function setViewToAllTracks(): boolean {
 
 function setMapLayer(_mapLayer?: string | undefined | null): boolean {
     var layer = p_mapsData.array.find((_v, _i, _o) => _v.name === _mapLayer);
-    if (layer !== undefined)
+    if (layer !== undefined) {
         layer.tileLayer.addTo(p_map);
-
-    return true;
+        return true;
+    }
+    return false;
 }
 (window as any).setMapLayer = setMapLayer;
 

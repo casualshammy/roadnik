@@ -89,7 +89,7 @@ export function GetMapLayers(): MapLayersData {
 	var landscapeMapUrl = '../thunderforest?type=landscape&x={x}&y={y}&z={z}',
 		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
-	var outdoorsMapUrl = 'thunderforest?type=outdoors&x={x}&y={y}&z={z}',
+	var outdoorsMapUrl = '../thunderforest?type=outdoors&x={x}&y={y}&z={z}',
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",

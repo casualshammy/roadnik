@@ -6,6 +6,7 @@ import { JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "
 import { StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
+import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -38,7 +39,9 @@ const p_map = new L.Map('map', {
 p_map.attributionControl.setPrefix(false);
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
-    Cookies.set("map-layer", _e.name);
+    if (!p_isRoadnikApp)
+        Cookies.set(COOKIE_MAP_LAYER, _e.name);
+
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED, data: p_currentLayer });
 });
 p_map.on('zoomend', function (_e) {
@@ -62,7 +65,7 @@ p_map.on("contextmenu", function (_e) {
     }
 });
 
-const cookieLayout = Cookies.get("map-layer");
+const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
 if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
     p_currentLayer = p_mapsData.array[0].name;
 
@@ -101,8 +104,11 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
     if (!p_firstDataReceived) {
         p_firstDataReceived = true;
         if (!p_isRoadnikApp) {
-            console.log("Not roadnik app, setting default view...");
-            setViewToAllTracks();
+            const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_USER);
+            if (cookieSelectedUser === undefined || !setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
+                console.log("Not roadnik app, setting default view...");
+                setViewToAllTracks();
+            }
         }
         else {
             p_map.attributionControl.remove();
@@ -129,8 +135,18 @@ function initControlsForUser(_user: string): void {
         const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
             .bindPopup("<b>Unknown track!</b>")
-            .addEventListener('popupopen', () => sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user }))
-            .addEventListener('popupclose', () => sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user }));
+            .addEventListener('popupopen', () => {
+                if (!p_isRoadnikApp)
+                    Cookies.set(COOKIE_SELECTED_USER, _user);
+
+                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user });
+            })
+            .addEventListener('popupclose', () => {
+                if (!p_isRoadnikApp)
+                    Cookies.remove(COOKIE_SELECTED_USER);
+
+                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user });
+            });
 
         p_markers.set(_user, marker);
     }
@@ -411,15 +427,12 @@ function getMapViewState(): MapViewState {
 (window as any).getState = getMapViewState;
 
 function setViewToTrack(_pathName: string, _zoom: number): boolean {
-    if (p_markers.size > 0) {
-        const marker = p_markers.get(_pathName);
-        if (marker === undefined)
-            return false;
+    const marker = p_markers.get(_pathName);
+    if (marker === undefined)
+        return false;
 
-        p_map.flyTo(marker.getLatLng(), _zoom, { duration: 0.5 });
-        marker.openPopup();
-    }
-
+    p_map.flyTo(marker.getLatLng(), _zoom, { duration: 0.5 });
+    marker.openPopup();
     return true;
 }
 (window as any).setViewToTrack = setViewToTrack;

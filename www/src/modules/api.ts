@@ -123,7 +123,7 @@ export class StorageApi {
         return res.ok;
     }
 
-    public async deleteRoomPointAsync(_roomId: string, _pointId: number): Promise<boolean> {
+    public async deleteRoomPointAsync(_roomId: string, _pointId: number): Promise<void> {
         const data: DeleteRoomPointReq = {
             RoomId: _roomId,
             PointId: _pointId
@@ -136,7 +136,9 @@ export class StorageApi {
                 "Content-type": "application/json; charset=UTF-8"
             }
         });
-        return res.ok;
+
+        if (res.status === 429)
+            alert("You're deleting points too fast; please wait a second");
     }
 
 }

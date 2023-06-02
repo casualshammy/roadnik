@@ -3,7 +3,7 @@ import * as Api from "./modules/api";
 import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
 import { JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
-import { StringDictionary, groupBy } from "./modules/toolkit";
+import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
@@ -21,7 +21,8 @@ const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
 const p_geoEntries: StringDictionary<TimedStorageEntry[]> = {};
-const p_pointMarkers: L.Marker[] = [];
+const p_pointMarkers: NumberDictionary<L.Marker> = [];
+const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 
 let p_firstDataReceived = false;
 let p_lastOffset = 0;
@@ -308,14 +309,11 @@ async function updatePointsAsync() {
     if (data === null)
         return;
 
-    for (let marker of p_pointMarkers)
-        marker
-            .remove()
-            .off("contextmenu");
+    const allPointIds = Object.keys(p_pointMarkers).map(_ => +_);
+    const validPointIds: number[] = [];
 
-    for (let i = 0; i < data.length; i++) {
-        const entry = data[i];
-        let marker = p_pointMarkers[i];
+    for (let entry of data) {
+        validPointIds.push(entry.PointId);
 
         let text: string;
         if (entry.Username.length > 0)
@@ -323,26 +321,34 @@ async function updatePointsAsync() {
         else
             text = entry.Description;
 
+        let marker = p_pointMarkers[entry.PointId];
         if (marker === undefined) {
-            marker = L.marker([entry.Lat, entry.Lng])
-                .addTo(p_map)
-                .bindPopup(text)
-                .on("contextmenu", function (_e) {
-                    p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
-                });
+            marker = p_pointMarkersPool.resolve();
+            p_pointMarkers[entry.PointId] = marker;
 
-            p_pointMarkers[i] = marker;
-        }
-        else {
-            marker
-                .setLatLng([entry.Lat, entry.Lng])
-                .setPopupContent(text)
-                .on("contextmenu", function (_e) {
-                    p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
-                })
-                .addTo(p_map);
+            marker.setLatLng([entry.Lat, entry.Lng])
+            marker.addTo(p_map);
+            marker.bindPopup(text);
+            marker.on("contextmenu", function (_e) {
+                p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
+            });
         }
     }
+
+    for (let pointId of allPointIds) {
+        if (validPointIds.includes(pointId))
+            continue;
+
+        let marker = p_pointMarkers[pointId];
+        marker.remove();
+        marker.unbindPopup();
+        marker.off("contextmenu");
+
+        delete p_pointMarkers[pointId];
+        p_pointMarkersPool.free(marker);
+    }
+
+    console.log(`Points visible: ${validPointIds.length}; points in pool: ${p_pointMarkersPool.getAvailableCount()}`);
 }
 
 if (p_roomId !== null) {

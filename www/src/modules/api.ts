@@ -11,6 +11,7 @@ export const JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
 export const JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
+export const HOST_MSG_NEW_POINT = "host-msg-new-point";
 export const JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED = "js-msg-popup-opened";
 export const JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
 export const JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";

@@ -3,7 +3,7 @@ import * as L from "leaflet"
 
 let customCtrlsCounter = 0;
 
-export const Colors: string[] = [
+export const PathColors: string[] = [
 	"maroon",
 	"purple",
 	"green",

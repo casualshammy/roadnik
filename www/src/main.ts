@@ -1,12 +1,12 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
-import * as Maps from "./modules/maps"
 import { TimeSpan } from "./modules/timespan";
-import { JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HOST_MSG_NEW_POINT, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
+import { GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -16,7 +16,6 @@ const p_roomId = urlParams.get('id');
 
 const p_isRoadnikApp = navigator.userAgent.includes("RoadnikApp");
 
-const p_lastAlts = new Map<string, number>();
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
@@ -28,9 +27,10 @@ let p_firstDataReceived = false;
 let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
+let p_pointsDataReceived: boolean = false;
 
-const p_mapsData = Maps.GetMapLayers();
-const p_overlays = Maps.GetMapOverlayLayers();
+const p_mapsData = GetMapLayers();
+const p_overlays = GetMapOverlayLayers();
 
 const p_map = new L.Map('map', {
     center: new L.LatLng(51.4768, 0.0006),
@@ -121,11 +121,9 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
 }
 
 function initControlsForUser(_user: string): void {
-    const color = Maps.Colors[p_userColorIndex % Maps.Colors.length];
+    const color = PathColors[p_userColorIndex % PathColors.length];
     const colorFile = `img/map_icon_${p_userColorIndex}.png`;
 
-    if (p_lastAlts.get(_user) === undefined)
-        p_lastAlts.set(_user, 0);
     if (p_markers.get(_user) === undefined) {
         const icon = L.icon({
             iconUrl: colorFile,
@@ -216,41 +214,7 @@ function updateControlsForUser(
         circle.bringToFront();
     }
 
-    const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - lastEntry.UnixTimeMs);
-    let elapsedString = "now";
-    if (Math.abs(elapsedSinceLastUpdate.totalSeconds) > 5)
-        elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
-
-    const kmh = (lastEntry.Speed ?? 0) * 3.6;
-
-    let altChangeMark = "\u2192";
-    const lastAlt = p_lastAlts.get(_user);
-    const newAlt = Math.ceil(lastEntry.Altitude);
-    if (lastAlt !== undefined) {
-        if (newAlt > lastAlt)
-            altChangeMark = "\u2191";
-        else if (newAlt < lastAlt)
-            altChangeMark = "\u2193";
-    }
-    p_lastAlts.set(_user, newAlt);
-
-    const popUpText =
-        `<b>${_user}</b>: ${lastEntry.Message ?? "Hi!"}
-        </br>
-        <p>
-        Speed: ${kmh.toFixed(2)} km/h
-        </br>
-        Altitude ( ${altChangeMark} ): ${newAlt} m
-        </br>
-        Heading: ${Math.round(lastEntry.Bearing ?? -1)}°
-        </p>
-        <p>
-        Battery: ${lastEntry.Battery}%
-        </br>
-        GSM power: ${lastEntry.GsmSignal}%
-        <br/>
-        Updated ${elapsedString}
-        </p>`;
+    const popUpText = buildPathPointPopup(_user, lastEntry);
 
     const marker = p_markers.get(_user);
     if (marker !== undefined) {
@@ -284,11 +248,9 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         `<b>${_user}</b>: ${_entry.Message ?? "Hi!"}
         </br>
         <p>
-        Speed: ${kmh.toFixed(2)} km/h
+        ${kmh.toFixed(2)} km/h @ ${Math.ceil(_entry.Altitude)} m @ ${Math.round(_entry.Bearing ?? -1)}°
         </br>
-        Altitude: ${Math.ceil(_entry.Altitude)} m
-        </br>
-        Heading: ${Math.round(_entry.Bearing ?? -1)}°
+        Accuracy: ${Math.ceil(_entry.Accuracy ?? 100)} m
         </p>
         <p>
         Battery: ${_entry.Battery}%
@@ -332,6 +294,9 @@ async function updatePointsAsync() {
             marker.on("contextmenu", function (_e) {
                 p_storageApi.deleteRoomPointAsync(p_roomId, entry.PointId);
             });
+
+            if (p_pointsDataReceived)
+                sendDataToHost({ msgType: HOST_MSG_NEW_POINT, data: entry });
         }
     }
 
@@ -348,6 +313,7 @@ async function updatePointsAsync() {
         p_pointMarkersPool.free(marker);
     }
 
+    p_pointsDataReceived = true;
     console.log(`Points visible: ${validPointIds.length}; points in pool: ${p_pointMarkersPool.getAvailableCount()}`);
 }
 
@@ -363,9 +329,6 @@ if (p_roomId !== null) {
         else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
             const msgData: WsMsgPathWiped = _data.Payload;
             const user = msgData.Username;
-
-            if (p_lastAlts.get(user) !== undefined)
-                p_lastAlts.set(user, 0);
 
             const path = p_paths.get(user);
             if (path !== undefined)

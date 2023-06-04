@@ -6,7 +6,7 @@ import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/too
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
-import { GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
+import { DEFAULT_MAP_LAYER, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -35,7 +35,7 @@ const p_overlays = GetMapOverlayLayers();
 const p_map = new L.Map('map', {
     center: new L.LatLng(51.4768, 0.0006),
     zoom: 14,
-    layers: [p_mapsData.array[0].tileLayer]
+    layers: [p_mapsData[DEFAULT_MAP_LAYER]]
 });
 p_map.attributionControl.setPrefix(false);
 p_map.on('baselayerchange', function (_e) {
@@ -68,9 +68,9 @@ p_map.on("contextmenu", function (_e) {
 
 const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
 if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
-    p_currentLayer = p_mapsData.array[0].name;
+    p_currentLayer = DEFAULT_MAP_LAYER;
 
-const p_layersControl = new L.Control.Layers(p_mapsData.obj, p_overlays);
+const p_layersControl = new L.Control.Layers(p_mapsData, p_overlays);
 p_map.addControl(p_layersControl);
 
 async function updateViewAsync(_offset: number | undefined = undefined) {
@@ -378,9 +378,12 @@ function setViewToAllTracks(): boolean {
 (window as any).setViewToAllTracks = setViewToAllTracks;
 
 function setMapLayer(_mapLayer?: string | undefined | null): boolean {
-    var layer = p_mapsData.array.find((_v, _i, _o) => _v.name === _mapLayer);
+    if (_mapLayer === undefined || _mapLayer === null)
+        return false;
+
+    var layer = p_mapsData[_mapLayer];
     if (layer !== undefined) {
-        layer.tileLayer.addTo(p_map);
+        layer.addTo(p_map);
         return true;
     }
     return false;

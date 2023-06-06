@@ -16,4 +16,6 @@ public interface ISettings
   double AnonymousMinIntervalMs { get; }
   double RegisteredMinIntervalMs { get; }
   int GetRequestReturnsEntriesCount { get; }
+  string? FCMServiceAccountJsonPath { get; }
+  string? FCMProjectId { get; }
 }

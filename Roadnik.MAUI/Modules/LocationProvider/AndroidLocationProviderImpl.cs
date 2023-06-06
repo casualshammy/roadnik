@@ -4,6 +4,7 @@ using Android.Locations;
 using Android.OS;
 using Android.Runtime;
 using Ax.Fw.Attributes;
+using Ax.Fw.Extensions;
 using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Immutable;
@@ -46,6 +47,9 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_activeProviders = providers
       .Where(_ => p_locationManager.IsProviderEnabled(_))
       .ToImmutableHashSet();
+
+    p_logger.Info($"Starting updates, all providers: <{string.Join(">, <", allProviders)}>");
+    p_logger.Info($"Starting updates, active providers: <{string.Join(">, <", p_activeProviders)}>");
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
@@ -117,11 +121,16 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void OnStatusChanged(string? _provider, [GeneratedEnum] Availability _status, Bundle? _extras)
   {
+    if (_provider.IsNullOrWhiteSpace())
+      return;
 
+    p_logger.Info($"Provider '{_provider}' now in new state: '{_status}'");
   }
 
   public void OnProviderDisabled(string _provider)
   {
+    p_logger.Info($"Provider '{_provider}' was disabled");
+
     if (_provider == LocationManager.PassiveProvider)
       return;
 
@@ -130,6 +139,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void OnProviderEnabled(string _provider)
   {
+    p_logger.Info($"Provider '{_provider}' was enabled");
+
     if (_provider == LocationManager.PassiveProvider)
       return;
 

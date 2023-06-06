@@ -1,7 +1,6 @@
 ﻿using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
-using System.Diagnostics;
 using System.Windows.Input;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -20,7 +19,8 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minAccuracy;
   private MapOpeningBehavior p_mapOpeningBehavior;
   private bool p_mapCacheEnabled;
-  private bool p_notificationOnNewUser;
+  private bool p_notificationOnNewTrack;
+  private bool p_notificationOnNewPoint;
 
   public OptionsPageViewModel()
   {
@@ -36,7 +36,8 @@ internal class OptionsPageViewModel : BaseViewModel
     p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
     p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
     p_mapCacheEnabled = p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
-    p_notificationOnNewUser = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
+    p_notificationOnNewTrack = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK);
+    p_notificationOnNewPoint = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT);
 
     ServerAddressCommand = new Command(OnServerAddressCommand);
     RoomIdCommand = new Command(OnRoomIdCommand);
@@ -47,7 +48,8 @@ internal class OptionsPageViewModel : BaseViewModel
     MinAccuracyCommand = new Command(OnMinAccuracy);
     MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
     MapCacheCommand = new Command(OnMapCache);
-    NotifyNewUserCommand = new Command(OnNotifyNewUser);
+    NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
+    NotifyNewPointCommand = new Command(OnNotifyNewPoint);
   }
 
   public string Title { get; } = "Options";
@@ -168,13 +170,22 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_MAP_CACHE_ENABLED, p_mapCacheEnabled);
     }
   }
-  public bool NotificationOnNewUser
+  public bool NotificationOnNewTrack
   {
-    get => p_notificationOnNewUser;
+    get => p_notificationOnNewTrack;
     set
     {
-      SetProperty(ref p_notificationOnNewUser, value);
-      p_storage.SetValue(PREF_NOTIFY_NEW_USER, p_notificationOnNewUser);
+      SetProperty(ref p_notificationOnNewTrack, value);
+      p_storage.SetValue(PREF_NOTIFY_NEW_TRACK, p_notificationOnNewTrack);
+    }
+  }
+  public bool NotificationOnNewPoint
+  {
+    get => p_notificationOnNewPoint;
+    set
+    {
+      SetProperty(ref p_notificationOnNewPoint, value);
+      p_storage.SetValue(PREF_NOTIFY_NEW_POINT, p_notificationOnNewPoint);
     }
   }
 
@@ -187,7 +198,8 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinAccuracyCommand { get; }
   public ICommand MapOpenBehaviorCommand { get; }
   public ICommand MapCacheCommand { get; }
-  public ICommand NotifyNewUserCommand { get; }
+  public ICommand NotifyNewTrackCommand { get; }
+  public ICommand NotifyNewPointCommand { get; }
 
   private async void OnServerAddressCommand(object _arg)
   {
@@ -359,12 +371,20 @@ internal class OptionsPageViewModel : BaseViewModel
     MapCacheEnabled = toggled;
   }
 
-  private void OnNotifyNewUser(object? _arg)
+  private void OnNotifyNewTrack(object? _arg)
   {
     if (_arg is not bool toggled)
       return;
 
-    NotificationOnNewUser = toggled;
+    NotificationOnNewTrack = toggled;
+  }
+
+  private void OnNotifyNewPoint(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    NotificationOnNewPoint = toggled;
   }
 
 }

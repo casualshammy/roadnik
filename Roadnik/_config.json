@@ -12,5 +12,7 @@
   "RegisteredMaxPoints": 1000,
   "AnonymousMinInterval": "00:00:09.900",
   "RegisteredMinInterval": "00:00:00.900",
-  "GetRequestReturnsEntriesCount": 10000
+  "GetRequestReturnsEntriesCount": 10000,
+  "FCMServiceAccountJsonPath": null,
+  "FCMProjectId": null
 }

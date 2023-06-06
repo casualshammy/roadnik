@@ -99,6 +99,7 @@
                 <RowDefinition Height="45" />
                 <RowDefinition />
                 <RowDefinition />
+                <RowDefinition />
             </Grid.RowDefinitions>
 
             <!-- SERVER SETTINGS  -->
@@ -245,7 +246,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Notifications"
-                    FontAttributes="Bold"
+                FontAttributes="Bold"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
                 <Rectangle 
@@ -259,12 +260,20 @@
                 HeightRequest="2"/>
             </Grid>
             <controls:OptionsItem
-                x:Name="p_notifyNewUser"
+                x:Name="p_notifyNewTrack"
                 Grid.Row="13"
-                Title="A new user has appeared"
+                Title="A new track was started"
                 DetailsText="New user has started to record their way"
                 ShowSwitch="True"
-                SwitchTapped="{Binding NotifyNewUserCommand}"
+                SwitchTapped="{Binding NotifyNewTrackCommand}"
+                ShowBottomLine="False"/>
+            <controls:OptionsItem
+                x:Name="p_notifyNewPoint"
+                Grid.Row="14"
+                Title="A new point was placed on the map"
+                DetailsText="Someone has created a new point"
+                ShowSwitch="True"
+                SwitchTapped="{Binding NotifyNewPointCommand}"
                 ShowBottomLine="False"/>
 
         </Grid>

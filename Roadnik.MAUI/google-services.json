@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "379368591698",
+    "project_id": "roadnik-a647d",
+    "storage_bucket": "roadnik-a647d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:379368591698:android:eabddbc14bfbf9c0ab6a8b",
+        "android_client_info": {
+          "package_name": "com.axiolab.roadnik"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "379368591698-j28joops82uvcbhp7o57fahtlcbunsqo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAAqSE8Vztv1doY0Jzoe-rcFjcJ2x6goMo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "379368591698-j28joops82uvcbhp7o57fahtlcbunsqo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

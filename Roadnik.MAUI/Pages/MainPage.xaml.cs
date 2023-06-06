@@ -10,7 +10,6 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -219,29 +218,6 @@ public partial class MainPage : CContentPage
           p_log.Error($"Commands returned an error: '{command}'");
       });
     }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_NEW_TRACK)
-    {
-      var notificationEnabled = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_USER);
-      if (!notificationEnabled)
-        return;
-
-      var newUser = msg.Data.ToObject<string>();
-      if (string.IsNullOrWhiteSpace(newUser))
-        return;
-
-      var myName = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-      if (newUser.Equals(myName, StringComparison.InvariantCultureIgnoreCase))
-        return;
-
-      var hash = newUser.GetHashCode();
-
-      SimpleNotification.Show(
-        hash,
-        "New Track Added",
-        "Notify when new user has started transmitting their location",
-        $"{newUser} has started transmitting their location",
-        $"Event time: {DateTimeOffset.Now:f}");
-    }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
       p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.ToObject<string>());
@@ -387,17 +363,17 @@ public partial class MainPage : CContentPage
 
     try
     {
-      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.WIPE_USER_PATH_DATA}");
-      using var content = JsonContent.Create(new WipeUserPathDataReq(roomId, username));
+      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
+      using var content = JsonContent.Create(new StartNewPathReq(roomId, username, true));
       req.Content = content;
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
       using var res = await p_httpClient.Value.SendAsync(req, cts.Token);
       res.EnsureSuccessStatusCode();
-      p_log.Info($"Sent request to wipe user's path in room '{roomId}'");
+      p_log.Info($"Sent request to start new track '{roomId}/{username}'");
     }
     catch (Exception ex)
     {
-      p_log.Error($"Request to wipe path data '{roomId}/{username}' was completed with error", ex);
+      p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error", ex);
     }
   }
 

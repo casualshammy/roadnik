@@ -3,8 +3,10 @@ using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using Roadnik.Attributes;
 using Roadnik.Common.ReqRes;
+using Roadnik.Common.ReqRes.PushMessages;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
@@ -29,6 +31,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly IRoomsController p_usersController;
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
+  private readonly IFCMPublisher p_fcmPublisher;
   private readonly ILogger p_logger;
 
   public ApiControllerV0(
@@ -38,7 +41,8 @@ public class ApiControllerV0 : JsonNetController
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
     ITilesCache _tilesCache,
-    IReqRateLimiter _reqRateLimiter)
+    IReqRateLimiter _reqRateLimiter,
+    IFCMPublisher _fcmPublisher)
   {
     p_settings = _settings;
     p_documentStorage = _documentStorage;
@@ -46,6 +50,7 @@ public class ApiControllerV0 : JsonNetController
     p_usersController = _usersController;
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
+    p_fcmPublisher = _fcmPublisher;
     p_logger = _logger["api-v0"][Interlocked.Increment(ref p_reqCount).ToString()];
   }
 
@@ -258,22 +263,28 @@ public class ApiControllerV0 : JsonNetController
     return Json(result);
   }
 
-  [HttpPost(ReqPaths.WIPE_USER_PATH_DATA)]
-  public async Task<IActionResult> WipeUserPathAsync(
-    [FromBody] WipeUserPathDataReq _req)
+  [HttpPost(ReqPaths.START_NEW_PATH)]
+  public async Task<IActionResult> StartNewPathAsync(
+    [FromBody] StartNewPathReq _req,
+    CancellationToken _ct)
   {
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.WIPE_USER_PATH_DATA, ip, 10 * 1000))
+    if (!p_reqRateLimiter.IsReqOk(ReqPaths.START_NEW_PATH, ip, 10 * 1000))
     {
-      p_logger.Warn($"[{ReqPaths.WIPE_USER_PATH_DATA}] Too many requests from ip '{ip}'");
+      p_logger.Warn($"[{ReqPaths.START_NEW_PATH}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
     var now = DateTimeOffset.UtcNow;
 
-    p_logger.Info($"Requested to wipe user path data, room '{_req.RoomId}', username '{_req.Username}'");
-    p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
-    return await Task.FromResult(Ok());
+    p_logger.Info($"Requested to start new path, room '{_req.RoomId}', username '{_req.Username}', wipe: '{_req.WipeData}'");
+    if (_req.WipeData)
+      p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
+
+    var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, JToken.FromObject(new PushMsgNewTrackStarted(_req.Username)));
+    await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
+
+    return Ok();
   }
 
   [HttpPost(ReqPaths.CREATE_NEW_POINT)]
@@ -302,6 +313,9 @@ public class ApiControllerV0 : JsonNetController
     await p_documentStorage.WriteSimpleDocumentAsync($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point, _ct);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+
+    var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, JToken.FromObject(new PushMsgRoomPointAdded(_req.Username, _req.Description)));
+    await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
 
     return Ok();
   }

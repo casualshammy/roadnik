@@ -19,7 +19,9 @@ internal class SettingsImpl : ISettings
     [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints,
     [JsonProperty(nameof(AnonymousMinIntervalMs))] double? _anonymousMinIntervalMs,
     [JsonProperty(nameof(RegisteredMinIntervalMs))] double? _registeredMinIntervalMs,
-    [JsonProperty(nameof(GetRequestReturnsEntriesCount))] int? _getRequestReturnsEntriesCount)
+    [JsonProperty(nameof(GetRequestReturnsEntriesCount))] int? _getRequestReturnsEntriesCount,
+    [JsonProperty(nameof(FCMServiceAccountJsonPath))] string? _fCMServiceAccountJsonPath,
+    [JsonProperty(nameof(FCMProjectId))] string? _fCMProjectId)
   {
     WebrootDirPath = _webrootDirPath ?? "www";
     LogDirPath = _logDirPath ?? "logs";
@@ -35,6 +37,8 @@ internal class SettingsImpl : ISettings
     AnonymousMinIntervalMs = _anonymousMinIntervalMs ?? 9.9d * 1000;
     RegisteredMinIntervalMs = _registeredMinIntervalMs ?? 0.9 * 1000;
     GetRequestReturnsEntriesCount = _getRequestReturnsEntriesCount ?? 10000;
+    FCMServiceAccountJsonPath = _fCMServiceAccountJsonPath;
+    FCMProjectId = _fCMProjectId;
   }
 
   public string WebrootDirPath { get; }
@@ -51,5 +55,7 @@ internal class SettingsImpl : ISettings
   public double AnonymousMinIntervalMs { get; }
   public double RegisteredMinIntervalMs { get; }
   public int GetRequestReturnsEntriesCount { get; }
+  public string? FCMServiceAccountJsonPath { get; }
+  public string? FCMProjectId { get; }
 
 }

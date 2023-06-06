@@ -37,7 +37,11 @@ const p_map = new L.Map('map', {
     zoom: 14,
     layers: [p_mapsData[DEFAULT_MAP_LAYER]]
 });
+
 p_map.attributionControl.setPrefix(false);
+if (p_isRoadnikApp)
+    p_map.attributionControl.remove();
+
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
     if (!p_isRoadnikApp)
@@ -112,7 +116,6 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
             }
         }
         else {
-            p_map.attributionControl.remove();
             sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {} });
         }
     }

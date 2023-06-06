@@ -13,7 +13,8 @@ public partial class OptionsPage : CContentPage
     p_bindingCtx = (OptionsPageViewModel)BindingContext;
 
     p_mapCacheToggle.SwitchIsToggled = p_bindingCtx.MapCacheEnabled;
-    p_notifyNewUser.SwitchIsToggled = p_bindingCtx.NotificationOnNewUser;
+    p_notifyNewTrack.SwitchIsToggled = p_bindingCtx.NotificationOnNewTrack;
+    p_notifyNewPoint.SwitchIsToggled = p_bindingCtx.NotificationOnNewPoint;
   }
     
 }

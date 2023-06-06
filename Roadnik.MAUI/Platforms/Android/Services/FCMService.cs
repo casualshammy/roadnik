@@ -95,6 +95,7 @@ public class FCMService : FirebaseMessagingService
 #pragma warning disable CS0618 // Type or member is obsolete
 
       var builder = new NotificationCompat.Builder(this)
+        .SetPriority(NotificationCompat.PriorityMax)
         .SetContentTitle(_title)
         .SetContentText(_msg)
         .SetContentIntent(activity)

@@ -32,8 +32,6 @@ public static class MauiProgram
     var logger = lifetime.ToDisposeOnEnded(fileLogger);
 #endif
 
-    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30)));
-
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
     var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
     logger.Info(line);
@@ -45,6 +43,11 @@ public static class MauiProgram
       logger.Info("============= app is closed =============");
       logger.Info("=========================================");
     });
+
+    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30), null, _file =>
+    {
+      logger.Info($"Old file was removed: '{_file.Name}'");
+    }));
 
     var assembly = Assembly.GetExecutingAssembly();
     var containerBuilder = DependencyManagerBuilder

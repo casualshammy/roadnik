@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -34,6 +35,10 @@ public class Startup
       .UseWebSockets(new WebSocketOptions()
       {
         KeepAliveInterval = TimeSpan.FromSeconds(300)
+      })
+      .UseForwardedHeaders(new ForwardedHeadersOptions()
+      {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
       })
       .UseResponseCompression()
       .UseEndpoints(_endpoints => _endpoints.MapControllers());

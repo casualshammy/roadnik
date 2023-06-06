@@ -32,7 +32,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fcmPublisher;
-  private readonly ILogger p_logger;
+  private readonly Lazy<ILogger> p_log;
 
   public ApiControllerV0(
     ISettings _settings,
@@ -51,7 +51,13 @@ public class ApiControllerV0 : JsonNetController
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
-    p_logger = _logger["api-v0"][Interlocked.Increment(ref p_reqCount).ToString()];
+
+    p_log = new Lazy<ILogger>(() =>
+    {
+      var ip = HttpContext.Request.HttpContext.Connection.RemoteIpAddress;
+      var logPrefix = $"{Interlocked.Increment(ref p_reqCount)} | {ip}";
+      return _logger[logPrefix];
+    }, true);
   }
 
   [HttpGet("/")]
@@ -61,7 +67,7 @@ public class ApiControllerV0 : JsonNetController
   public async Task<IActionResult> GetStaticFileAsync(
     [FromRoute(Name = "path")] string _path)
   {
-    p_logger.Info($"Requested static path '{_path}'");
+    p_log.Value.Info($"Requested static path '{_path}'");
 
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
@@ -69,13 +75,13 @@ public class ApiControllerV0 : JsonNetController
     var path = Path.Combine(p_settings.WebrootDirPath!, _path);
     if (!System.IO.File.Exists(path))
     {
-      p_logger.Warn($"File '{_path}' is not found");
+      p_log.Value.Warn($"File '{_path}' is not found");
       return await Task.FromResult(StatusCode(404));
     }
 
     if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
     {
-      p_logger.Error($"Tried to get file not from webroot: '{_path}'");
+      p_log.Value.Error($"Tried to get file not from webroot: '{_path}'");
       return StatusCode(403);
     }
 
@@ -91,7 +97,7 @@ public class ApiControllerV0 : JsonNetController
   public async Task<IActionResult> GetRoomAsync(
     [FromRoute(Name = "path")] string? _path)
   {
-    p_logger.Info($"Requested static path '/room/{_path}'");
+    p_log.Value.Info($"Requested static path '/room/{_path}'");
 
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
@@ -99,13 +105,13 @@ public class ApiControllerV0 : JsonNetController
     var path = Path.Combine(p_settings.WebrootDirPath!, "room", _path);
     if (!System.IO.File.Exists(path))
     {
-      p_logger.Warn($"File '{path}' is not found");
+      p_log.Value.Warn($"File '{path}' is not found");
       return await Task.FromResult(StatusCode(404));
     }
 
     if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
     {
-      p_logger.Error($"Tried to get file not from webroot: '{path}'");
+      p_log.Value.Error($"Tried to get file not from webroot: '{path}'");
       return StatusCode(403);
     }
 
@@ -140,12 +146,12 @@ public class ApiControllerV0 : JsonNetController
       var cachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
       if (cachedStream != null)
       {
-        p_logger.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
+        p_log.Value.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
         return File(cachedStream, MimeMapping.KnownMimeTypes.Png);
       }
     }
 
-    p_logger.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
+    p_log.Value.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
     var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.ThunderforestApikey}";
 
     if (p_settings.ThunderforestCacheSize <= 0)
@@ -192,7 +198,7 @@ public class ApiControllerV0 : JsonNetController
     if (!string.IsNullOrWhiteSpace(_username) && !ReqResUtil.IsUserDefinedStringSafe(_username))
       return BadRequest("Username is incorrect!");
 
-    p_logger.Info($"Requested to store geo data, room: '{_roomId}'");
+    p_log.Value.Info($"Requested to store geo data, room: '{_roomId}'");
 
     var user = await p_usersController.GetRoomAsync(_roomId, _ct);
     if (!p_settings.AllowAnonymousPublish && user == null)
@@ -204,7 +210,7 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)timeLimit))
     {
-      p_logger.Warn($"[{ReqPaths.GET}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{timeLimit} ms'");
+      p_log.Value.Warn($"[{ReqPaths.GET}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{timeLimit} ms'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -232,11 +238,11 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(ReqPaths.GET, ip, 1000))
     {
-      p_logger.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
+      p_log.Value.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    p_logger.Info($"Requested to get geo data, room: '{_roomId}'");
+    p_log.Value.Info($"Requested to get geo data, room: '{_roomId}'");
 
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
@@ -271,13 +277,13 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(ReqPaths.START_NEW_PATH, ip, 10 * 1000))
     {
-      p_logger.Warn($"[{ReqPaths.START_NEW_PATH}] Too many requests from ip '{ip}'");
+      p_log.Value.Warn($"[{ReqPaths.START_NEW_PATH}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
     var now = DateTimeOffset.UtcNow;
 
-    p_logger.Info($"Requested to start new path, room '{_req.RoomId}', username '{_req.Username}', wipe: '{_req.WipeData}'");
+    p_log.Value.Info($"Requested to start new path, room '{_req.RoomId}', username '{_req.Username}', wipe: '{_req.WipeData}'");
     if (_req.WipeData)
       p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
 
@@ -295,7 +301,7 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(ReqPaths.CREATE_NEW_POINT, ip, 1000))
     {
-      p_logger.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
+      p_log.Value.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -306,7 +312,7 @@ public class ApiControllerV0 : JsonNetController
 
     var description = ReqResUtil.ClearUserMsg(_req.Description);
 
-    p_logger.Info($"Got request to save point [{(int)_req.Lat}, {(int)_req.Lng}] for room '{_req.RoomId}'");
+    p_log.Value.Info($"Got request to save point [{(int)_req.Lat}, {(int)_req.Lng}] for room '{_req.RoomId}'");
 
     var now = DateTimeOffset.UtcNow;
     var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
@@ -331,7 +337,7 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(ReqPaths.LIST_ROOM_POINTS, ip, 1000))
     {
-      p_logger.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
+      p_log.Value.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -353,11 +359,11 @@ public class ApiControllerV0 : JsonNetController
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(ReqPaths.DELETE_ROOM_POINT, ip, 1000))
     {
-      p_logger.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
+      p_log.Value.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    p_logger.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
+    p_log.Value.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
     await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%"), _ct: _ct))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
@@ -385,19 +391,19 @@ public class ApiControllerV0 : JsonNetController
 
     var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
     var filePath = Path.Combine(folder, $"{timestamp}.gzip");
-    p_logger.Info($"Requested to store user log file to '{filePath}'");
+    p_log.Value.Info($"Requested to store user log file to '{filePath}'");
 
     try
     {
       using (var file = System.IO.File.OpenWrite(filePath))
         await Request.Body.CopyToAsync(file, _ct);
 
-      p_logger.Info($"User log file is stored to '{filePath}'");
+      p_log.Value.Info($"User log file is stored to '{filePath}'");
       return Ok();
     }
     catch (Exception ex)
     {
-      p_logger.Error($"Error occured while trying to save user log file '{filePath}'", ex);
+      p_log.Value.Error($"Error occured while trying to save user log file '{filePath}'", ex);
       return StatusCode((int)HttpStatusCode.InternalServerError);
     }
   }
@@ -415,11 +421,11 @@ public class ApiControllerV0 : JsonNetController
       return StatusCode((int)HttpStatusCode.BadRequest, $"Expected web socket request");
 
     var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
-    p_logger.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
+    p_log.Value.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
 
     using var websocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
     _ = await p_webSocketCtrl.AcceptSocket(_roomId, websocket);
-    p_logger.Info($"WS connection '{sessionIndex}' for room '{_roomId}' is closed");
+    p_log.Value.Info($"WS connection '{sessionIndex}' for room '{_roomId}' is closed");
 
     return new EmptyResult();
   }

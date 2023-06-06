@@ -53,6 +53,9 @@ public class Program
     using var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
     lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
 
+    if (!Directory.Exists(settings.DataDirPath))
+      Directory.CreateDirectory(settings.DataDirPath);
+
     var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
       .WithCache(1000, TimeSpan.FromHours(1));
 

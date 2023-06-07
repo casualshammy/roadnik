@@ -5,15 +5,20 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Extensions;
 using CommandLine;
+using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Roadnik.Interfaces;
 using Roadnik.Modules.Settings;
+using Roadnik.Toolkit;
 using System.Net;
 using System.Reactive.Linq;
 using System.Reflection;
@@ -51,6 +56,14 @@ public class Program
       Directory.CreateDirectory(settings.LogDirPath);
 
     using var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
+
+    lifetime.DoOnEnded(() =>
+    {
+      logger.Info($"-------------------------------------------");
+      logger.Info($"Server stopped");
+      logger.Info($"-------------------------------------------");
+    });
+
     lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
 
     if (!Directory.Exists(settings.DataDirPath))
@@ -78,7 +91,7 @@ public class Program
       .AddSingleton<ISettingsController>(settingsController)
       .Build();
 
-    var host = CreateHostBuilder(_args, depMgr).Build();
+    var webApp = CreateWebApp(_args, depMgr);
 
     logger.Info($"-------------------------------------------");
     logger.Info($"Roadnik Server Started");
@@ -87,33 +100,43 @@ public class Program
     logger.Info($"Config file: '{configFilePath}'");
     logger.Info($"-------------------------------------------");
 
-    host.Run();
+    webApp.Run();
     lifetime.End();
-
-    logger.Info($"-------------------------------------------");
-    logger.Info($"Server stopped");
-    logger.Info($"-------------------------------------------");
   }
 
-  public static IHostBuilder CreateHostBuilder(string[] _args, DependencyManager _depMgr)
+  public static WebApplication CreateWebApp(string[] _args, DependencyManager _depMgr)
   {
     var settings = _depMgr.Locate<ISettings>();
-    return Host
-        .CreateDefaultBuilder(_args)
-        .ConfigureLogging((_ctx, _logBuilder) => _logBuilder.ClearProviders())
-        .UseGraceContainer(_depMgr.ServiceProvider)
-        .ConfigureServices(_ => _.AddResponseCompression(_options => _options.EnableForHttps = true))
-        .ConfigureWebHostDefaults(_webBuilder =>
-        {
-          _webBuilder
-            .UseKestrel(_serverOptions =>
-            {
-              _serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
-              _serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
-              _serverOptions.Listen(IPAddress.Parse(settings.IpBind), settings.PortBind);
-            })
-            .UseStartup<Startup>();
-        });
+
+    var builder = WebApplication.CreateBuilder(_args);
+    builder.Host.ConfigureLogging((_ctx, _logBuilder) => _logBuilder.ClearProviders());
+    builder.Host.UseGraceContainer(_depMgr.ServiceProvider);
+    builder.Host.ConfigureServices(_ => _.AddResponseCompression(_options => _options.EnableForHttps = true));
+    builder.WebHost.ConfigureKestrel(_options =>
+    {
+      _options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
+      _options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
+      _options.Listen(IPAddress.Parse(settings.IpBind), settings.PortBind);
+    });
+
+    builder.Services.AddControllers(_options => _options.Filters.Add<ApiKeyFilter>());
+    builder.Services.AddRazorPages();
+
+    var app = builder.Build();
+    app
+      .UseRouting()
+      .UseWebSockets(new WebSocketOptions()
+      {
+        KeepAliveInterval = TimeSpan.FromSeconds(300)
+      })
+      .UseForwardedHeaders(new ForwardedHeadersOptions()
+      {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+      })
+      .UseResponseCompression()
+      .UseEndpoints(_endpoints => _endpoints.MapControllers());
+
+    return app;
   }
 
 }

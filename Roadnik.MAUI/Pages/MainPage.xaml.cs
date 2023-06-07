@@ -247,7 +247,7 @@ public partial class MainPage : CContentPage
       else
         p_log.Error($"Resource 'DangerLowBrush' is not found!");
 
-      _ = Task.Run(SendWipeUserPathReqAsync);
+      _ = Task.Run(SendStartNewPathReqAsync);
       locationReporterService.Start();
     }
     else
@@ -347,7 +347,7 @@ public partial class MainPage : CContentPage
     p_storage.SetValue(PREF_USER_MSG, ReqResUtil.ClearUserMsg(msg));
   }
 
-  private async Task SendWipeUserPathReqAsync()
+  private async Task SendStartNewPathReqAsync()
   {
     var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     if (serverAddress.IsNullOrWhiteSpace())
@@ -361,10 +361,12 @@ public partial class MainPage : CContentPage
     if (username.IsNullOrWhiteSpace())
       return;
 
+    var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
+
     try
     {
       using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
-      using var content = JsonContent.Create(new StartNewPathReq(roomId, username, true));
+      using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
       req.Content = content;
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
       using var res = await p_httpClient.Value.SendAsync(req, cts.Token);

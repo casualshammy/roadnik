@@ -38,6 +38,7 @@ public partial class App : CMauiApplication
       storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
       storage.SetValue(PREF_NOTIFY_NEW_POINT, true);
       storage.SetValue(PREF_NOTIFY_NEW_TRACK, true);
+      storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
     }
   }
 

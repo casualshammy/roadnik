@@ -93,8 +93,10 @@ public class Program
 
     var webApp = CreateWebApp(_args, depMgr);
 
+    var version = new SerializableVersion(assembly.GetName().Version ?? new Version(0, 0, 0, 0));
     logger.Info($"-------------------------------------------");
     logger.Info($"Roadnik Server Started");
+    logger.Info($"Version: {version}");
     logger.Info($"Address: {settings.IpBind}:{settings.PortBind}");
     logger.Info($"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}");
     logger.Info($"Config file: '{configFilePath}'");

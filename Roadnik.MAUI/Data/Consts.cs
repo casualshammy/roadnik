@@ -17,6 +17,7 @@ internal static class Consts
   public const string PREF_MIN_ACCURACY = "settings.report.min-accuracy";
   public const string PREF_MAP_OPEN_BEHAVIOR = "settings.appearance.map-open-behavior";
   public const string PREF_MAP_CACHE_ENABLED = "settings.appearance.map-cache-enabled";
+  public const string PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED = "settings.appearance.wipe-old-track-on-new-enabled";
   public const string PREF_NOTIFY_NEW_TRACK = "settings.notifications.on-new-track";
   public const string PREF_NOTIFY_NEW_POINT = "settings.notifications.on-new-point";
 

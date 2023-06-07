@@ -19,6 +19,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minAccuracy;
   private MapOpeningBehavior p_mapOpeningBehavior;
   private bool p_mapCacheEnabled;
+  private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
 
@@ -36,6 +37,7 @@ internal class OptionsPageViewModel : BaseViewModel
     p_minAccuracy = p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY);
     p_mapOpeningBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
     p_mapCacheEnabled = p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
+    p_wipeOldTrackOnNewEnabled = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
     p_notificationOnNewTrack = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK);
     p_notificationOnNewPoint = p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT);
 
@@ -48,6 +50,7 @@ internal class OptionsPageViewModel : BaseViewModel
     MinAccuracyCommand = new Command(OnMinAccuracy);
     MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
     MapCacheCommand = new Command(OnMapCache);
+    WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
   }
@@ -170,6 +173,15 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_MAP_CACHE_ENABLED, p_mapCacheEnabled);
     }
   }
+  public bool WipeOldTrackOnNewEnabled
+  {
+    get => p_wipeOldTrackOnNewEnabled;
+    set
+    {
+      SetProperty(ref p_wipeOldTrackOnNewEnabled, value);
+      p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled);
+    }
+  }
   public bool NotificationOnNewTrack
   {
     get => p_notificationOnNewTrack;
@@ -198,6 +210,7 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinAccuracyCommand { get; }
   public ICommand MapOpenBehaviorCommand { get; }
   public ICommand MapCacheCommand { get; }
+  public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
 
@@ -369,6 +382,14 @@ internal class OptionsPageViewModel : BaseViewModel
       return;
 
     MapCacheEnabled = toggled;
+  }
+
+  private void OnWipeOldTrackOnNew(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    WipeOldTrackOnNewEnabled = toggled;
   }
 
   private void OnNotifyNewTrack(object? _arg)

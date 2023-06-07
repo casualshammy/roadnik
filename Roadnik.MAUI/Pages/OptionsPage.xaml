@@ -16,68 +16,6 @@
         <converters:BoolToEnabledDisabledTextConverter x:Key="BoolToEnabledDisabledText" />
     </ContentPage.Resources>
 
-    <!--<TableView Intent="Settings">
-        <TableRoot>
-            <TableSection Title="{x:Static l:AppResources.page_options_connectionSettings}"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell
-                    Text="{x:Static l:AppResources.page_options_serverAddress}"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="ServerAddress_Tapped"
-                    Detail="{Binding ServerName}"/>
-                <TextCell
-                    Text="{x:Static l:AppResources.page_options_roomId}"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="ServerKey_Tapped"
-                    Detail="{Binding RoomId}"/>
-                <TextCell
-                    Text="{x:Static l:AppResources.page_options_username}"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="Nickname_Tapped"
-                    Detail="{Binding Nickname}"/>
-            </TableSection>
-            <TableSection Title="Reporting settings"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell
-                    Text="Time interval between reported trackpoints"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinimumInterval_Tapped"
-                    Detail="{Binding MinimumTime}"/>
-                <TextCell
-                    Text="Distance between reported trackpoints"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinimumDistance_Tapped"
-                    Detail="{Binding MinimumDistance}"/>
-                <TextCell
-                    Text="Trackpoint reporting condition"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="TrackpointReportingCondition_Tapped"
-                    Detail="{Binding TrackpointReportingConditionText}"/>
-                <TextCell
-                    Text="Required location accuracy"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinAccuracy_Tapped"
-                    Detail="{Binding MinAccuracy}"/>
-            </TableSection>
-            <TableSection Title="Map appearance"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell Text="What to show on map opening"
-                          TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                          Tapped="MapOpenBehavior_Tapped"
-                          Detail="{Binding MapOpenBehavior}"/>
-                <TextCell Text="Map data caching"
-                          TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                          Tapped="MapCache_Tapped"
-                          Detail="{Binding MapCacheEnabled, Converter={StaticResource BoolToEnabledDisabledText}}"/>
-            </TableSection>
-            <TableSection Title="Notifications"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <SwitchCell Text="A new user has appeared" 
-                            OnColor="{AppThemeBinding Dark=White, Light={StaticResource Primary}}"
-                            On="{Binding NotificationOnNewUser}"/>
-            </TableSection>
-        </TableRoot>
-    </TableView>-->
     <ScrollView>
         <Grid>
             <Grid.ColumnDefinitions>
@@ -89,6 +27,7 @@
                 <RowDefinition />
                 <RowDefinition />
                 <RowDefinition Height="45" />
+                <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
                 <RowDefinition />
@@ -190,13 +129,20 @@
                 Grid.Row="8"
                 Title="Required location accuracy"
                 DetailsText="{Binding MinAccuracy}"
-                TapCommand="{Binding MinAccuracyCommand }"
+                TapCommand="{Binding MinAccuracyCommand }"/>
+            <controls:OptionsItem
+                x:Name="p_deleteOldRouteOnNew"
+                Grid.Row="9"
+                Title="Delete old track when starting a new one"
+                DetailsText=""
+                ShowSwitch="True"
+                SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
                 ShowBottomLine="False"/>
 
             <!-- MAP APPEARANCE -->
             <Grid
                 Margin="20, 0"
-                Grid.Row="9">
+                Grid.Row="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -220,13 +166,13 @@
                 HeightRequest="2"/>
             </Grid>
             <controls:OptionsItem
-                Grid.Row="10"
+                Grid.Row="11"
                 Title="What to show on map opening"
                 DetailsText="{Binding MapOpenBehavior}"
                 TapCommand="{Binding MapOpenBehaviorCommand}"/>
             <controls:OptionsItem
                 x:Name="p_mapCacheToggle"
-                Grid.Row="11"
+                Grid.Row="12"
                 Title="Map data caching"
                 DetailsText="Will help in case of slow internet connection"
                 ShowSwitch="True"
@@ -236,7 +182,7 @@
             <!-- NOTIFICATIONS -->
             <Grid
                 Margin="20, 0"
-                Grid.Row="12">
+                Grid.Row="13">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -261,7 +207,7 @@
             </Grid>
             <controls:OptionsItem
                 x:Name="p_notifyNewTrack"
-                Grid.Row="13"
+                Grid.Row="14"
                 Title="A new track was started"
                 DetailsText="New user has started to record their way"
                 ShowSwitch="True"
@@ -269,7 +215,7 @@
                 ShowBottomLine="False"/>
             <controls:OptionsItem
                 x:Name="p_notifyNewPoint"
-                Grid.Row="14"
+                Grid.Row="15"
                 Title="A new point was placed on the map"
                 DetailsText="Someone has created a new point"
                 ShowSwitch="True"

@@ -3,9 +3,12 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Views;
 using JustLogger.Interfaces;
+using QRCoder;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
+using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
@@ -168,7 +171,14 @@ public partial class MainPage : CContentPage
       if (layer == null)
         return;
 
-      var command = $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
+
+      var command = "";
+      if (webAppState != null)
+        command += $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});";
+
+      command += $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
         var result = await p_webView.EvaluateJavaScriptAsync(command);
@@ -329,8 +339,32 @@ public partial class MainPage : CContentPage
       return;
     }
 
-    var req = new ShareTextRequest(url, "Url");
-    await Share.Default.RequestAsync(req);
+    var methodUrlLink = "Share link as text";
+    var methodQrCode = "Share link as QR code";
+    var method = await DisplayActionSheet(null, null, null, methodUrlLink, methodQrCode);
+    if (method == null)
+      return;
+
+    if (method == methodUrlLink)
+    {
+      var req = new ShareTextRequest(url, "Url");
+      await Share.Default.RequestAsync(req);
+    }
+    else if (method == methodQrCode)
+    {
+      var pngBytes = await Task.Run(() =>
+      {
+        var generator = new PayloadGenerator.Url(url);
+        var payload = generator.ToString();
+
+        using var qrGenerator = new QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new PngByteQRCode(qrCodeData);
+        return qrCode.GetGraphic(20);
+      });
+
+      await this.ShowPopupAsync(new ImagePopup(pngBytes));
+    }
   }
 
   private async void Message_Clicked(object _sender, EventArgs _e)

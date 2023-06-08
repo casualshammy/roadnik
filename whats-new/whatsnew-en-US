@@ -1,3 +1,1 @@
-  - now push msgs are delivered even when app is killed
-  - push msg notification now properly closes on click
-  - added option to wipe old track when user starts a new one
+  - now room link can be shared via QR code

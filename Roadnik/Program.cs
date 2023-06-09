@@ -131,14 +131,40 @@ public class Program
       {
         KeepAliveInterval = TimeSpan.FromSeconds(300)
       })
-      .UseForwardedHeaders(new ForwardedHeadersOptions()
-      {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-      })
+      .Use(ForwardProxyHeadersMiddlewareAsync)
       .UseResponseCompression()
       .UseEndpoints(_endpoints => _endpoints.MapControllers());
 
     return app;
+  }
+
+  private static Task ForwardProxyHeadersMiddlewareAsync(HttpContext _ctx, RequestDelegate _next)
+  {
+    if (_ctx.Request.Headers.TryGetValue("CF-Connecting-IP", out var cfConnectingIp))
+    {
+      var headerValue = cfConnectingIp.ToString();
+      if (!headerValue.IsNullOrWhiteSpace() && IPAddress.TryParse(headerValue, out var ip))
+      {
+        _ctx.Connection.RemoteIpAddress = ip;
+        return _next(_ctx);
+      }
+    }
+
+    if (_ctx.Request.Headers.TryGetValue("X-Forwarded-For", out var xForwardedFor))
+    {
+      var headerValue = xForwardedFor.ToString();
+      if (!headerValue.IsNullOrWhiteSpace())
+      {
+        var split = headerValue.Split(',', StringSplitOptions.TrimEntries);
+        if (split.Length > 0 && IPAddress.TryParse(split[0], out var ip))
+        {
+          _ctx.Connection.RemoteIpAddress = ip;
+          return _next(_ctx);
+        }
+      }
+    }
+
+    return _next(_ctx);
   }
 
 }

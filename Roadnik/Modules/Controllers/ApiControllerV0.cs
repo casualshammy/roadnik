@@ -61,7 +61,18 @@ public class ApiControllerV0 : JsonNetController
   }
 
   [HttpGet("/")]
-  public async Task<IActionResult> GetIndexFileAsync() => await GetStaticFileAsync("/");
+  public async Task<IActionResult> GetIndexFileAsync()
+  {
+    //foreach (var (key, value) in HttpContext.Request.Headers)
+    //  if (key.Equals("X-Forwarded-For", StringComparison.InvariantCultureIgnoreCase))
+    //    p_log.Value.Warn($"X-Forwarded-For: '{value}'");
+    //  else if (key.Equals("X-Real-IP", StringComparison.InvariantCultureIgnoreCase))
+    //    p_log.Value.Warn($"X-Real-IP: '{value}'");
+    //  else if (key.Equals("CF-Connecting-IP", StringComparison.InvariantCultureIgnoreCase))
+    //    p_log.Value.Warn($"CF-Connecting-IP: '{value}'");
+
+    return await GetStaticFileAsync("/");
+  }
 
   [HttpGet("{**path}")]
   public async Task<IActionResult> GetStaticFileAsync(

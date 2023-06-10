@@ -368,7 +368,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest($"Incorrect room id!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.DELETE_ROOM_POINT, ip, 1000))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       p_log.Value.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);

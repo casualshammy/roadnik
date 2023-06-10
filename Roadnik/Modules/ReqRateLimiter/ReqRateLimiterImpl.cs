@@ -1,4 +1,5 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw;
+using Ax.Fw.Attributes;
 using Roadnik.Interfaces;
 using System.Collections.Concurrent;
 using System.Net;
@@ -9,6 +10,7 @@ namespace Roadnik.Modules.ReqRateLimiter;
 internal class ReqRateLimiterImpl : IReqRateLimiter
 {
   private readonly ConcurrentDictionary<string, ConcurrentDictionary<IPAddress, long>> p_limiter = new();
+  private readonly ConcurrentDictionary<string, ConcurrentDictionary<IPAddress, TimeWall>> p_timeWallLimiter = new();
 
   public bool IsReqOk(string _type, IPAddress? _ip, long _intervalMs)
   {
@@ -22,6 +24,18 @@ internal class ReqRateLimiterImpl : IReqRateLimiter
 
     dictionary[_ip] = now;
     return true;
+  }
+
+  public bool IsReqTimewallOk(string _type, IPAddress? _ip, Func<TimeWall> _timewallFactory)
+  {
+    if (_ip == null)
+      return false;
+
+    var dictionary = p_timeWallLimiter.GetOrAdd(_type, new ConcurrentDictionary<IPAddress, TimeWall>());
+    if (!dictionary.TryGetValue(_ip, out var timewall))
+      dictionary.TryAdd(_ip, (timewall = _timewallFactory()));
+
+    return timewall.TryGetTicket();
   }
 
 }

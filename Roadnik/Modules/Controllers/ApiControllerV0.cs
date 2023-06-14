@@ -247,7 +247,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.GET, ip, 1000))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       p_log.Value.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -310,7 +310,7 @@ public class ApiControllerV0 : JsonNetController
     CancellationToken _ct)
   {
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.CREATE_NEW_POINT, ip, 1000))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_NEW_POINT, ip, () => new Ax.Fw.TimeWall(10, TimeSpan.FromSeconds(10))))
     {
       p_log.Value.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -346,7 +346,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest($"Incorrect room id!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.LIST_ROOM_POINTS, ip, 1000))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       p_log.Value.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -392,10 +392,15 @@ public class ApiControllerV0 : JsonNetController
   [HttpPost(ReqPaths.UPLOAD_LOG)]
   [RequestSizeLimit(10 * 1024 * 1024)]
   public async Task<IActionResult> UploadLogAsync(
-    [FromHeader(Name = "roomId")] string _roomId,
-    [FromHeader(Name = "username")] string _username,
+    [FromHeader(Name = "roomId")] string? _roomId,
+    [FromHeader(Name = "username")] string? _username,
     CancellationToken _ct)
   {
+    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+      return BadRequest("Room Id is incorrect!");
+    if (!ReqResUtil.IsUsernameSafe(_username))
+      return BadRequest("Username is incorrect!");
+
     var folder = Path.Combine(p_settings.DataDirPath, "user-logs", _roomId, _username);
     if (!Directory.Exists(folder))
       Directory.CreateDirectory(folder);

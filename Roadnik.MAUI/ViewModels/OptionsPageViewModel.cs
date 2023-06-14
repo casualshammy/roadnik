@@ -84,19 +84,11 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_username;
     set
     {
-      if (value == null)
+      if (!ReqResUtil.IsUsernameSafe(value))
         return;
 
-      var v = value;
-      if (!ReqResUtil.IsUserDefinedStringSafe(v))
-        v = ReqResUtil.ClearUserMsg(v);
-
-      if (!ReqResUtil.IsUserDefinedStringSafe(v))
-        return;
-
-      SetProperty(ref p_username, v);
-      if (p_username != null && !string.IsNullOrWhiteSpace(p_username))
-        p_storage.SetValue(PREF_USERNAME, p_username);
+      SetProperty(ref p_username, value);
+      p_storage.SetValue(PREF_USERNAME, value);
     }
   }
   public int MinimumTime
@@ -261,10 +253,11 @@ internal class OptionsPageViewModel : BaseViewModel
 
     var usernameRaw = await currentPage.DisplayPromptAsync(
       "Username:",
-      $"Empty username is not allowed. Minimum length - {ReqResUtil.MinRoomIdLength} characters, maximum - {ReqResUtil.MaxRoomIdLength} characters",
+      $"Minimum length - {ReqResUtil.MinUsernameLength}, maximum - {ReqResUtil.MaxUsernameLength}.\n" +
+      $"Allowed characters: alphanumeric plus \\-_@#$%^&()",
       "Save",
       initialValue: Nickname,
-      maxLength: ReqResUtil.MaxRoomIdLength);
+      maxLength: ReqResUtil.MaxUsernameLength);
 
     if (usernameRaw == null)
       return;

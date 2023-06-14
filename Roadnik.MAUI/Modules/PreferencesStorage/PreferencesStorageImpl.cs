@@ -1,10 +1,13 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw;
+using Ax.Fw.Attributes;
 using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using Newtonsoft.Json;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Subjects;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
 
@@ -16,6 +19,9 @@ internal class PreferencesStorageImpl : IPreferencesStorage
 
   public PreferencesStorageImpl()
   {
+    SetupDefaultPreferences();
+    MigratePreferences();
+
     p_prefChangedFlow.OnNext();
   }
 
@@ -48,6 +54,38 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     Preferences.Default.Remove(_key);
     p_cache.TryRemove(_key, out _);
     p_prefChangedFlow.OnNext();
+  }
+
+  private void SetupDefaultPreferences()
+  {
+    if (GetValueOrDefault<bool>(PREF_INITIALIZED) == true)
+      return;
+
+    if (GetValueOrDefault<int>(PREF_DB_VERSION) != default)
+      return;
+
+    SetValue(PREF_INITIALIZED, true);
+    SetValue(PREF_DB_VERSION, 1);
+
+    SetValue(PREF_SERVER_ADDRESS, "https://roadnik.app");
+    SetValue(PREF_ROOM, Utilities.GetRandomString(10, false));
+    SetValue(PREF_TIME_INTERVAL, 10);
+    SetValue(PREF_DISTANCE_INTERVAL, 100);
+    SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+    SetValue(PREF_USER_MSG, "Hi there!");
+    SetValue(PREF_MIN_ACCURACY, 30);
+    SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(1000, 9999)}");
+    SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
+    SetValue(PREF_NOTIFY_NEW_POINT, true);
+    SetValue(PREF_NOTIFY_NEW_TRACK, true);
+    SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
+  }
+
+  private void MigratePreferences()
+  {
+    var dbVersion = GetValueOrDefault<int>(PREF_DB_VERSION);
+
+
   }
 
 }

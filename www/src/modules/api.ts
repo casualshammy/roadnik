@@ -7,6 +7,7 @@ export const WS_MSG_PATH_WIPED: string = "ws-msg-path-wiped";
 export const WS_MSG_ROOM_POINTS_UPDATED: string = "ws-msg-room-points-updated";
 
 export const JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
+export const HOST_MSG_REQUEST_DONE = "host-msg-request-done";
 export const JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";

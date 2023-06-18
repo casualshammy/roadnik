@@ -168,16 +168,17 @@ public partial class MainPage : CContentPage
     if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
     {
       var layer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
-      if (layer == null)
-        return;
-
       var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
 
       var command = "";
       if (webAppState != null)
         command += $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});";
 
-      command += $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+      if (layer != null)
+        command += $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+
+      if (command.IsNullOrWhiteSpace())
+        return;
 
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
@@ -201,6 +202,10 @@ public partial class MainPage : CContentPage
         return;
 
       p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
+    }
+    else if (msg.MsgType == HOST_MSG_REQUEST_DONE)
+    {
+      p_bindingCtx.IsSpinnerRequired = false;
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED)
     {
@@ -277,8 +282,6 @@ public partial class MainPage : CContentPage
   {
     if (_e.Result != WebNavigationResult.Success)
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
-
-    p_bindingCtx.IsSpinnerRequired = false;
   }
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)

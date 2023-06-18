@@ -1,1 +1,2 @@
-  - now room link can be shared via QR code
+  - updated tooltip for username in `Settings` window
+  - map loading spinner now is shown until first portion of geo data is loaded 

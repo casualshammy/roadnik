@@ -25,6 +25,7 @@ internal static class Consts
   public const string PREF_BOOKMARKS_LIST = "bookmarks.list";
 
   public const string JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
+  public const string HOST_MSG_REQUEST_DONE = "host-msg-request-done";
   public const string JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";

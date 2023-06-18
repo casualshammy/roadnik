@@ -1,7 +1,7 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
-import { HOST_MSG_NEW_POINT, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
@@ -82,6 +82,9 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
         return;
 
     const data = await p_storageApi.getDataAsync(p_roomId, _offset);
+
+    sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: {} });
+
     if (data === null || !data.Success)
         return;
 

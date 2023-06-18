@@ -174,7 +174,7 @@
                 x:Name="p_mapCacheToggle"
                 Grid.Row="12"
                 Title="Map data caching"
-                DetailsText="Will help in case of slow internet connection"
+                DetailsText="Will help in case of slow internet connection.&#10;Supported on Android 8+"
                 ShowSwitch="True"
                 SwitchTapped="{Binding MapCacheCommand}"
                 ShowBottomLine="False"/>

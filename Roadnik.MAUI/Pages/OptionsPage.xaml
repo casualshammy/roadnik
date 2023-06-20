@@ -17,34 +17,11 @@
     </ContentPage.Resources>
 
     <ScrollView>
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="45" />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition Height="45" />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition Height="45" />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition Height="45" />
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-            </Grid.RowDefinitions>
-
+        <VerticalStackLayout>
             <!-- SERVER SETTINGS  -->
             <Grid
                 Margin="20, 0"
-                Grid.Row="0">
+                HeightRequest="40">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -56,14 +33,14 @@
                 Text="Connection settings"
                 FontAttributes="Bold"
                 VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
                     Grid.Column="0"
                     Grid.Row="1"
                     Grid.ColumnSpan="2"
                     VerticalOptions="End"
-                    Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                    Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
                     Margin="-20, 0"
                     HeightRequest="2"/>
             </Grid>
@@ -85,9 +62,8 @@
                 ShowBottomLine="False"/>
 
             <!-- TRACKING SETTINGS  -->
-            <Grid
-            Margin="20, 0"
-            Grid.Row="4">
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -99,14 +75,14 @@
                 Text="Tracking settings"
                     FontAttributes="Bold"
                 VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
                 Grid.Column="0"
                 Grid.Row="1"
                 Grid.ColumnSpan="2"
                 VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
                 Margin="-20, 0"
                 HeightRequest="2"/>
             </Grid>
@@ -140,9 +116,8 @@
                 ShowBottomLine="False"/>
 
             <!-- MAP APPEARANCE -->
-            <Grid
-                Margin="20, 0"
-                Grid.Row="10">
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -154,14 +129,14 @@
                 Text="Map appearance"
                     FontAttributes="Bold"
                 VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
                 Grid.Column="0"
                 Grid.Row="1"
                 Grid.ColumnSpan="2"
                 VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
+                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
                 Margin="-20, 0"
                 HeightRequest="2"/>
             </Grid>
@@ -180,9 +155,8 @@
                 ShowBottomLine="False"/>
 
             <!-- NOTIFICATIONS -->
-            <Grid
-                Margin="20, 0"
-                Grid.Row="13">
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
@@ -191,19 +165,19 @@
                     <RowDefinition Height="2" />
                 </Grid.RowDefinitions>
                 <Label 
-                Text="Notifications"
-                FontAttributes="Bold"
-                VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}"/>
+                    Text="Notifications"
+                    FontAttributes="Bold"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
-                Grid.Column="0"
-                Grid.Row="1"
-                Grid.ColumnSpan="2"
-                VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=LightBlue}"
-                Margin="-20, 0"
-                HeightRequest="2"/>
+                    Grid.Column="0"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    VerticalOptions="End"
+                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Margin="-20, 0"
+                    HeightRequest="2"/>
             </Grid>
             <controls:OptionsItem
                 x:Name="p_notifyNewTrack"
@@ -221,8 +195,8 @@
                 ShowSwitch="True"
                 SwitchTapped="{Binding NotifyNewPointCommand}"
                 ShowBottomLine="False"/>
-
-        </Grid>
+        </VerticalStackLayout>
+        
     </ScrollView>
 
 

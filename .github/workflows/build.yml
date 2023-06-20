@@ -65,5 +65,5 @@ jobs:
         serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         packageName: com.axiolab.roadnik
         releaseFiles: artifacts/*.aab
-        track: beta
+        track: internal
         whatsNewDirectory: whats-new

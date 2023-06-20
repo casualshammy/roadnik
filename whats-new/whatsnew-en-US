@@ -1,2 +1,2 @@
-  - updated tooltip for username in `Settings` window
-  - map loading spinner now is shown until first portion of geo data is loaded 
+  - fixed incorrect text sizing in options page
+  - fixed bug when options page's values were not updated on bookmark loading

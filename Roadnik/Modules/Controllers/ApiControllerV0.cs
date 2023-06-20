@@ -1,4 +1,5 @@
-﻿using Ax.Fw.Storage.Data;
+﻿using Ax.Fw;
+using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
 using Microsoft.AspNetCore.Http;
@@ -12,6 +13,7 @@ using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Toolkit;
 using System.Net;
+using System.Text;
 
 namespace Roadnik.Modules.Controllers;
 
@@ -247,7 +249,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       p_log.Value.Warn($"[{ReqPaths.GET}] Too many requests from ip '{ip}'");
       return StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -352,6 +354,8 @@ public class ApiControllerV0 : JsonNetController
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
+    p_log.Value.Info($"Got req to list points in room '{_roomId}'");
+
     var entries = new List<ListRoomPointsResData>();
     await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(new LikeExpr($"{_roomId}.%"), _ct: _ct))
       entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
@@ -387,6 +391,38 @@ public class ApiControllerV0 : JsonNetController
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
     return Ok();
+  }
+
+  [HttpGet(ReqPaths.GET_FREE_ROOM_ID)]
+  public async Task<IActionResult> GetFreeRoomIdAsync(CancellationToken _ct)
+  {
+    var ip = Request.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_FREE_ROOM_ID, ip, () => new TimeWall(10, TimeSpan.FromSeconds(60))))
+    {
+      p_log.Value.Warn($"[{ReqPaths.GET_FREE_ROOM_ID}] Too many requests from ip '{ip}'");
+      return StatusCode((int)HttpStatusCode.TooManyRequests);
+    }
+
+    p_log.Value.Info($"Got req to get free room id");
+
+    string? roomId = null;
+    var roomIdValid = false;
+    while (!_ct.IsCancellationRequested && !roomIdValid)
+    {
+      roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
+      roomIdValid = !await p_documentStorage
+        .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{roomId}.%"), _ct: _ct)
+        .AnyAsync(_ct);
+    }
+
+    if (!roomIdValid || string.IsNullOrEmpty(roomId))
+    {
+      p_log.Value.Error("Can't find free room id!");
+      return StatusCode((int)HttpStatusCode.InternalServerError, "Can't find free room id!");
+    }
+
+    p_log.Value.Info($"Sending free room id: '{roomId}'");
+    return Content(roomId, "text/plain", Encoding.UTF8);
   }
 
   [HttpPost(ReqPaths.UPLOAD_LOG)]

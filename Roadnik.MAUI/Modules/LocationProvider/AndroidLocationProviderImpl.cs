@@ -65,6 +65,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     if (oldEnabled == 0)
       return;
 
+    p_logger.Info($"Stopping updates, active providers: <{string.Join(">, <", p_activeProviders)}>");
+
     try
     {
       MainThread.BeginInvokeOnMainThread(() => p_locationManager.RemoveUpdates(this));
@@ -79,6 +81,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   {
     p_minTimePeriod = _minTime;
     p_minDistanceMeters = _minDistanceMeters;
+
+    p_logger.Info($"Constrains were changed; min time: '{_minTime}', min distance: '{_minDistanceMeters}'");
 
     if (Interlocked.Read(ref p_enabled) == 1)
     {

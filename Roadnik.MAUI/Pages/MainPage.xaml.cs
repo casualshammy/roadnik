@@ -252,6 +252,17 @@ public partial class MainPage : CContentPage
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
 
+    const int currentVersion = 3;
+    var version = p_storage.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
+    if (version < currentVersion)
+    {
+      var result = await this.ShowPopupAsync(new AgreementsPopup());
+      if (result is not bool agreed || !agreed)
+        return;
+
+      p_storage.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
+    }
+
     if (!await locationReporter.IsEnabledAsync())
     {
       if (!await IsLocationPermissionOkAsync())

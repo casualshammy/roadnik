@@ -260,7 +260,7 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       roomId = await currentPage.DisplayPromptAsync(
         "Room ID",
-        $"Only alphanumeric characters and hyphens are allowed. Minimum length: {ReqResUtil.MinRoomIdLength} characters, maximum: {ReqResUtil.MaxRoomIdLength} characters",
+        $"Only alphanumeric characters and hyphens are allowed. Minimum length: {ReqResUtil.MinRoomIdLength}, maximum: {ReqResUtil.MaxRoomIdLength}",
         "Save",
         initialValue: RoomId,
         maxLength: ReqResUtil.MaxRoomIdLength);
@@ -300,7 +300,7 @@ internal class OptionsPageViewModel : BaseViewModel
     var usernameRaw = await currentPage.DisplayPromptAsync(
       "Username:",
       $"Minimum length - {ReqResUtil.MinUsernameLength}, maximum - {ReqResUtil.MaxUsernameLength}.\n" +
-      $"Allowed characters: alphanumeric plus \\-_@#$%^&()",
+      $"Allowed characters: alphanumeric plus \\-_@#$",
       "Save",
       initialValue: Nickname,
       maxLength: ReqResUtil.MaxUsernameLength);
@@ -319,9 +319,10 @@ internal class OptionsPageViewModel : BaseViewModel
 
     var mimimalIntervalRaw = await currentPage.DisplayPromptAsync(
       "Interval in seconds:",
-      "Minimum interval for anonymous user is 10 sec, for registered user is 1 sec. Maximum interval is 1 hour (3600 sec)",
+      "Minimum interval is 1 sec. Maximum interval is 1 hour (3600 sec).\n" +
+      "Pay attention: minimum interval may be restricted by the server",
       initialValue: MinimumTime.ToString(),
-      keyboard: Microsoft.Maui.Keyboard.Numeric);
+      keyboard: Keyboard.Numeric);
 
     if (mimimalIntervalRaw != null &&
       int.TryParse(mimimalIntervalRaw, out var mimimalInterval) &&
@@ -340,7 +341,7 @@ internal class OptionsPageViewModel : BaseViewModel
       "Distance in metres:",
       "0 to disable limit. Maximum value - 10 km (10000 metres)",
       initialValue: MinimumDistance.ToString(),
-      keyboard: Microsoft.Maui.Keyboard.Numeric);
+      keyboard: Keyboard.Numeric);
 
     if (mimimalDistanceRaw != null &&
       int.TryParse(mimimalDistanceRaw, out var mimimalDistance) &&
@@ -374,9 +375,9 @@ internal class OptionsPageViewModel : BaseViewModel
 
     var minAccuracyRaw = await currentPage.DisplayPromptAsync(
       "Accuracy in metres:",
-      "Minimum value - 1 meter. Sane value is between 10 and 30 metres",
+      "Minimum value - 1 meter. Sane value is between 5 and 30 metres",
       initialValue: MinAccuracy.ToString(),
-      keyboard: Microsoft.Maui.Keyboard.Numeric);
+      keyboard: Keyboard.Numeric);
 
     if (minAccuracyRaw == null)
       return;

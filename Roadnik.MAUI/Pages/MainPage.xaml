@@ -38,15 +38,14 @@
                 HeightRequest="40"
                 CornerRadius="45"
                 Background="{StaticResource PrimaryBrush}"
-                Clicked="Message_Clicked"
-                SemanticProperties.Description="{Binding MsgButtonDescription}">
+                Clicked="Message_Clicked" 
+                SemanticProperties.Description="{Binding MsgButtonDescription}" >
             </Button>
             <ImageButton 
                 WidthRequest="30"
                 HeightRequest="30"
                 Source="message.svg"
-                InputTransparent="True"
-                SemanticProperties.Description="{Binding MsgButtonDescription}"/>
+                InputTransparent="True" />
         </Grid>
 
         <Grid
@@ -80,8 +79,7 @@
                     WidthRequest="30"
                     HeightRequest="30"
                     Source="share.svg"
-                    InputTransparent="True"
-                    SemanticProperties.Description="{Binding ShareButtonDescription}"/>
+                    InputTransparent="True"/>
             </Grid>
 
             <Grid 
@@ -101,8 +99,7 @@
                     WidthRequest="40"
                     HeightRequest="40"
                     Source="my_location.svg"
-                    InputTransparent="True"
-                    SemanticProperties.Description="{Binding GoToMyLocationButtonDescription}"/>
+                    InputTransparent="True"/>
             </Grid>
 
             <Grid Grid.Row="2"
@@ -120,8 +117,7 @@
                     WidthRequest="70"
                     HeightRequest="70"
                     Source="record_rec.svg"
-                    InputTransparent="True"
-                    SemanticProperties.Description="{Binding StartPublishButtonDescription}"/>
+                    InputTransparent="True"/>
             </Grid>
 
         </Grid>

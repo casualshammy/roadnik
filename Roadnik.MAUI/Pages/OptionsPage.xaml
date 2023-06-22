@@ -88,7 +88,7 @@
             </Grid>
             <controls:OptionsItem
                 Grid.Row="5"
-                Title="Time interval between reported location"
+                Title="Time interval between reported trackpoints"
                 DetailsText="{Binding MinimumTime}"
                 TapCommand="{Binding MinimumIntervalCommand }"/>
             <controls:OptionsItem

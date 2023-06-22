@@ -62,7 +62,7 @@ internal class MainPageViewModel : BaseViewModel
 
   public string LocationPermissionDescription { get; } =
     "Our app requires access to your device's background location in order to provide you with accurate and up-to-date location tracking. " +
-    "This means that even when you're not actively using the app, we're still able to keep track of your location in the background.\r\n\r\n" +
+    "This means that even when our app is not shown on the screen, we're still able to keep track of your location in the background.\r\n\r\n" +
     "Additionally, if you choose to share your location information with others through our remote server feature, " +
     "we need access to your background location so that we can continuously update your location and share it with other users in real-time.\r\n\r\n" +
     "We understand that privacy is important to you, and we want to assure you that we take the protection of your personal data seriously. " +

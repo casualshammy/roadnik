@@ -4,6 +4,7 @@ internal static class Consts
 {
   public const string PREF_INITIALIZED = "settings.initialized";
   public const string PREF_DB_VERSION = "settings.db-version";
+  public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";
   public const string PREF_MAP_VIEW_STATE = "page.main.map-view-state";
   public const string PREF_MAP_LAYER = "page.main.map-layer";
   public const string PREF_MAP_SELECTED_TRACK = "page.main.map-selected-track";

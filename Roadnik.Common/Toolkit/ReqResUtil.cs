@@ -8,12 +8,12 @@ public static class ReqResUtil
 {
   private static readonly Regex p_safeStringRegex = new(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled);
   private static readonly Regex p_safeUserMessageRegex = new(@"^[\d\w\-_\s\!\,\.\:\?]*$", RegexOptions.Compiled);
-  private static readonly Regex p_safeUsernameRegex = new(@"^[a-zA-Z0-9\-_\@\#\$\%\^\&\(\)]*$", RegexOptions.Compiled);
+  private static readonly Regex p_safeUsernameRegex = new(@"^[a-zA-Z0-9\-_\@\#\$]*$", RegexOptions.Compiled);
 
   public static int MaxUserMsgLength { get; } = 1024;
 
   public static int MaxRoomIdLength { get; } = 16;
-  public static int MinRoomIdLength { get; } = 4;
+  public static int MinRoomIdLength { get; } = 8;
 
   public static int MinUsernameLength { get; } = 4;
   public static int MaxUsernameLength { get; } = 16;

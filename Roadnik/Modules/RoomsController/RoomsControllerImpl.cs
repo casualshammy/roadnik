@@ -123,7 +123,7 @@ internal class RoomsControllerImpl : IRoomsController
     var users = await p_storage
       .ListSimpleDocumentsAsync<User>(_ct: _ct)
       .Select(_ => _.Data)
-      .ToListAsync(_ct: _ct);
+      .ToListAsync(_ct);
 
     return users;
   }

@@ -186,7 +186,7 @@
                 DetailsText="New user has started to record their way"
                 ShowSwitch="True"
                 SwitchTapped="{Binding NotifyNewTrackCommand}"
-                ShowBottomLine="False"/>
+                ShowBottomLine="True"/>
             <controls:OptionsItem
                 x:Name="p_notifyNewPoint"
                 Grid.Row="15"

@@ -1,13 +1,10 @@
-﻿using Roadnik.MAUI.Resources.Strings;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 
 namespace Roadnik.MAUI.ViewModels;
 
 internal class AboutPageViewModel : BaseViewModel
 {
   private ICommand p_goWebCommand;
-  private bool p_updateAvailable;
-  private string p_updateButtonText;
 
   public AboutPageViewModel()
   {
@@ -18,8 +15,6 @@ internal class AboutPageViewModel : BaseViewModel
 
       Launcher.Default.OpenAsync(url);
     });
-
-    p_updateButtonText = AppResources.page_about_updateAvailable;
   }
 
   public string Title { get; } = "About";
@@ -29,17 +24,5 @@ internal class AboutPageViewModel : BaseViewModel
   public ICommand GoWebCommand { get => p_goWebCommand; set => SetProperty(ref p_goWebCommand, value); }
   public string AppVersion => $"Version: {AppInfo.Current.VersionString}";
   public string ThisAppUses => $"This app uses:";
-
-  public bool UpdateAvailable
-  {
-    get => p_updateAvailable;
-    set => SetProperty(ref p_updateAvailable, value);
-  }
-
-  public string UpdateButtonText
-  {
-    get => p_updateButtonText;
-    set => SetProperty(ref p_updateButtonText, value);
-  }
 
 }

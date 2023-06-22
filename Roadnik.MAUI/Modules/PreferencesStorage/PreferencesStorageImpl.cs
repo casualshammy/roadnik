@@ -2,7 +2,9 @@
 using Ax.Fw.Attributes;
 using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
+using JustLogger.Interfaces;
 using Newtonsoft.Json;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive;
@@ -14,11 +16,14 @@ namespace Roadnik.MAUI.Modules.PreferencesStorage;
 [ExportClass(typeof(IPreferencesStorage), Singleton: true)]
 internal class PreferencesStorageImpl : IPreferencesStorage
 {
+  private readonly ILogger p_log;
   private readonly SyncCache<string, object?> p_cache = new(new SyncCacheSettings(100, 10, TimeSpan.FromHours(1)));
   private readonly ReplaySubject<Unit> p_prefChangedFlow = new(1);
 
-  public PreferencesStorageImpl()
+  public PreferencesStorageImpl(ILogger _log)
   {
+    p_log = _log["pref-storage"];
+
     SetupDefaultPreferences();
     MigratePreferences();
 
@@ -68,13 +73,13 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     SetValue(PREF_DB_VERSION, 1);
 
     SetValue(PREF_SERVER_ADDRESS, "https://roadnik.app");
-    SetValue(PREF_ROOM, Utilities.GetRandomString(10, false));
+    SetValue(PREF_ROOM, Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false));
     SetValue(PREF_TIME_INTERVAL, 10);
     SetValue(PREF_DISTANCE_INTERVAL, 100);
     SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
     SetValue(PREF_USER_MSG, "Hi there!");
     SetValue(PREF_MIN_ACCURACY, 30);
-    SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(1000, 9999)}");
+    SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}");
     SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
@@ -84,8 +89,41 @@ internal class PreferencesStorageImpl : IPreferencesStorage
   private void MigratePreferences()
   {
     var dbVersion = GetValueOrDefault<int>(PREF_DB_VERSION);
+    if (!int.TryParse(AppInfo.Current.BuildString, out var appVersion))
+    {
+      p_log.Error($"Can't parse app version: '{AppInfo.Current.BuildString}'");
+      return;
+    }
 
+    if (appVersion != dbVersion)
+    {
+      p_log.Info($"Application is updated - wiping cache...");
+      var cacheDir = new DirectoryInfo(FileSystem.Current.CacheDirectory);
+      foreach (var file in cacheDir.EnumerateFiles("*", SearchOption.AllDirectories))
+        if (!file.TryDelete())
+          p_log.Warn($"Can't delete cache file: '{file.FullName}'");
 
+      p_log.Info($"Cache is wiped");
+    }
+
+    var migrations = GetMigrations();
+    for (var i = dbVersion + 1; i <= appVersion; i++)
+      if (migrations.TryGetValue(i, out var action))
+      {
+        p_log.Info($"Migrating db up to version -->> {i}");
+        action();
+        p_log.Info($"Db is migrated to version -->> {i}");
+      }
+
+    SetValue(PREF_DB_VERSION, appVersion);
+  }
+
+  private IReadOnlyDictionary<int, Action> GetMigrations()
+  {
+    return new Dictionary<int, Action>()
+    {
+
+    };
   }
 
 }

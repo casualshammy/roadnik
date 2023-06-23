@@ -2,7 +2,6 @@
 
 internal static class Consts
 {
-  public const string PREF_INITIALIZED = "settings.initialized";
   public const string PREF_DB_VERSION = "settings.db-version";
   public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";
   public const string PREF_MAP_VIEW_STATE = "page.main.map-view-state";
@@ -34,5 +33,7 @@ internal static class Consts
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED = "js-msg-popup-opened";
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
+
+  public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
 
 }

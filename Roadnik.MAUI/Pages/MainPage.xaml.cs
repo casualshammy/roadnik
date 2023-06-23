@@ -148,7 +148,7 @@ public partial class MainPage : CContentPage
       {
         return (await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted);
       }
-      else if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
+      else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
       {
         p_bindingCtx.IsPermissionWindowShowing = true;
         return false;
@@ -249,19 +249,25 @@ public partial class MainPage : CContentPage
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
+    // privacy policy
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    if (serverAddress != null && serverAddress.StartsWith(ROADNIK_APP_ADDRESS))
+    {
+      const int currentVersion = 3;
+      var version = p_storage.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
+      if (version < currentVersion)
+      {
+        var result = await this.ShowPopupAsync(new AgreementsPopup());
+        if (result is not bool agreed || !agreed)
+          return;
+
+        p_storage.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
+      }
+    }
+
+    // check permissions and run
     var locationReporter = Container.Locate<ILocationReporter>();
     var locationReporterService = Container.Locate<ILocationReporterService>();
-
-    const int currentVersion = 3;
-    var version = p_storage.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
-    if (version < currentVersion)
-    {
-      var result = await this.ShowPopupAsync(new AgreementsPopup());
-      if (result is not bool agreed || !agreed)
-        return;
-
-      p_storage.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
-    }
 
     if (!await locationReporter.IsEnabledAsync())
     {

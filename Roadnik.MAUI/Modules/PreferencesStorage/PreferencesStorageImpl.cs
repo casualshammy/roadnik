@@ -63,16 +63,12 @@ internal class PreferencesStorageImpl : IPreferencesStorage
 
   private void SetupDefaultPreferences()
   {
-    if (GetValueOrDefault<bool>(PREF_INITIALIZED) == true)
-      return;
-
     if (GetValueOrDefault<int>(PREF_DB_VERSION) != default)
       return;
 
-    SetValue(PREF_INITIALIZED, true);
     SetValue(PREF_DB_VERSION, 1);
 
-    SetValue(PREF_SERVER_ADDRESS, "https://roadnik.app");
+    SetValue(PREF_SERVER_ADDRESS, ROADNIK_APP_ADDRESS);
     SetValue(PREF_ROOM, Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false));
     SetValue(PREF_TIME_INTERVAL, 10);
     SetValue(PREF_DISTANCE_INTERVAL, 100);
@@ -120,10 +116,21 @@ internal class PreferencesStorageImpl : IPreferencesStorage
 
   private IReadOnlyDictionary<int, Action> GetMigrations()
   {
-    return new Dictionary<int, Action>()
-    {
+    var migrations = new Dictionary<int, Action>();
 
-    };
+    migrations.Add(175, () =>
+    {
+      var roomId = GetValueOrDefault<string>(PREF_ROOM);
+      if (!roomId.IsNullOrEmpty() && roomId.Length < ReqResUtil.MinRoomIdLength)
+      {
+        var length = ReqResUtil.MinRoomIdLength - roomId.Length;
+        var newRoomId = $"{roomId}{new string('-', length)}";
+        SetValue(PREF_ROOM, newRoomId);
+        p_log.Info($"Migration 175: new room id: '{newRoomId}'");
+      }
+    });
+
+    return migrations;
   }
 
 }

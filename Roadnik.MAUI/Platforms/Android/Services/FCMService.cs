@@ -1,5 +1,4 @@
 ﻿using Android.App;
-using Android.Nfc;
 using Android.OS;
 using Android.Util;
 using AndroidX.Core.App;
@@ -30,7 +29,7 @@ public class FCMService : FirebaseMessagingService
 
       if (Microsoft.Maui.Controls.Application.Current is not IMauiApp app)
       {
-        Log.Info("roadnik", $"Can't get the instance of '{nameof(IMauiApp)}'!");
+        Log.Error("roadnik", $"Can't get the instance of '{nameof(IMauiApp)}'!");
         return;
       }
 
@@ -82,7 +81,7 @@ public class FCMService : FirebaseMessagingService
         if (enabled == true && myUsername != msgData.Username)
         {
           log.Info($"NewTrackStarted: '{msgData.Username}'");
-          ShowNotification($"User '{msgData.Username}' has started a new track", null);
+          ShowNotification($"User '{msgData.Username}' has started a new track", "Click to open map");
         }
       }
     }

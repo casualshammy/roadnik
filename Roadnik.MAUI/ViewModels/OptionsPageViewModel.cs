@@ -72,7 +72,7 @@ internal class OptionsPageViewModel : BaseViewModel
       }, lifetime);
   }
 
-  public string Title { get; } = "Options";
+  public string Title { get; } = "Settings";
   public string? ServerName
   {
     get => p_serverName;

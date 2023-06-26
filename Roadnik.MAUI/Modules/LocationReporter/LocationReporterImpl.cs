@@ -57,6 +57,7 @@ internal class LocationReporterImpl : ILocationReporter
       .RefCount();
 
     var timerFlow = prefsFlow
+      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval))
       .Select(_prefs =>
       {
         if (_prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
@@ -71,7 +72,7 @@ internal class LocationReporterImpl : ILocationReporter
       .ToUnit();
 
     var locationFlow = _locationProvider.Location
-      .CombineLatest(prefsFlow)
+      .WithLatestFrom(prefsFlow)
       .Where(_ =>
       {
         var (location, prefs) = _;
@@ -81,7 +82,7 @@ internal class LocationReporterImpl : ILocationReporter
 
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
-    
+
     var reportFlow = timerFlow
       .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
@@ -177,6 +178,7 @@ internal class LocationReporterImpl : ILocationReporter
 
     prefsFlow
       .ObserveOn(locationProviderStateScheduler)
+      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval, _.DistanceInterval))
       .Subscribe(_ =>
       {
         if (_.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)

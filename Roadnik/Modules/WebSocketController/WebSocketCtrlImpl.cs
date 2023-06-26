@@ -40,10 +40,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
       return false;
 
     var session = new WebSocketSession(_roomId, _webSocket);
-    var mre = new ManualResetEvent(false);
+    using var semaphore = new SemaphoreSlim(0, 1);
 
-    await Task.Factory.StartNew(async () => await CreateNewLoopAsync(session, mre), TaskCreationOptions.LongRunning);
-    mre.WaitOne();
+    await Task.Factory.StartNew(async () => await CreateNewLoopAsync(session, semaphore), TaskCreationOptions.LongRunning);
+    await semaphore.WaitAsync();
     return true;
   }
 
@@ -108,7 +108,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
   }
 
-  private async Task CreateNewLoopAsync(WebSocketSession _session, ManualResetEvent _completeSignal)
+  private async Task CreateNewLoopAsync(WebSocketSession _session, SemaphoreSlim _completeSignal)
   {
     var session = _session;
     var sessionIndex = Interlocked.Increment(ref p_sessionsCount);
@@ -132,16 +132,16 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
       {
         cts.CancelAfter(TimeSpan.FromMinutes(5));
 
-        var msg = WsHelper.ParseWsMessage(buffer, receiveResult.Count);
-        if (msg is null)
+        try
+        {
+          var msg = WsHelper.ParseWsMessage(buffer, receiveResult.Count);
+          if (msg != null)
+            p_incomingMsgs.OnNext(msg);
+        }
+        finally
         {
           receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
-          continue;
         }
-
-        p_incomingMsgs.OnNext(msg);
-
-        receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
       }
     }
     catch (OperationCanceledException)
@@ -150,7 +150,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
     catch (WebSocketException wsEx) when (wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
     {
-      p_log.Info($"WS connection '{sessionIndex}' was closed prematurely for room '{session.RoomId}'");
+      // don't care
     }
     catch (Exception ex)
     {
@@ -178,7 +178,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
 
     p_sessions.TryRemove(sessionIndex, out _);
-    _completeSignal.Set();
+    _completeSignal.Release();
   }
 
   private static T? GetAttribute<T>(Type _type) where T : Attribute

@@ -149,7 +149,7 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Z is null!");
     if (string.IsNullOrWhiteSpace(_type))
       return BadRequest("Type is null!");
-    if (!ReqResUtil.IsRoomIdSafe(_type))
+    if (!ReqResUtil.ValidMapTypes.Contains(_type))
       return BadRequest("Type is incorrect!");
     if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
@@ -196,8 +196,6 @@ public class ApiControllerV0 : JsonNetController
     [FromQuery(Name = "var")] string? _message = null,
     CancellationToken _ct = default)
   {
-    if (string.IsNullOrWhiteSpace(_roomId))
-      return BadRequest("Room Id is null!");
     if (!ReqResUtil.IsRoomIdSafe(_roomId))
       return BadRequest("Room Id is incorrect!");
     if (_lat == null)
@@ -206,9 +204,9 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Longitude is null!");
     if (_alt == null)
       return BadRequest("Altitude is null!");
-    if (!string.IsNullOrWhiteSpace(_message) && !ReqResUtil.IsUserDefinedStringSafe(_message))
+    if (!ReqResUtil.IsUserDefinedStringSafe(_message))
       return BadRequest("Message is incorrect!");
-    if (!string.IsNullOrWhiteSpace(_username) && !ReqResUtil.IsUserDefinedStringSafe(_username))
+    if (!ReqResUtil.IsUsernameSafe(_username))
       return BadRequest("Username is incorrect!");
 
     p_log.Value.Info($"Requested to store geo data, room: '{_roomId}'");

@@ -1,4 +1,5 @@
 ﻿using Ax.Fw.Attributes;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.HttpClientProvider;
@@ -11,7 +12,7 @@ internal class HttpClientProviderImpl : IHttpClientProvider
   public HttpClientProviderImpl()
   {
     p_httpClient.Timeout = TimeSpan.FromSeconds(10);
-    p_httpClient.DefaultRequestHeaders.Add("User-Agent", $"RoadnikApp/{AppInfo.Current.VersionString}");
+    p_httpClient.DefaultRequestHeaders.Add("User-Agent", $"{ReqResUtil.UserAgent}/{AppInfo.Current.VersionString}");
     Value = p_httpClient;
   }
 

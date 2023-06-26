@@ -19,7 +19,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
   private readonly ILogger p_logger;
-  private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
   private long p_enabled = 0;
@@ -42,19 +41,30 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     if (oldEnabled == 1)
       return;
 
-    var providers = p_locationManager.GetProviders(false);
-    var allProviders = providers.ToArray();
-    p_activeProviders = providers
-      .Where(_ => p_locationManager.IsProviderEnabled(_))
-      .ToImmutableHashSet();
+    var knownProviders = new[] { "gps", "passive" };
+    var providers = p_locationManager
+      .GetProviders(false)
+      .ToArray();
 
-    p_logger.Info($"Starting updates, all providers: <{string.Join(">, <", allProviders)}>");
-    p_logger.Info($"Starting updates, active providers: <{string.Join(">, <", p_activeProviders)}>");
+    var usableProviders = providers
+      .Intersect(knownProviders)
+      .ToArray();
+
+    if (!usableProviders.Any())
+    {
+      p_logger.Error($"There is not known providers: <{string.Join(">, <", providers)}>");
+      return;
+    }
+
+    p_logger.Info($"Starting updates, providers: <{string.Join(">, <", providers)}>");
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
-      foreach (var provider in allProviders)
+      foreach (var provider in usableProviders)
+      {
         p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
+        p_logger.Info($"Subscribed to '{provider}' provider");
+      }
     });
   }
 
@@ -65,7 +75,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     if (oldEnabled == 0)
       return;
 
-    p_logger.Info($"Stopping updates, active providers: <{string.Join(">, <", p_activeProviders)}>");
+    p_logger.Info($"Stopping updates...");
 
     try
     {
@@ -134,21 +144,11 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   public void OnProviderDisabled(string _provider)
   {
     p_logger.Info($"Provider '{_provider}' was disabled");
-
-    if (_provider == LocationManager.PassiveProvider)
-      return;
-
-    p_activeProviders = p_activeProviders.Remove(_provider);
   }
 
   public void OnProviderEnabled(string _provider)
   {
     p_logger.Info($"Provider '{_provider}' was enabled");
-
-    if (_provider == LocationManager.PassiveProvider)
-      return;
-
-    p_activeProviders = p_activeProviders.Add(_provider);
   }
 
   public async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)

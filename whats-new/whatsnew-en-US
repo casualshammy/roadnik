@@ -1,2 +1,2 @@
-  - fixed incorrect text sizing in options page
-  - fixed bug when options page's values were not updated on bookmark loading
+  - performance fix
+  - fixed thunderforest maps

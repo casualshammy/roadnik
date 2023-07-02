@@ -11,12 +11,12 @@ namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 public partial class CachedMauiWebViewClient : MauiWebViewClient
 {
   private static readonly Regex[] p_cacheRegexes = {
-    ThunderForestRegex(),
-    MapIconsRegex(),
-    FaviconRegex(),
-    RoomRegex(),
-    JsFileRegex(),
-    OSMRegex(),
+    new Regex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$"),
+    new Regex(@"img/map_icon_\d+\.png$"),
+    new Regex(@"favicon\.ico$"),
+    new Regex(@"/r/\?id=[\w\-_]+$"),
+    new Regex(@"\.js$"),
+    new Regex(@"openstreetmap\.org/\d+/\d+/\d+\.png$"),
   };
   private readonly ITilesCache? p_tilesCache;
   private readonly IPreferencesStorage? p_storage;
@@ -65,18 +65,5 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     p_tilesCache.EnqueueDownload(url);
     return base.ShouldInterceptRequest(_view, _request);
   }
-
-  [GeneratedRegex("thunderforest\\?type=\\w+?&x=\\d+&y=\\d+&z=\\d+$")]
-  private static partial Regex ThunderForestRegex();
-  [GeneratedRegex("img/map_icon_\\d+\\.png$")]
-  private static partial Regex MapIconsRegex();
-  [GeneratedRegex("favicon\\.ico$")]
-  private static partial Regex FaviconRegex();
-  [GeneratedRegex("/r/\\?id=[\\w\\-_]+$")]
-  private static partial Regex RoomRegex();
-  [GeneratedRegex("\\.js$")]
-  private static partial Regex JsFileRegex();
-  [GeneratedRegex("openstreetmap\\.org/\\d+/\\d+/\\d+\\.png$")]
-  private static partial Regex OSMRegex();
 
 }

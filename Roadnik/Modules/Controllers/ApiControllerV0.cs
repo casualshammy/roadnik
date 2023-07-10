@@ -331,7 +331,8 @@ public class ApiControllerV0 : JsonNetController
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
-    var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, JToken.FromObject(new PushMsgRoomPointAdded(_req.Username, _req.Description)));
+    var pushMsgData = new PushMsgRoomPointAdded(_req.Username, _req.Description, _req.Lat, _req.Lng);
+    var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, JToken.FromObject(pushMsgData));
     await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
 
     return Ok();

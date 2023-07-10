@@ -1,12 +1,11 @@
 ﻿using Android.App;
-using Android.OS;
 using Android.Util;
-using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Firebase.Messaging;
 using JustLogger.Interfaces;
 using Newtonsoft.Json.Linq;
 using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -17,9 +16,6 @@ namespace Roadnik.MAUI.Platforms.Android.Services;
 [IntentFilter(new[] { "com.google.firebase.INSTANCE_ID_EVENT" })]
 public class FCMService : FirebaseMessagingService
 {
-  private const int REQUEST_POST_NOTIFICATIONS = 1000;
-  private int p_notificationId = 1000;
-
   public override void OnMessageReceived(RemoteMessage _message)
   {
     var data = _message.Data;
@@ -33,6 +29,7 @@ public class FCMService : FirebaseMessagingService
         return;
       }
 
+      var notificationMgr = app.Container.Locate<INotificationMgr>();
       var prefStorage = app.Container.Locate<IPreferencesStorage>();
       var log = app.Container.Locate<ILogger>()["fcm-service"];
 
@@ -43,16 +40,7 @@ public class FCMService : FirebaseMessagingService
         return;
       }
 
-      if (msg.Type == PushMsgType.Notification)
-      {
-        var notificationData = msg.Data.ToObject<PushMsgNotification>();
-        if (notificationData == null)
-          return;
-
-        log.Info($"Notification: '{notificationData.Title}' / '{notificationData.Text}'");
-        ShowNotification(notificationData.Title, notificationData.Text);
-      }
-      else if (msg.Type == PushMsgType.RoomPointAdded)
+      if (msg.Type == PushMsgType.RoomPointAdded)
       {
         var msgData = msg.Data.ToObject<PushMsgRoomPointAdded>();
         if (msgData == null)
@@ -67,7 +55,12 @@ public class FCMService : FirebaseMessagingService
             username = "Unknown user";
 
           log.Info($"RoomPointAdded: '{username}' / '{msgData.Description}'");
-          ShowNotification($"User '{username}' has added new point to map", $"\"{msgData.Description}\"");
+          notificationMgr.ShowNotification(
+            NOTIFICATION_NEW_POINT, 
+            $"User '{username}' has added new point to map", 
+            $"\"{msgData.Description}\"", 
+            NOTIFICATION_CHANNEL_MAP_EVENTS,
+            JToken.FromObject(new LatLng(msgData.Lat, msgData.Lng)));
         }
       }
       else if (msg.Type == PushMsgType.NewTrackStarted)
@@ -81,61 +74,15 @@ public class FCMService : FirebaseMessagingService
         if (enabled == true && myUsername != msgData.Username)
         {
           log.Info($"NewTrackStarted: '{msgData.Username}'");
-          ShowNotification($"User '{msgData.Username}' has started a new track", "Click to open map");
+          notificationMgr.ShowNotification(
+            NOTIFICATION_NEW_TRACK,
+            $"User '{msgData.Username}' has started a new track",
+            "Click to open map",
+            NOTIFICATION_CHANNEL_MAP_EVENTS,
+            JToken.FromObject(msgData.Username));
         }
       }
     }
-  }
-
-  private void ShowNotification(string _title, string? _msg)
-  {
-    var context = global::Android.App.Application.Context;
-    var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
-    var activityIntent = Platform.CurrentActivity?.Intent ?? new global::Android.Content.Intent(this, typeof(MainActivity));
-    var activity = PendingIntent.GetActivity(context, 0, activityIntent, PendingIntentFlags.Immutable);
-
-    if (Build.VERSION.SdkInt > BuildVersionCodes.SV2 && Platform.CurrentActivity != null)
-      if (ActivityCompat.ShouldShowRequestPermissionRationale(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS"))
-        ActivityCompat.RequestPermissions(Platform.CurrentActivity, new[] { "android.permission.POST_NOTIFICATIONS" }, REQUEST_POST_NOTIFICATIONS);
-
-    global::Android.App.Notification notification;
-    if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-    {
-      var channelId = "EventsChannel";
-
-#pragma warning disable CA1416 // Validate platform compatibility
-
-      var channel = new NotificationChannel(channelId, "Various event notifications", NotificationImportance.Max);
-      manager.CreateNotificationChannel(channel);
-      var builder = new global::Android.App.Notification.Builder(this, channelId)
-       .SetContentTitle(_title)
-       .SetContentText(_msg)
-       .SetContentIntent(activity)
-       .SetSmallIcon(Resource.Drawable.letter_r)
-       .SetAutoCancel(true);
-
-#pragma warning restore CA1416 // Validate platform compatibility
-
-      notification = builder.Build();
-    }
-    else
-    {
-#pragma warning disable CS0618 // Type or member is obsolete
-
-      var builder = new NotificationCompat.Builder(this)
-        .SetPriority(NotificationCompat.PriorityMax)
-        .SetContentTitle(_title)
-        .SetContentText(_msg)
-        .SetContentIntent(activity)
-        .SetSmallIcon(Resource.Drawable.letter_r)
-        .SetAutoCancel(true);
-
-#pragma warning restore CS0618 // Type or member is obsolete
-
-      notification = builder.Build();
-    }
-
-    manager.Notify(Interlocked.Increment(ref p_notificationId), notification);
   }
 
 }

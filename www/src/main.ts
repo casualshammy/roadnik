@@ -1,7 +1,7 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
-import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, HostMsgRequestDoneData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
@@ -83,21 +83,14 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
 
     const data = await p_storageApi.getDataAsync(p_roomId, _offset);
 
-    sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: {} });
-
-    if (data === null || !data.Success)
+    if (data === null)
         return;
 
     p_lastOffset = data.LastUpdateUnixMs;
+    console.log(`New last offset: ${p_lastOffset}`);
 
     const usersMap = groupBy(data.Entries, _ => _.Username);
     const users = Object.keys(usersMap);
-
-    // notify about new users
-    if (p_firstDataReceived)
-        for (let user of users)
-            if (p_paths.get(user) === undefined)
-                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_NEW_TRACK, data: user });
 
     // init users controls
     for (let user of users)
@@ -119,7 +112,20 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
             }
         }
         else {
-            sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED, data: {} });
+            const msgData: HostMsgRequestDoneData = {
+                dataReceived: true,
+                firstDataPart: true
+            };
+            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
+        }
+    }
+    else {
+        if (p_isRoadnikApp) {
+            const msgData: HostMsgRequestDoneData = {
+                dataReceived: true,
+                firstDataPart: false
+            };
+            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
         }
     }
 

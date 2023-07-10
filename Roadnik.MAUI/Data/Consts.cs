@@ -26,14 +26,16 @@ internal static class Consts
 
   public const string JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
   public const string HOST_MSG_REQUEST_DONE = "host-msg-request-done";
-  public const string JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED = "js-msg-initial-data-received";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
   public const string JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
-  public const string JS_TO_CSHARP_MSG_TYPE_NEW_TRACK = "js-msg-new-track";
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED = "js-msg-popup-opened";
   public const string JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED = "js-msg-popup-closed";
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
 
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
+
+  public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
+  public const int NOTIFICATION_NEW_POINT = 10000;
+  public const int NOTIFICATION_NEW_TRACK = 10001;
 
 }

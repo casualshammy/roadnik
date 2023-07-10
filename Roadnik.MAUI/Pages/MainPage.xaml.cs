@@ -30,6 +30,7 @@ public partial class MainPage : CContentPage
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILogger p_log;
   private readonly Subject<bool> p_pageVisibleChangeFlow = new();
+  private readonly Subject<bool> p_webAppDataReceivedSubj = new();
   private readonly MainPageViewModel p_bindingCtx;
 
   public MainPage()
@@ -41,6 +42,8 @@ public partial class MainPage : CContentPage
 
     var pageController = Container.Locate<IPagesController>();
     pageController.OnMainPage(this);
+
+    var notificationMgr = Container.Locate<INotificationMgr>();
 
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
@@ -119,6 +122,18 @@ public partial class MainPage : CContentPage
       .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
 
+    notificationMgr.Events
+      .CombineLatest(p_webAppDataReceivedSubj)
+      .Where(_ => _.Second)
+      .Select(_ => _.First)
+      .Where(_ =>
+      {
+        var diff = Environment.TickCount64 - _.Timestamp;
+        return diff < 15 * 1000;
+      })
+      .SelectAsync(OnNotificationAsync)
+      .Subscribe(p_lifetime);
+
     p_log.Info($"Main page is opened");
   }
 
@@ -132,6 +147,7 @@ public partial class MainPage : CContentPage
   {
     base.OnDisappearing();
     p_pageVisibleChangeFlow.OnNext(false);
+    p_webAppDataReceivedSubj.OnNext(false);
   }
 
   private async Task<bool> IsLocationPermissionOkAsync()
@@ -205,33 +221,7 @@ public partial class MainPage : CContentPage
     }
     else if (msg.MsgType == HOST_MSG_REQUEST_DONE)
     {
-      p_bindingCtx.IsSpinnerRequired = false;
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_INITIAL_DATA_RECEIVED)
-    {
-      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-      if (webAppState == null)
-        return;
-
-      var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-      var lastTrackedRoute = p_storage.GetValueOrDefault<string>(PREF_MAP_SELECTED_TRACK);
-      var command = mapOpenBehavior switch
-      {
-        MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
-        MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
-        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom}) || setViewToAllTracks();" : $"setViewToAllTracks();",
-        _ => $"setViewToAllTracks();"
-      };
-
-      if (command == null)
-        return;
-
-      await MainThread.InvokeOnMainThreadAsync(async () =>
-      {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Commands returned an error: '{command}'");
-      });
+      await OnJsMsgHostMsgRequestDoneAsync(msg);
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
@@ -433,6 +423,47 @@ public partial class MainPage : CContentPage
     }
   }
 
+  private async Task OnJsMsgHostMsgRequestDoneAsync(JsToCSharpMsg _msg)
+  {
+    p_bindingCtx.IsSpinnerRequired = false;
+
+    var msgData = _msg.Data.ToObject<HostMsgRequestDoneData>();
+    if (msgData == null)
+    {
+      p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_REQUEST_DONE)}': '{_msg.Data}'");
+      return;
+    }
+
+    if (msgData.FirstDataPart)
+    {
+      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
+      if (webAppState == null)
+      {
+        p_webAppDataReceivedSubj.OnNext(true);
+        return;
+      }
+
+      var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
+      var lastTrackedRoute = p_storage.GetValueOrDefault<string>(PREF_MAP_SELECTED_TRACK);
+      var command = mapOpenBehavior switch
+      {
+        MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
+        MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
+        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom}) || setViewToAllTracks();" : $"setViewToAllTracks();",
+        _ => $"setViewToAllTracks();"
+      };
+
+      await MainThread.InvokeOnMainThreadAsync(async () =>
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result == null)
+          p_log.Error($"Command returned an error: '{command}'");
+
+        p_webAppDataReceivedSubj.OnNext(true);
+      });
+    }
+  }
+
   private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)
   {
     var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
@@ -473,6 +504,40 @@ public partial class MainPage : CContentPage
     catch (Exception ex)
     {
       p_log.Error($"Request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}' was failed", ex);
+    }
+  }
+
+  private async Task OnNotificationAsync(NotificationTapEvent _e, CancellationToken _ct)
+  {
+    if (_e.NotificationId == NOTIFICATION_NEW_POINT)
+    {
+      var data = _e.Data?.ToObject<LatLng>();
+      if (data == null)
+        return;
+
+      var command = $"setLocation({data.Lat}, {data.Lng}, {15});";
+
+      await MainThread.InvokeOnMainThreadAsync(async () =>
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result == null)
+          p_log.Error($"Command returned an error: '{command}'");
+      });
+    }
+    else if (_e.NotificationId == NOTIFICATION_NEW_TRACK)
+    {
+      var username = _e.Data?.ToObject<string>();
+      if (username == null)
+        return;
+
+      var command = $"setViewToTrack(\"{username}\", {13}) || setViewToAllTracks();";
+
+      await MainThread.InvokeOnMainThreadAsync(async () =>
+      {
+        var result = await p_webView.EvaluateJavaScriptAsync(command);
+        if (result == null)
+          p_log.Error($"Command returned an error: '{command}'");
+      });
     }
   }
 

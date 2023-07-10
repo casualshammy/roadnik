@@ -5,6 +5,9 @@ using CommunityToolkit.Maui;
 using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
+using Plugin.LocalNotification;
+using Plugin.LocalNotification.AndroidOption;
+using Roadnik.MAUI.Data;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -65,6 +68,7 @@ public static class MauiProgram
     builder
       .UseMauiApp<App>()
       .UseMauiCommunityToolkit()
+      .UseLocalNotification(SetupLocalNotification)
       .ConfigureFonts(_fonts =>
       {
         _fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -79,5 +83,20 @@ public static class MauiProgram
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
   public static IInjectionScope Container { get; private set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+  private static void SetupLocalNotification(ILocalNotificationBuilder _builder)
+  {
+    _builder.AddAndroid(_android =>
+    {
+      _android.AddChannel(new NotificationChannelRequest
+      {
+        Id = Consts.NOTIFICATION_CHANNEL_MAP_EVENTS,
+        Name = "Various map events notifications",
+        EnableSound = true,
+        EnableVibration = true,
+        Importance = AndroidImportance.Max
+      });
+    });
+  }
 
 }

@@ -255,6 +255,8 @@ public class ApiControllerV0 : JsonNetController
 
     p_log.Value.Info($"Requested to get geo data, room: '{_roomId}'");
 
+    var now = DateTimeOffset.UtcNow;
+
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct)
@@ -262,10 +264,10 @@ public class ApiControllerV0 : JsonNetController
       .Take(p_settings.GetRequestReturnsEntriesCount)
       .ToListAsync(_ct);
 
-    GetResData result;
+    GetPathResData result;
     if (!documents.Any())
     {
-      result = new GetResData(false, 0, Array.Empty<TimedStorageEntry>());
+      result = new GetPathResData(now.ToUnixTimeMilliseconds(), Array.Empty<TimedStorageEntry>());
     }
     else
     {
@@ -274,7 +276,7 @@ public class ApiControllerV0 : JsonNetController
         .Reverse(documents)
         .Select(TimedStorageEntry.FromStorageEntry);
 
-      result = new GetResData(true, lastEntryTime, entries);
+      result = new GetPathResData(lastEntryTime, entries);
     }
 
     return Json(result);

@@ -1,6 +1,5 @@
 ﻿namespace Roadnik.Data;
 
-internal record GetResData(
-  bool Success,
+internal record GetPathResData(
   long LastUpdateUnixMs,
   IEnumerable<TimedStorageEntry> Entries);

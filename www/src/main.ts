@@ -77,7 +77,7 @@ if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
 const p_layersControl = new L.Control.Layers(p_mapsData, p_overlays);
 p_map.addControl(p_layersControl);
 
-async function updateViewAsync(_offset: number | undefined = undefined) {
+async function updateViewAsync(_offset: number) {
     if (p_roomId === null)
         return;
 
@@ -99,7 +99,7 @@ async function updateViewAsync(_offset: number | undefined = undefined) {
     // update users controls
     for (let user of users) {
         const userData = usersMap[user];
-        updateControlsForUser(user, userData, _offset === undefined);
+        updateControlsForUser(user, userData, _offset);
     }
 
     if (!p_firstDataReceived) {
@@ -202,7 +202,7 @@ function initControlsForUser(_user: string): void {
 function updateControlsForUser(
     _user: string,
     _entries: Api.TimedStorageEntry[],
-    _firstUpdate: boolean): void {
+    _offset: number): void {
     const lastEntry = _entries[_entries.length - 1];
     if (lastEntry === undefined)
         return;
@@ -240,11 +240,16 @@ function updateControlsForUser(
     const path = p_paths.get(_user);
     if (path !== undefined) {
         const points = _entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-        if (_firstUpdate === true)
+        if (_offset === 0) {
             path.setLatLngs(points);
-        else
+            console.log(`Set ${points.length} points to path ${_user}`);
+        }
+        else {
             for (let point of points)
                 path.addLatLng(point);
+
+            console.log(`Added ${points.length} points to path ${_user}`);
+        }
     }
 }
 
@@ -334,9 +339,11 @@ if (p_roomId !== null) {
         if (_data.Type === Api.WS_MSG_TYPE_HELLO) {
             updateViewAsync(p_lastOffset);
             updatePointsAsync();
+            console.log(`WS_MSG_TYPE_HELLO`);
         }
         else if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
             updateViewAsync(p_lastOffset);
+            console.log(`WS_MSG_TYPE_DATA_UPDATED`);
         }
         else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
             const msgData: WsMsgPathWiped = _data.Payload;
@@ -349,6 +356,8 @@ if (p_roomId !== null) {
             const geoEntries = p_geoEntries[user];
             if (geoEntries !== undefined)
                 geoEntries.length = 0;
+
+            console.log(`WS_MSG_PATH_WIPED`);
         }
         else if (_data.Type == Api.WS_MSG_ROOM_POINTS_UPDATED) {
             console.log("Points were changed, updating markers...");

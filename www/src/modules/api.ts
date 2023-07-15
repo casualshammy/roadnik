@@ -30,8 +30,7 @@ export interface TimedStorageEntry {
     Message?: string | undefined | null;
 }
 
-export interface GetResData {
-    Success: boolean;
+export interface GetPathResData {
     LastUpdateUnixMs: number;
     Entries: TimedStorageEntry[];
 }
@@ -86,9 +85,9 @@ export class StorageApi {
 
     }
 
-    public async getDataAsync(_roomId: string, _offset: number | undefined = 0): Promise<GetResData> {
+    public async getDataAsync(_roomId: string, _offset: number | undefined = 0): Promise<GetPathResData> {
         const response = await fetch(`../get?roomId=${_roomId}&offset=${_offset}`);
-        const data: GetResData = await response.json();
+        const data: GetPathResData = await response.json();
         return data;
     }
 

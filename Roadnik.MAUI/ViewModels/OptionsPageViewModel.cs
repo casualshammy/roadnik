@@ -322,7 +322,7 @@ internal class OptionsPageViewModel : BaseViewModel
       "Minimum interval is 1 sec. Maximum interval is 1 hour (3600 sec).\n" +
       "Pay attention: minimum interval may be restricted by the server",
       initialValue: MinimumTime.ToString(),
-      keyboard: Keyboard.Numeric);
+      keyboard: Keyboard.Telephone);
 
     if (mimimalIntervalRaw != null &&
       int.TryParse(mimimalIntervalRaw, out var mimimalInterval) &&
@@ -341,7 +341,7 @@ internal class OptionsPageViewModel : BaseViewModel
       "Distance in metres:",
       "0 to disable limit. Maximum value - 10 km (10000 metres)",
       initialValue: MinimumDistance.ToString(),
-      keyboard: Keyboard.Numeric);
+      keyboard: Keyboard.Telephone);
 
     if (mimimalDistanceRaw != null &&
       int.TryParse(mimimalDistanceRaw, out var mimimalDistance) &&
@@ -377,7 +377,7 @@ internal class OptionsPageViewModel : BaseViewModel
       "Accuracy in metres:",
       "Minimum value - 1 meter. Sane value is between 5 and 30 metres",
       initialValue: MinAccuracy.ToString(),
-      keyboard: Keyboard.Numeric);
+      keyboard: Keyboard.Telephone);
 
     if (minAccuracyRaw == null)
       return;

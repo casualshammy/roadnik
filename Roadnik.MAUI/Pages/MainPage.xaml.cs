@@ -269,7 +269,7 @@ public partial class MainPage : CContentPage
       else
         p_log.Error($"Resource 'DangerLowBrush' is not found!");
 
-      _ = Task.Run(SendStartNewPathReqAsync);
+      _ = Task.Run(async () => await locationReporter.ReportStartNewPathAsync(p_lifetime.Token));
       locationReporterService.Start();
     }
     else
@@ -389,38 +389,6 @@ public partial class MainPage : CContentPage
       return;
 
     p_storage.SetValue(PREF_USER_MSG, ReqResUtil.ClearUserMsg(msg));
-  }
-
-  private async Task SendStartNewPathReqAsync()
-  {
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    if (serverAddress.IsNullOrWhiteSpace())
-      return;
-
-    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
-    if (roomId.IsNullOrWhiteSpace())
-      return;
-
-    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-    if (username.IsNullOrWhiteSpace())
-      return;
-
-    var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
-
-    try
-    {
-      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
-      using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
-      req.Content = content;
-      using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-      using var res = await p_httpClient.Value.SendAsync(req, cts.Token);
-      res.EnsureSuccessStatusCode();
-      p_log.Info($"Sent request to start new track '{roomId}/{username}'");
-    }
-    catch (Exception ex)
-    {
-      p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error", ex);
-    }
   }
 
   private async Task OnJsMsgHostMsgRequestDoneAsync(JsToCSharpMsg _msg)

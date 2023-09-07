@@ -9,13 +9,13 @@ using JustLogger.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Globalization;
-using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using static Roadnik.MAUI.Data.Consts;
-using Microsoft.Maui.Controls.Shapes;
+using Roadnik.Common.ReqRes;
+using System.Net.Http.Json;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -28,6 +28,8 @@ internal class LocationReporterImpl : ILocationReporter
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
+  private readonly IPreferencesStorage p_storage;
+  private readonly IHttpClientProvider p_httpClientProvider;
 
   public LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
@@ -38,6 +40,8 @@ internal class LocationReporterImpl : ILocationReporter
     ITelephonyMgrProvider _telephonyMgrProvider)
   {
     p_log = _log["location-reporter"];
+    p_storage = _storage;
+    p_httpClientProvider = _httpClientProvider;
 
     _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var reportScheduler));
 
@@ -126,6 +130,7 @@ internal class LocationReporterImpl : ILocationReporter
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
+          p_log.Info($"Sending location data, lat: *{location.Latitude % 10}, lng: *{location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
           var url = GetUrl(prefs.ServerAddress, prefs.RoomId, prefs.Username, prefs.UserMsg, location, batteryCharge, signalStrength);
           var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
           res.EnsureSuccessStatusCode();
@@ -196,6 +201,45 @@ internal class LocationReporterImpl : ILocationReporter
   {
     p_enableFlow.OnNext(_enabled);
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
+  }
+
+  public async Task ReportStartNewPathAsync(CancellationToken _ct = default)
+  {
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    if (serverAddress.IsNullOrWhiteSpace())
+      return;
+
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    if (roomId.IsNullOrWhiteSpace())
+      return;
+
+    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+    if (username.IsNullOrWhiteSpace())
+      return;
+
+    var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
+
+    var counter = 10;
+    while (counter-- > 0 && !_ct.IsCancellationRequested)
+    {
+      try
+      {
+        p_log.Info($"Sending request to start new track '{roomId}/{username}'; retry: '{counter}'...");
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
+        using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
+        req.Content = content;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var res = await p_httpClientProvider.Value.SendAsync(req, cts.Token);
+        res.EnsureSuccessStatusCode();
+        p_log.Info($"Sent request to start new track '{roomId}/{username}'");
+        break;
+      }
+      catch (Exception ex)
+      {
+        p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error (retry: '{counter}')", ex);
+        await Task.Delay(TimeSpan.FromSeconds(6), _ct);
+      }
+    }
   }
 
   private static string GetUrl(

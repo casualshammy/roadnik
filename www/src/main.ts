@@ -19,8 +19,8 @@ const p_isRoadnikApp = navigator.userAgent.includes("RoadnikApp");
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = new Map<string, L.Polyline>();
-const p_geoEntries: StringDictionary<TimedStorageEntry[]> = {};
-const p_pointMarkers: NumberDictionary<L.Marker> = [];
+const p_geoEntries: { [userName: string]: TimedStorageEntry[] } = {};
+const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 
 let p_firstDataReceived = false;
@@ -28,6 +28,7 @@ let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
 let p_pointsDataReceived: boolean = false;
+let p_maxSavedPoints: number = 1000;
 
 const p_mapsData = GetMapLayers();
 const p_overlays = GetMapOverlayLayers();
@@ -77,15 +78,16 @@ if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
 const p_layersControl = new L.Control.Layers(p_mapsData, p_overlays);
 p_map.addControl(p_layersControl);
 
-async function updateViewAsync(_offset: number) {
+async function updatePathsAsync() {
     if (p_roomId === null)
         return;
 
-    const data = await p_storageApi.getDataAsync(p_roomId, _offset);
+    const data = await p_storageApi.getDataAsync(p_roomId, p_lastOffset);
 
     if (data === null)
         return;
 
+    const prevOffset = p_lastOffset;
     p_lastOffset = data.LastUpdateUnixMs;
     console.log(`New last offset: ${p_lastOffset}`);
 
@@ -99,7 +101,7 @@ async function updateViewAsync(_offset: number) {
     // update users controls
     for (let user of users) {
         const userData = usersMap[user];
-        updateControlsForUser(user, userData, _offset);
+        updateControlsForUser(user, userData, prevOffset === 0);
     }
 
     if (!p_firstDataReceived) {
@@ -202,7 +204,7 @@ function initControlsForUser(_user: string): void {
 function updateControlsForUser(
     _user: string,
     _entries: Api.TimedStorageEntry[],
-    _offset: number): void {
+    _isFirstDataChunk: boolean): void {
     const lastEntry = _entries[_entries.length - 1];
     if (lastEntry === undefined)
         return;
@@ -210,7 +212,7 @@ function updateControlsForUser(
     var geoEntries = p_geoEntries[_user];
     if (geoEntries !== undefined) {
         geoEntries.push(..._entries);
-        const geoEntriesExcessiveCount = geoEntries.length - 1000;
+        const geoEntriesExcessiveCount = geoEntries.length - p_maxSavedPoints;
         if (geoEntriesExcessiveCount > 0) {
             const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
             console.log(`${removedEntries.length} geo entries were removed for user ${_user}`);
@@ -240,7 +242,7 @@ function updateControlsForUser(
     const path = p_paths.get(_user);
     if (path !== undefined) {
         const points = _entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-        if (_offset === 0) {
+        if (_isFirstDataChunk) {
             path.setLatLngs(points);
             console.log(`Set ${points.length} points to path ${_user}`);
         }
@@ -335,15 +337,19 @@ async function updatePointsAsync() {
 }
 
 if (p_roomId !== null) {
-    const ws = p_storageApi.setupWs(p_roomId, (_ws, _data) => {
+    const ws = p_storageApi.setupWs(p_roomId, async (_ws, _data) => {
+        console.log(_data.Type);
         if (_data.Type === Api.WS_MSG_TYPE_HELLO) {
-            updateViewAsync(p_lastOffset);
-            updatePointsAsync();
-            console.log(`WS_MSG_TYPE_HELLO`);
+            const msgData: Api.WsMsgHello = _data.Payload;
+            p_maxSavedPoints = msgData.MaxPathPointsPerRoom;
+            console.log(`Max saved points: ${p_maxSavedPoints}`);
+            console.log(`Server time: ${new Date(msgData.UnixTimeMs).toISOString()}`);
+
+            await updatePathsAsync();
+            await updatePointsAsync();
         }
         else if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
-            updateViewAsync(p_lastOffset);
-            console.log(`WS_MSG_TYPE_DATA_UPDATED`);
+            await updatePathsAsync();
         }
         else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
             const msgData: WsMsgPathWiped = _data.Payload;
@@ -356,12 +362,10 @@ if (p_roomId !== null) {
             const geoEntries = p_geoEntries[user];
             if (geoEntries !== undefined)
                 geoEntries.length = 0;
-
-            console.log(`WS_MSG_PATH_WIPED`);
         }
         else if (_data.Type == Api.WS_MSG_ROOM_POINTS_UPDATED) {
             console.log("Points were changed, updating markers...");
-            updatePointsAsync();
+            await updatePointsAsync();
         }
     });
 }

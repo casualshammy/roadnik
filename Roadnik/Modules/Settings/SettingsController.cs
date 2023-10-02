@@ -16,9 +16,9 @@ internal class SettingsController : ISettingsController
       throw new InvalidDataException($"Lifetime is already finished!");
 
     p_storage = new JsonObservableStorage<SettingsImpl>(lifetime, _configPath);
-    Value = p_storage.ToProperty(lifetime);
+    Settings = p_storage.ToProperty(lifetime);
   }
 
-  public IRxProperty<SettingsImpl?> Value { get; }
+  public IRxProperty<SettingsImpl?> Settings { get; }
 
 }

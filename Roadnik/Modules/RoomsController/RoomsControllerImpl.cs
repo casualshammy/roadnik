@@ -34,7 +34,7 @@ internal class RoomsControllerImpl : IRoomsController
 
     _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
 
-    _settingsController.Value
+    _settingsController.Settings
       .WhereNotNull()
       .HotAlive(_lifetime, (_conf, _life) =>
       {

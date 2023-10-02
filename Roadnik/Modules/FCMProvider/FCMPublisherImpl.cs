@@ -39,7 +39,7 @@ internal class FCMPublisherImpl : IFCMPublisher
       Formatting = Formatting.Indented
     };
 
-    p_fcmSettings = _settingsController.Value
+    p_fcmSettings = _settingsController.Settings
       .Select(_ =>
       {
         if (_ == null)

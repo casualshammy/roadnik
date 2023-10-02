@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using JustLogger.Interfaces;
@@ -27,7 +28,7 @@ public class ApiControllerV0 : JsonNetController
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
 
-  private readonly ISettings p_settings;
+  private readonly ISettingsController p_settingsCtrl;
   private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_usersController;
@@ -37,7 +38,7 @@ public class ApiControllerV0 : JsonNetController
   private readonly Lazy<ILogger> p_log;
 
   public ApiControllerV0(
-    ISettings _settings,
+    ISettingsController _settingsCtrl,
     IDocumentStorage _documentStorage,
     ILogger _logger,
     IWebSocketCtrl _webSocketCtrl,
@@ -46,7 +47,7 @@ public class ApiControllerV0 : JsonNetController
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fcmPublisher)
   {
-    p_settings = _settings;
+    p_settingsCtrl = _settingsCtrl;
     p_documentStorage = _documentStorage;
     p_webSocketCtrl = _webSocketCtrl;
     p_usersController = _usersController;
@@ -67,11 +68,11 @@ public class ApiControllerV0 : JsonNetController
   {
     //foreach (var (key, value) in HttpContext.Request.Headers)
     //  if (key.Equals("X-Forwarded-For", StringComparison.InvariantCultureIgnoreCase))
-    //    p_log.Value.Warn($"X-Forwarded-For: '{value}'");
+    //    p_log.Settings.Warn($"X-Forwarded-For: '{value}'");
     //  else if (key.Equals("X-Real-IP", StringComparison.InvariantCultureIgnoreCase))
-    //    p_log.Value.Warn($"X-Real-IP: '{value}'");
+    //    p_log.Settings.Warn($"X-Real-IP: '{value}'");
     //  else if (key.Equals("CF-Connecting-IP", StringComparison.InvariantCultureIgnoreCase))
-    //    p_log.Value.Warn($"CF-Connecting-IP: '{value}'");
+    //    p_log.Settings.Warn($"CF-Connecting-IP: '{value}'");
 
     return await GetStaticFileAsync("/");
   }
@@ -85,7 +86,11 @@ public class ApiControllerV0 : JsonNetController
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
 
-    var path = Path.Combine(p_settings.WebrootDirPath!, _path);
+    var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
+    if (webroot.IsNullOrWhiteSpace())
+      return await Task.FromResult(StatusCode(502, $"Webroot dir is misconfigured"));
+
+    var path = Path.Combine(webroot, _path);
     if (!System.IO.File.Exists(path))
     {
       p_log.Value.Warn($"File '{_path}' is not found");
@@ -115,7 +120,11 @@ public class ApiControllerV0 : JsonNetController
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
 
-    var path = Path.Combine(p_settings.WebrootDirPath!, "room", _path);
+    var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
+    if (webroot.IsNullOrWhiteSpace())
+      return await Task.FromResult(StatusCode(502, $"Webroot dir is misconfigured"));
+
+    var path = Path.Combine(webroot, "room", _path);
     if (!System.IO.File.Exists(path))
     {
       p_log.Value.Warn($"File '{path}' is not found");
@@ -151,10 +160,13 @@ public class ApiControllerV0 : JsonNetController
       return BadRequest("Type is null!");
     if (!ReqResUtil.ValidMapTypes.Contains(_type))
       return BadRequest("Type is incorrect!");
-    if (string.IsNullOrEmpty(p_settings.ThunderforestApikey))
+
+    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
+    if (tfApiKey.IsNullOrWhiteSpace())
       return StatusCode((int)HttpStatusCode.InternalServerError, $"Thunderforest API key is not set!");
 
-    if (p_settings.ThunderforestCacheSize > 0)
+    var tfCacheSize = p_settingsCtrl.Settings.Value?.ThunderforestCacheSize;
+    if (tfCacheSize != null && tfCacheSize.Value > 0)
     {
       var cachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
       if (cachedStream != null)
@@ -165,9 +177,9 @@ public class ApiControllerV0 : JsonNetController
     }
 
     p_log.Value.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
-    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={p_settings.ThunderforestApikey}";
+    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={tfApiKey}";
 
-    if (p_settings.ThunderforestCacheSize <= 0)
+    if (tfCacheSize == null || tfCacheSize.Value <= 0)
       return File(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
 
     var ms = new MemoryStream();
@@ -212,10 +224,15 @@ public class ApiControllerV0 : JsonNetController
     p_log.Value.Info($"Requested to store geo data, room: '{_roomId}'");
 
     var user = await p_usersController.GetRoomAsync(_roomId, _ct);
-    if (!p_settings.AllowAnonymousPublish && user == null)
+    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && user == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var timeLimit = user != null ? p_settings.RegisteredMinIntervalMs : p_settings.AnonymousMinIntervalMs;
+    var registeredMinIntervalMs = p_settingsCtrl.Settings.Value?.RegisteredMinIntervalMs;
+    var anonymousMinIntervalMs = p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
+    if (registeredMinIntervalMs == null || anonymousMinIntervalMs == null)
+      return await Task.FromResult(StatusCode(502, $"Store minimum intervals are misconfigured"));
+
+    var timeLimit = user != null ? registeredMinIntervalMs : anonymousMinIntervalMs;
     var compositeKey = $"{ReqPaths.GET}/{_roomId}/{_username ?? ""}";
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
@@ -257,11 +274,12 @@ public class ApiControllerV0 : JsonNetController
 
     var now = DateTimeOffset.UtcNow;
 
+    var maxReturnEntries = p_settingsCtrl.Settings.Value?.GetRequestReturnsEntriesCount ?? int.MaxValue;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct)
       .OrderByDescending(_ => _.Created)
-      .Take(p_settings.GetRequestReturnsEntriesCount)
+      .Take(maxReturnEntries)
       .ToListAsync(_ct);
 
     GetPathResData result;
@@ -438,7 +456,11 @@ public class ApiControllerV0 : JsonNetController
     if (!ReqResUtil.IsUsernameSafe(_username))
       return BadRequest("Username is incorrect!");
 
-    var folder = Path.Combine(p_settings.DataDirPath, "user-logs", _roomId, _username);
+    var dataDir = p_settingsCtrl.Settings.Value?.DataDirPath;
+    if (dataDir.IsNullOrWhiteSpace())
+      return StatusCode((int)HttpStatusCode.InternalServerError, $"Data dir path is not set!");
+
+    var folder = Path.Combine(dataDir, "user-logs", _roomId, _username);
     if (!Directory.Exists(folder))
       Directory.CreateDirectory(folder);
 

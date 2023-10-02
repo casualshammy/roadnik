@@ -116,8 +116,8 @@ public class Program
     builder.Host.ConfigureServices(_ => _.AddResponseCompression(_options => _options.EnableForHttps = true));
     builder.WebHost.ConfigureKestrel(_options =>
     {
-      _options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
-      _options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(1);
+      _options.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
+      _options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
       _options.Listen(IPAddress.Parse(settings.IpBind), settings.PortBind);
     });
 
@@ -129,7 +129,7 @@ public class Program
       .UseRouting()
       .UseWebSockets(new WebSocketOptions()
       {
-        KeepAliveInterval = TimeSpan.FromSeconds(300)
+        KeepAliveInterval = TimeSpan.FromSeconds(60)
       })
       .Use(ForwardProxyHeadersMiddlewareAsync)
       .UseResponseCompression()

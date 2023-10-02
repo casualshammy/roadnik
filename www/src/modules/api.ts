@@ -48,6 +48,11 @@ export interface WsBaseMsg {
     Payload: any;
 }
 
+export interface WsMsgHello {
+    UnixTimeMs: number;
+    MaxPathPointsPerRoom: number;
+}
+
 export interface WsMsgPathWiped {
     Username: string;
 }
@@ -91,7 +96,7 @@ export class StorageApi {
         return data;
     }
 
-    public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => any): Websocket {
+    public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => Promise<void>): Websocket {
         const host = window.document.location.host.replace(/\/+$/, "");
         const path = window.document.location.pathname.replace(/\/+$/, "");
         const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";

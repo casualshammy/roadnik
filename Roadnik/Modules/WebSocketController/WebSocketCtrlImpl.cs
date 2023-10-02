@@ -23,12 +23,15 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
   private readonly ConcurrentDictionary<int, WebSocketSession> p_sessions = new();
   private readonly Subject<object> p_incomingMsgs = new();
   private readonly Subject<WebSocketSession> p_clientConnectedFlow = new();
+  private readonly ISettingsController p_settingsCtrl;
   private int p_sessionsCount = 0;
 
   public WebSocketCtrlImpl(
-      ILogger _log)
+    ILogger _log,
+    ISettingsController _settingsController)
   {
     p_log = _log["ws"];
+    p_settingsCtrl = _settingsController;
   }
 
   public IObservable<object> IncomingMessages => p_incomingMsgs;
@@ -122,7 +125,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
 
     try
     {
-      var helloMsg = WsHelper.CreateWsMessage(new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+      var maxPoints = p_settingsCtrl.Settings.Value?.GetWebMaxPoints() ?? int.MaxValue;
+      var helloMsgData = new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), maxPoints);
+      var helloMsg = WsHelper.CreateWsMessage(helloMsgData);
+
       await session.Socket.SendAsync(helloMsg, WebSocketMessageType.Text, true, cts.Token);
       p_clientConnectedFlow.OnNext(session);
 

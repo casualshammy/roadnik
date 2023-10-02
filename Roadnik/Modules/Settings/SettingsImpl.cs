@@ -3,7 +3,7 @@ using Roadnik.Interfaces;
 
 namespace Roadnik.Modules.Settings;
 
-internal class SettingsImpl : ISettings
+public class SettingsImpl : ISettings
 {
   public SettingsImpl(
     [JsonProperty(nameof(WebrootDirPath))] string? _webrootDirPath,
@@ -57,5 +57,7 @@ internal class SettingsImpl : ISettings
   public int GetRequestReturnsEntriesCount { get; }
   public string? FCMServiceAccountJsonPath { get; }
   public string? FCMProjectId { get; }
+
+  public int GetWebMaxPoints() => Math.Max(AnonymousMaxPoints, RegisteredMaxPoints);
 
 }

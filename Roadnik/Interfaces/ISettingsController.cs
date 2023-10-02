@@ -3,7 +3,7 @@ using Roadnik.Modules.Settings;
 
 namespace Roadnik.Interfaces;
 
-internal interface ISettingsController
+public interface ISettingsController
 {
-    IRxProperty<SettingsImpl?> Value { get; }
+    IRxProperty<SettingsImpl?> Settings { get; }
 }

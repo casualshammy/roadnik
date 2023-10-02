@@ -20,7 +20,7 @@ internal class TilesCacheImpl : ITilesCache
     var cacheFlow = new Subject<FileCache>();
     p_cacheProp = cacheFlow.ToProperty(_lifetime);
 
-    _settingsController.Value
+    _settingsController.Settings
       .WhereNotNull()
       .HotAlive(_lifetime, (_conf, _life) =>
       {

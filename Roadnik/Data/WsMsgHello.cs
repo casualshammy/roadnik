@@ -3,4 +3,4 @@
 namespace Roadnik.Data;
 
 [WebSocketMsg("ws-msg-hello")]
-internal record WsMsgHello(long UnixTimeMs);
+internal record WsMsgHello(long UnixTimeMs, int MaxPathPointsPerRoom);

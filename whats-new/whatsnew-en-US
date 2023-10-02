@@ -1,1 +1,2 @@
-  - fixed bug with not working keyboard on Android 12+
+  - fixed path tooltips in very long paths
+  - fixed app links in Android 12+

@@ -370,6 +370,22 @@ if (p_roomId !== null) {
     });
 }
 
+if (!p_isRoadnikApp) {
+    setTimeout(async () => {
+        const roomIdIsCorrect = await p_storageApi.isRoomIdValidAsync(p_roomId);
+        if (!roomIdIsCorrect) {
+            console.log(`Incorrect room id: ${p_roomId}`)
+            const newRoomId = prompt("Room id is missed or invalid\nPlease enter correct room id:");
+            if (newRoomId !== null) {
+                const host = window.document.location.host.replace(/\/+$/, "");
+                const path = window.document.location.pathname.replace(/\/+$/, "");
+                const protocol = window.document.location.protocol;
+                window.location.replace(`${protocol}//${host}${path}/?id=${newRoomId}`);
+            }
+        }
+    }, 1000);
+}
+
 // C# interaction
 function sendDataToHost(_msg: JsToCSharpMsg): void {
     try {

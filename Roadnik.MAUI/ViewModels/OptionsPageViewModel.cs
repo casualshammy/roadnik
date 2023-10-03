@@ -88,7 +88,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_roomId;
     set
     {
-      if (value == null || !ReqResUtil.IsRoomIdSafe(value))
+      if (value == null || !ReqResUtil.IsRoomIdValid(value))
         return;
 
       SetProperty(ref p_roomId, value);

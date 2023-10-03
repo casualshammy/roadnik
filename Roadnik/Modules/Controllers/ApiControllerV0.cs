@@ -208,7 +208,7 @@ public class ApiControllerV0 : JsonNetController
     [FromQuery(Name = "var")] string? _message = null,
     CancellationToken _ct = default)
   {
-    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
       return BadRequest("Room Id is incorrect!");
     if (_lat == null)
       return BadRequest("Latitude is null!");
@@ -260,7 +260,7 @@ public class ApiControllerV0 : JsonNetController
   {
     if (string.IsNullOrWhiteSpace(_roomId))
       return BadRequest("Room Id is null!");
-    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
       return BadRequest("Room Id is incorrect!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
@@ -336,7 +336,7 @@ public class ApiControllerV0 : JsonNetController
       return StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    if (!ReqResUtil.IsRoomIdSafe(_req.RoomId))
+    if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
       return BadRequest($"Incorrect room id!");
     if (!ReqResUtil.IsUserDefinedStringSafe(_req.Username))
       return BadRequest($"Incorrect username!");
@@ -363,7 +363,7 @@ public class ApiControllerV0 : JsonNetController
     [FromQuery(Name = "roomId")] string? _roomId = null,
     CancellationToken _ct = default)
   {
-    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
       return BadRequest($"Incorrect room id!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
@@ -387,7 +387,7 @@ public class ApiControllerV0 : JsonNetController
     [FromBody] DeleteRoomPointReq _req,
     CancellationToken _ct)
   {
-    if (!ReqResUtil.IsRoomIdSafe(_req.RoomId))
+    if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
       return BadRequest($"Incorrect room id!");
 
     var ip = Request.HttpContext.Connection.RemoteIpAddress;
@@ -451,7 +451,7 @@ public class ApiControllerV0 : JsonNetController
     [FromHeader(Name = "username")] string? _username,
     CancellationToken _ct)
   {
-    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
       return BadRequest("Room Id is incorrect!");
     if (!ReqResUtil.IsUsernameSafe(_username))
       return BadRequest("Username is incorrect!");
@@ -483,13 +483,22 @@ public class ApiControllerV0 : JsonNetController
     }
   }
 
+  [HttpGet(ReqPaths.IS_ROOM_ID_VALID)]
+  public async Task<IActionResult> IsRoomIdValidAsync(
+    [FromQuery(Name = "roomId")] string? _roomId,
+    CancellationToken _ct)
+  {
+    var valid = ReqResUtil.IsRoomIdValid(_roomId);
+    return await Task.FromResult(valid ? Ok() : StatusCode((int)HttpStatusCode.NotAcceptable));
+  }
+
   [HttpGet("/ws")]
   public async Task<IActionResult> StartWebSocketAsync(
     [FromQuery(Name = "roomId")] string? _roomId = null)
   {
     if (string.IsNullOrWhiteSpace(_roomId))
       return BadRequest("Room Id is null!");
-    if (!ReqResUtil.IsRoomIdSafe(_roomId))
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
       return BadRequest("Room Id is incorrect!");
 
     if (!HttpContext.WebSockets.IsWebSocketRequest)

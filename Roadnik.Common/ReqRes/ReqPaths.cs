@@ -9,4 +9,5 @@ public static class ReqPaths
   public const string DELETE_ROOM_POINT = "/delete-room-point";
   public const string UPLOAD_LOG = "/upload-log";
   public const string GET_FREE_ROOM_ID = "/get-free-room-id";
+  public const string IS_ROOM_ID_VALID = "/is-room-id-valid";
 }

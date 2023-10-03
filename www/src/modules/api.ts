@@ -150,4 +150,12 @@ export class StorageApi {
             alert("You're deleting points too fast; please wait a second");
     }
 
+    public async isRoomIdValidAsync(_roomId?: string | undefined | null): Promise<boolean> {
+        const res = await fetch(`../is-room-id-valid?roomId=${_roomId}`, {
+            method: "GET"
+        });
+
+        return !(res.status === 406);
+    }
+
 }

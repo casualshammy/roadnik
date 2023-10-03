@@ -1,15 +1,19 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.OS;
-using AndroidX.AppCompat.App;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI;
 
 [Activity(Exported = true)]
-[IntentFilter(new[] { Intent.ActionView }, Categories = new[] { Intent.ActionView, Intent.CategoryDefault, Intent.CategoryBrowsable },
-  DataScheme = "https", DataHost = "roadnik.app", DataPathPattern = "/r/", AutoVerify = true)]
-public class DeepLinkActivity : AppCompatActivity
+[IntentFilter(
+  new[] { Intent.ActionView }, 
+  Categories = new[] { Intent.ActionView, Intent.CategoryDefault, Intent.CategoryBrowsable },
+  DataScheme = "https", 
+  DataHost = "roadnik.app", 
+  DataPathPattern = "/r/", 
+  AutoVerify = true)]
+public class DeepLinkActivity : Activity
 {
   protected override void OnCreate(Bundle? _savedInstanceState)
   {
@@ -28,6 +32,8 @@ public class DeepLinkActivity : AppCompatActivity
     }
     finally
     {
+      var intent = new Intent(this, typeof(MainActivity));
+      StartActivity(intent);
       MainThread.BeginInvokeOnMainThread(Finish);
     }
   }

@@ -32,6 +32,7 @@ export interface TimedStorageEntry {
 
 export interface GetPathResData {
     LastUpdateUnixMs: number;
+    MoreEntriesAvailable: boolean;
     Entries: TimedStorageEntry[];
 }
 

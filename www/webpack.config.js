@@ -23,7 +23,7 @@ module.exports = {
     ]
   },
   performance: {
-    maxEntrypointSize: 2*1024*1024,
-    maxAssetSize: 2*1024*1024
+    maxEntrypointSize: 3*1024*1024,
+    maxAssetSize: 3*1024*1024
   },
 };

@@ -274,27 +274,32 @@ public class ApiControllerV0 : JsonNetController
 
     var now = DateTimeOffset.UtcNow;
 
-    var maxReturnEntries = p_settingsCtrl.Settings.Value?.GetRequestReturnsEntriesCount ?? int.MaxValue;
+    const int maxReturnEntries = 250;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = await p_documentStorage
       .ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct)
-      .OrderByDescending(_ => _.Created)
-      .Take(maxReturnEntries)
+      .OrderBy(_ => _.Created)
+      .Take(maxReturnEntries + 1)
       .ToListAsync(_ct);
 
     GetPathResData result;
     if (!documents.Any())
     {
-      result = new GetPathResData(now.ToUnixTimeMilliseconds(), Array.Empty<TimedStorageEntry>());
+      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, Array.Empty<TimedStorageEntry>());
+    }
+    else if (documents.Count <= maxReturnEntries)
+    {
+      var entries = documents.Select(TimedStorageEntry.FromStorageEntry);
+      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, entries);
     }
     else
     {
-      var lastEntryTime = documents[0].Created.ToUnixTimeMilliseconds();
-      var entries = Enumerable
-        .Reverse(documents)
+      var lastEntryTime = documents[^2].Created.ToUnixTimeMilliseconds();
+      var entries = documents
+        .Take(maxReturnEntries)
         .Select(TimedStorageEntry.FromStorageEntry);
 
-      result = new GetPathResData(lastEntryTime, entries);
+      result = new GetPathResData(lastEntryTime, true, entries);
     }
 
     return Json(result);

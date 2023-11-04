@@ -19,7 +19,6 @@ public class SettingsImpl : ISettings
     [JsonProperty(nameof(RegisteredMaxPoints))] int? _registeredMaxPoints,
     [JsonProperty(nameof(AnonymousMinIntervalMs))] double? _anonymousMinIntervalMs,
     [JsonProperty(nameof(RegisteredMinIntervalMs))] double? _registeredMinIntervalMs,
-    [JsonProperty(nameof(GetRequestReturnsEntriesCount))] int? _getRequestReturnsEntriesCount,
     [JsonProperty(nameof(FCMServiceAccountJsonPath))] string? _fCMServiceAccountJsonPath,
     [JsonProperty(nameof(FCMProjectId))] string? _fCMProjectId)
   {
@@ -36,7 +35,6 @@ public class SettingsImpl : ISettings
     RegisteredMaxPoints = _registeredMaxPoints ?? 1000;
     AnonymousMinIntervalMs = _anonymousMinIntervalMs ?? 9.9d * 1000;
     RegisteredMinIntervalMs = _registeredMinIntervalMs ?? 0.9 * 1000;
-    GetRequestReturnsEntriesCount = _getRequestReturnsEntriesCount ?? 10000;
     FCMServiceAccountJsonPath = _fCMServiceAccountJsonPath;
     FCMProjectId = _fCMProjectId;
   }
@@ -54,7 +52,6 @@ public class SettingsImpl : ISettings
   public int RegisteredMaxPoints { get; }
   public double AnonymousMinIntervalMs { get; }
   public double RegisteredMinIntervalMs { get; }
-  public int GetRequestReturnsEntriesCount { get; }
   public string? FCMServiceAccountJsonPath { get; }
   public string? FCMProjectId { get; }
 

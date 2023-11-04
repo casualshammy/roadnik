@@ -2,11 +2,12 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
 import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, HostMsgRequestDoneData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
-import { NumberDictionary, Pool, StringDictionary, groupBy } from "./modules/toolkit";
+import { Pool, groupBy, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
+import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 
 const p_storageApi = new Api.StorageApi();
 
@@ -22,6 +23,7 @@ const p_paths = new Map<string, L.Polyline>();
 const p_geoEntries: { [userName: string]: TimedStorageEntry[] } = {};
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
+const p_tracksUpdateRequired$ = new Subject<void>();
 
 let p_firstDataReceived = false;
 let p_lastOffset = 0;
@@ -82,7 +84,15 @@ async function updatePathsAsync() {
     if (p_roomId === null)
         return;
 
-    const data = await p_storageApi.getDataAsync(p_roomId, p_lastOffset);
+    let data: Api.GetPathResData;
+    try {
+        data = await p_storageApi.getDataAsync(p_roomId, p_lastOffset);
+    } catch (error) {
+        console.warn(`Got error trying to fetch paths data with offset ${p_lastOffset}, retrying...\n${error}`);
+        await sleepAsync(1000);
+        p_tracksUpdateRequired$.next();
+        return;
+    }
 
     if (data === null)
         return;
@@ -132,6 +142,8 @@ async function updatePathsAsync() {
     }
 
     document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
+    if (data.MoreEntriesAvailable)
+        p_tracksUpdateRequired$.next();
 }
 
 function initControlsForUser(_user: string): void {
@@ -247,7 +259,7 @@ function updateControlsForUser(
             console.log(`Set ${points.length} points to path ${_user}`);
         }
         else {
-            for (let point of points)
+            for (const point of points)
                 path.addLatLng(point);
 
             console.log(`Added ${points.length} points to path ${_user}`);
@@ -264,7 +276,7 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
 
     const popUpText =
-        `<b>${_user}</b>: ${_entry.Message ?? "Hi!"}
+        `<center><b>${_user}</b>: ${_entry.Message ?? "Hi!"}</center>
         </br>
         <p>
         ${kmh.toFixed(2)} km/h @ ${Math.ceil(_entry.Altitude)} m @ ${Math.round(_entry.Bearing ?? -1)}°
@@ -336,28 +348,36 @@ async function updatePointsAsync() {
     console.log(`Points visible: ${validPointIds.length}; points in pool: ${p_pointMarkersPool.getAvailableCount()}`);
 }
 
+p_tracksUpdateRequired$
+    .pipe(
+        observeOn(asyncScheduler),
+        //scan((_acc, _) => {return _acc+1}, 0),
+        switchMap(async _ => await updatePathsAsync()))
+    .subscribe();
+
 if (p_roomId !== null) {
     const ws = p_storageApi.setupWs(p_roomId, async (_ws, _data) => {
-        console.log(_data.Type);
+        console.log(`WS MSG: ${_data.Type}`);
         if (_data.Type === Api.WS_MSG_TYPE_HELLO) {
             const msgData: Api.WsMsgHello = _data.Payload;
             p_maxSavedPoints = msgData.MaxPathPointsPerRoom;
             console.log(`Max saved points: ${p_maxSavedPoints}`);
             console.log(`Server time: ${new Date(msgData.UnixTimeMs).toISOString()}`);
 
-            await updatePathsAsync();
+            p_tracksUpdateRequired$.next();
+            //await updatePathsAsync();
             await updatePointsAsync();
         }
         else if (_data.Type === Api.WS_MSG_TYPE_DATA_UPDATED) {
-            await updatePathsAsync();
+            p_tracksUpdateRequired$.next();
+            //await updatePathsAsync();
         }
         else if (_data.Type == Api.WS_MSG_PATH_WIPED) {
             const msgData: WsMsgPathWiped = _data.Payload;
             const user = msgData.Username;
 
             const path = p_paths.get(user);
-            if (path !== undefined)
-                path.setLatLngs([]);
+            path?.setLatLngs([]);
 
             const geoEntries = p_geoEntries[user];
             if (geoEntries !== undefined)

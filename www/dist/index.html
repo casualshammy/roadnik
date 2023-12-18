@@ -1,30 +1,163 @@
-<!DOCTYPE HTML>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<title>Tracking Map</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="robots" content="noindex, nofollow, noarchive" />
-	<meta name="MSSmartTagsPreventParsing" content="true" />
-	<meta http-equiv="imagetoolbar" content="no" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-	<link type="image/ico" rel="shortcut icon" href="/favicon.ico" />
-	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin=""/>
+	<title>Roadnik - share your way!</title>
+
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="stylesheet" href="assets/css/bootstrap.min.css">
+	<link rel="stylesheet" href="assets/css/ionicons.min.css">
+	<link rel="stylesheet" href="assets/css/owl.carousel.css">
+	<link rel="stylesheet" href="assets/css/owl.theme.css">
+	<link rel="stylesheet" href="assets/css/animate.css">
+	<link rel="stylesheet" href="assets/css/style.css">
 	
-	<style type="text/css">
-		body {
-			padding: 0;
-			margin: 0;
-		}
-		html, body, #map {
-			height: 100%;
-		}
-	</style>
+	<link type="image/ico" rel="shortcut icon" href="favicon.ico" />
+
+	<link href='http://fonts.googleapis.com/css?family=Roboto:400,100,100italic,300,300italic,400italic,500,500italic,700,700italic,900,900italic|Roboto+Condensed:300italic,400italic,700italic,400,300,700|Oxygen:400,300,700' rel='stylesheet'>
 </head>
-<body>
+<body id="home">
 
-<div id="map" style="width: 100%; height: 100%;">
-</div>
-<script src="bundle.js" crossorigin="anonymous"></script>
+	<!-- ****************************** Preloader ************************** -->
 
+	<div id="preloader"></div>
+
+	<!-- ****************************** Sidebar ************************** -->
+
+	<nav id="sidebar-wrapper">
+		<a id="menu-close" href="#" class="close-btn toggle"><i class="ion-ios-close-empty"></i></a>
+	    <ul class="sidebar-nav">
+		  <li><a href="#home">Home</a></li>
+			<li><a href="#features">Features</a></li>
+			<li><a href="#footer">Contacts</a></li>
+	    </ul>
+	</nav>
+
+	<!-- ****************************** Header ************************** -->
+
+	<header class="sticky" id="header">
+		<section class="container">
+			<section class="row" id="logo_menu">
+				<section class="col-xs-8"><a class="logo" href="">R O A D N I K</a></section>
+				<section class="col-xs-4"><a id="menu-toggle" href="#" class="toggle wow rotateIn" data-wow-delay="1s"><i class="ion-navicon"></i></a></section>
+			</section>
+		</section>
+	</header>
+
+	<!-- ****************************** Banner ************************** -->
+
+
+	<section id="banner" >
+		<section class="container">
+			<a class="slidedown wow animated zoomIn" data-wow-delay="2s" href="#features"><i class="ion-ios-download-outline"></i></a>
+			<section class="row">
+				<div class="col-md-6">
+					<div class="headings">
+						<h1 class="wow animated fadeInDown">Share your way</h1>
+						<p class="wow animated fadeInLeft">Let your friends or family know you’re here. Share your position during your outdoor adventures in real time. Share meeting points. Find out where the always late John is located.</p>
+						<div class="row">
+							<div class="col-xs-6 col-sm-6 col-md-5">
+								<div>
+									<a href="https://play.google.com/store/apps/details?id=com.axiolab.roadnik" class="polo-btn store wow animated bounceInUp"><i class="ion-social-android"></i> Play Store</a>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-6 hidden-xs hidden-sm">
+					<div class="hand-container">
+					<img class="iphone-hand img_res wow animated bounceInUp" data-wow-duration="1.2s" src="assets/img/roadnik_phone.png"></img>
+					<div class="clearfix"></div>
+					</div>
+				</div>
+			</section>
+		</section>
+	</section>
+
+	<!-- ****************************** Features Section ************************** -->
+
+	<section id="features" class="block">
+		<section class="container">
+			<section class="row">
+				<div class="title-box"><h1 class="block-title wow animated rollIn">
+				<span class="bb-top-left"></span>
+				<span class="bb-bottom-left"></span>
+				Features
+				<span class="bb-top-right"></span>
+				<span class="bb-bottom-right"></span>
+				</h1></div>
+			</section>
+			
+			<section class="row">
+        <div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.3s">
+						<i class="ion-person-add" style="color:#00ceb8;"></i>
+						<h2>Rooms</h2>
+						<p>An unlimited number of people can join the room and share their location.</p>
+					</div>
+				</div>
+        <div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.6s">
+						<i class="ion-map" style="color:#c0392b;"></i>
+						<h2>Maps</h2>
+						<p>Multiple types of maps available: OpenStreetMap, OpenCycleMap, Outdoor Map and Google Maps.</p>
+					</div>
+				</div>
+        <div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.6s">
+						<i class="ion-ios-time" style="color:#2c3e50;"></i>
+						<h2>Fast share</h2>
+						<p>Download app and click 2 buttons - and your friends will easily find you.</p>
+					</div>
+				</div>
+				<div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.3s">
+						<i class="ion-ios-locked-outline" style="color:#d35400;"></i>
+						<h2>Security</h2>
+						<p>Your data is protected: we do not collect it at all. Only anonymized geodata is stored on the server.</p>
+					</div>
+				</div>
+				<div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.6s">
+						<i class="ion-happy" style="color:#27ae60;"></i>
+						<h2>No Ads</h2>
+						<p>App doesn't contain any ads.</p>
+					</div>
+				</div>
+        <div class="col-sm-6 col-md-4">
+					<div class="feature-box wow animated flipInX" data-wow-delay="0.3s">
+						<i class="ion-ios-settings" style="color:#9b59b6;"></i>
+						<h2>Battery friendly</h2>
+						<p>The application uses geolocation only when it is needed. No battery drain anymore.</p>
+					</div>
+				</div>
+			</section>
+			<div class="clearfix"></div>
+		</section>
+	</section>
+
+  <section id="footer">
+    <section class="container">
+      <span>Please leave questions, bug reports, or comments on the issue tracker:</span>
+      <h1 class="footer-logo">
+        <i class="ion-social-github" style="color: #000;;"></i>
+        <a href="https://github.com/casualshammy/roadnik-public/issues">GitHub</a>
+      </h1>
+      <span>Also you can contact me via e-mail:</span>
+      <h1 class="footer-logo">
+        <i class="ion-email" style="color:#9b59b6;"></i>
+        <a href="mailto://info@roadnik.app?subject=Question from roadnik.app">info@roadnik.app</a>
+      </h1>
+    </section>
+  </section>
+
+	<script src="assets/js/jquery-2.1.3.min.js"></script>
+	<script src="assets/js/bootstrap.min.js"></script>
+	<script src="assets/js/wow.min.js"></script>
+	<script src="assets/js/owl.carousel.js"></script>
+	<script src="assets/js/script.js"></script>
+	
 </body>
 </html>

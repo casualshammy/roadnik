@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<tookit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
-             xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
-             x:Class="Roadnik.MAUI.Pages.MainPage"
-             Title="{Binding Title}">
+<tookit:CContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+    x:Class="Roadnik.MAUI.Pages.MainPage"
+    Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:MainPageViewModel />
@@ -31,24 +32,6 @@
         <Grid
             IsVisible="{Binding CanShowRegilarView}"
             AbsoluteLayout.LayoutFlags="PositionProportional"
-            AbsoluteLayout.LayoutBounds="0.00, 0.95, 60, 50">
-            <Button
-                    WidthRequest="40"
-                    HeightRequest="40"
-                    CornerRadius="45"
-                    Background="{StaticResource PrimaryBrush}"
-                    Clicked="Message_Clicked">
-            </Button>
-            <ImageButton 
-                    WidthRequest="30"
-                    HeightRequest="30"
-                    Source="message.svg"
-                    InputTransparent="True"/>
-        </Grid>
-
-        <Grid
-            IsVisible="{Binding CanShowRegilarView}"
-            AbsoluteLayout.LayoutFlags="PositionProportional"
             AbsoluteLayout.LayoutBounds="0.95, 0.95, 140, 130">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -69,7 +52,8 @@
                     CornerRadius="45"
                     HorizontalOptions="Center"
                     Background="{StaticResource PrimaryBrush}"
-                    Clicked="Share_Clicked">
+                    Clicked="Share_Clicked"
+                    SemanticProperties.Description="{Binding ShareButtonDescription}">
                 </Button>
                 <ImageButton 
                     Margin="0,0,5,0"
@@ -78,7 +62,7 @@
                     Source="share.svg"
                     InputTransparent="True"/>
             </Grid>
-            
+
             <Grid 
                 Grid.Row="2"
                 Grid.Column="0">
@@ -88,9 +72,11 @@
                     CornerRadius="45"
                     HorizontalOptions="Center"
                     Background="{StaticResource PrimaryBrush}"
-                    Clicked="GoToMyLocation_Clicked">
+                    Clicked="GoToMyLocation_Clicked"
+                    SemanticProperties.Description="{Binding GoToMyLocationButtonDescription}">
                 </Button>
                 <ImageButton 
+                    x:Name="p_goToMyLocationImage"
                     WidthRequest="40"
                     HeightRequest="40"
                     Source="my_location.svg"
@@ -105,7 +91,8 @@
                     HeightRequest="70"
                     CornerRadius="45"
                     Background="{StaticResource PrimaryBrush}"
-                    Clicked="FAB_Clicked">
+                    Clicked="FAB_Clicked"
+                    SemanticProperties.Description="{Binding StartPublishButtonDescription}">
                 </Button>
                 <ImageButton 
                     WidthRequest="70"
@@ -208,7 +195,7 @@
                     FontSize="Medium"
                     Clicked="Reload_Clicked"/>
             </VerticalStackLayout>
-            
+
         </Grid>
 
         <!--IsInBackground-->

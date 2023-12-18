@@ -4,7 +4,8 @@ namespace Roadnik.Data;
 
 [SimpleDocument("geo-data")]
 internal record StorageEntry(
-  string Key,
+  string RoomId,
+  string Username,
   float Latitude,
   float Longitude,
   float Altitude,
@@ -12,5 +13,4 @@ internal record StorageEntry(
   float? Accuracy = null,
   float? Battery = null,
   float? GsmSignal = null,
-  float? Bearing = null,
-  string? Message = null);
+  float? Bearing = null);

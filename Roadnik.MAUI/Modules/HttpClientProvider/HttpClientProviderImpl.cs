@@ -1,17 +1,26 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.HttpClientProvider;
 
-[ExportClass(typeof(IHttpClientProvider), Singleton: true)]
-internal class HttpClientProviderImpl : IHttpClientProvider
+internal class HttpClientProviderImpl : IHttpClientProvider, IAppModule<HttpClientProviderImpl>
 {
-  private readonly HttpClient p_httpClient = new();
-
-  public HttpClientProviderImpl()
+  public static HttpClientProviderImpl ExportInstance(IAppDependencyCtx _ctx)
   {
-    p_httpClient.Timeout = TimeSpan.FromSeconds(10);
-    Value = p_httpClient;
+    return new HttpClientProviderImpl();
+  }
+
+  private HttpClientProviderImpl()
+  {
+    var handler = new SocketsHttpHandler
+    {
+      PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+    };
+    var httpClient = new HttpClient(handler);
+    httpClient.Timeout = TimeSpan.FromSeconds(10);
+    httpClient.DefaultRequestHeaders.Add("User-Agent", $"{ReqResUtil.UserAgent}/{AppInfo.Current.VersionString}");
+    Value = httpClient;
   }
 
   public HttpClient Value { get; }

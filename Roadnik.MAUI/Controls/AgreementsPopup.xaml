@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               x:Class="Roadnik.MAUI.Controls.AgreementsPopup"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               Color="White">
+
+    <VerticalStackLayout Padding="10">
+        <Label 
+            Text="Please read&#10;the following agreements"
+            TextColor="IndianRed"
+            FontSize="Medium"
+            LineBreakMode="WordWrap"
+            HorizontalTextAlignment="Center"/>
+        <Rectangle 
+            VerticalOptions="End"
+            Fill="DarkOrange"
+            Stroke="DarkOrange"
+            Margin="2, 0"
+            HeightRequest="2" />
+        <ContentView>
+            <ContentView.GestureRecognizers>
+                <TapGestureRecognizer 
+                    Command="{Binding GoWebCommand}"
+                    CommandParameter="https://roadnik.app/privacy_policy.html"/>
+            </ContentView.GestureRecognizers>
+            <Label 
+                Margin="0, 5,0,0"
+                Text="Privacy policy"
+                TextColor="Blue"
+                TextDecorations="Underline"/>
+        </ContentView>
+        <Button 
+            Margin="0, 20,0,0"
+            Text="Agree"
+            TextColor="Black"
+            Background="DarkOrange"
+            HorizontalOptions="FillAndExpand"
+            Command="{Binding CloseCommand}"
+            CommandParameter="1"/>
+    </VerticalStackLayout>
+</toolkit:Popup>

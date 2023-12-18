@@ -23,5 +23,6 @@ internal class AboutPageViewModel : BaseViewModel
     "Alternatively, you can reach me via e-mail.";
   public ICommand GoWebCommand { get => p_goWebCommand; set => SetProperty(ref p_goWebCommand, value); }
   public string AppVersion => $"Version: {AppInfo.Current.VersionString}";
+  public string ThisAppUses => $"This app uses:";
 
 }

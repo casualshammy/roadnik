@@ -4,7 +4,6 @@
 /logs
 /www/node_modules
 /data
-/www/dist/bundle.js
 /Roadnik.MAUI/bin
 /Roadnik.MAUI/obj
 /output
@@ -13,3 +12,5 @@
 /Roadnik.MAUI/Roadnik.MAUI.csproj.user
 /Roadnik.Common/bin
 /Roadnik.Common/obj
+/www/dist/room/bundle.js
+/www/dist/room/bundle.js.LICENSE.txt

@@ -1,27 +1,29 @@
-﻿using Ax.Fw;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Roadnik.Attributes;
-using Roadnik.Data;
+﻿using Roadnik.Server.Data.WebSockets;
+using System.Collections.Immutable;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace Roadnik.Toolkit;
+namespace Roadnik.Server.Toolkit;
 
 public static class WsHelper
 {
-  private static readonly IReadOnlyDictionary<string, Type> p_msgTypes;
+  private static ImmutableDictionary<string, Type> p_wsMsgTypes = ImmutableDictionary<string, Type>.Empty;
+  private static JsonSerializerContext? p_jsonSerializerContext = null;
 
   static WsHelper()
   {
-    var typesCache = new Dictionary<string, Type>();
-    foreach (var type in Utilities.GetTypesWithAttr<WebSocketMsgAttribute>(true))
-    {
-      var attr = GetAttribute<WebSocketMsgAttribute>(type);
-      if (attr is not null)
-        typesCache.Add(attr.Type, type);
-    }
 
-    p_msgTypes = typesCache;
+  }
+
+  public static void RegisterMsType(string _msgTypeSlug, Type _msgType)
+  {
+    p_wsMsgTypes = p_wsMsgTypes.SetItem(_msgTypeSlug, _msgType);
+  }
+
+  public static void RegisterSerializationContext(JsonSerializerContext _jsonSerializerContext)
+  {
+    p_jsonSerializerContext = _jsonSerializerContext;
   }
 
   public static object? ParseWsMessage(byte[] _msgBuffer, int _length)
@@ -32,37 +34,39 @@ public static class WsHelper
 
   public static object? ParseWsMessage(string _json)
   {
-    var incomingBaseMsg = JsonConvert.DeserializeObject<WsBaseMsg>(_json);
+    if (p_jsonSerializerContext == null)
+      throw new InvalidOperationException("You must register serialization context by calling 'RegisterSerializationContext' method");
 
-    if (incomingBaseMsg is null)
+    try
+    {
+      if (JsonSerializer.Deserialize(_json, typeof(WsBaseMsg), p_jsonSerializerContext) is not WsBaseMsg incomingBaseMsg)
+        return null;
+
+      if (!p_wsMsgTypes.TryGetValue(incomingBaseMsg.Type, out var type))
+        return null;
+
+      return ((JsonElement)incomingBaseMsg.Payload).Deserialize(type, p_jsonSerializerContext);
+    }
+    catch
+    {
       return null;
-
-    if (!p_msgTypes.TryGetValue(incomingBaseMsg.Type, out var type))
-      return null;
-
-    var msg = incomingBaseMsg.Payload.ToObject(type);
-    if (msg is null)
-      return null;
-
-    return msg;
+    }
   }
 
   public static byte[] CreateWsMessage<T>(T _msg) where T : notnull
   {
-    var attr = GetAttribute<WebSocketMsgAttribute>(typeof(T));
-    if (attr is null)
-      throw new FormatException($"Data object must have '{nameof(WebSocketMsgAttribute)}' attribute!");
+    if (p_jsonSerializerContext == null)
+      throw new InvalidOperationException("You must register serialization context by calling 'RegisterSerializationContext' method");
 
-    var baseMsg = new WsBaseMsg(attr.Type, JToken.FromObject(_msg));
-    var json = JsonConvert.SerializeObject(baseMsg);
-    var buffer = Encoding.UTF8.GetBytes(json);
-    return buffer;
-  }
+    var type = typeof(T);
+    if (!p_wsMsgTypes.Values.Contains(type))
+      throw new InvalidOperationException($"Can't serialize object of type '{type.Name}'!");
 
-  private static T? GetAttribute<T>(Type _type) where T : Attribute
-  {
-    var attr = Attribute.GetCustomAttribute(_type, typeof(T)) as T;
-    return attr;
+    var wsMsgTypeInfo = p_wsMsgTypes.First(_ => _.Value == type);
+
+    var baseMsg = new WsBaseMsg(wsMsgTypeInfo.Key, _msg);
+    var json = JsonSerializer.Serialize(baseMsg, typeof(WsBaseMsg), p_jsonSerializerContext);
+    return Encoding.UTF8.GetBytes(json);
   }
 
 }

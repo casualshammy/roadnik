@@ -27,9 +27,14 @@
 
     <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
         <ShellContent 
+            x:Name="p_mainPageFlyoutItem"
             Title="Map" 
             Icon="map.svg"
             ContentTemplate="{DataTemplate pages:MainPage}" />
+        <ShellContent 
+            Title="Bookmarks" 
+            Icon="bookmarks.svg"
+            ContentTemplate="{DataTemplate pages:BookmarksPage}" />
         <ShellContent 
             Title="Settings" 
             Icon="cog_box.svg"

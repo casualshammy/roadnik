@@ -1,27 +1,20 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+﻿using System.Text.Json;
 
 namespace Roadnik.MAUI.Toolkit;
 
 internal static class Serialization
 {
-  private static readonly JsonSerializerSettings p_camelCaseSerializer;
+  private static readonly JsonSerializerOptions p_camelCaseSerializer;
 
   static Serialization()
   {
-    p_camelCaseSerializer = new JsonSerializerSettings()
+    p_camelCaseSerializer = new JsonSerializerOptions()
     {
-      ContractResolver = new DefaultContractResolver
-      {
-        NamingStrategy = new CamelCaseNamingStrategy()
-      },
-      Formatting = Formatting.Indented
+      PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+      WriteIndented = true,
     };
   }
 
-  public static string SerializeToCamelCaseJson(object _obj)
-  {
-    return JsonConvert.SerializeObject(_obj, p_camelCaseSerializer);
-  }
+  public static string SerializeToCamelCaseJson(object? _obj) => JsonSerializer.Serialize(_obj, p_camelCaseSerializer);
 
 }

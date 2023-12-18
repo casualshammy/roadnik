@@ -1,61 +1,73 @@
-﻿using Ax.Fw.Attributes;
-using JustLogger.Interfaces;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Roadnik.Attributes;
-using Roadnik.Data;
+﻿using Ax.Fw.DependencyInjection;
+using Ax.Fw.SharedTypes.Interfaces;
+using AxToolsServerNet.Data.Serializers;
 using Roadnik.Interfaces;
 using Roadnik.Modules.WebSocketController.Parts;
-using Roadnik.Toolkit;
+using Roadnik.Server.Data.WebSockets;
+using Roadnik.Server.Interfaces;
+using Roadnik.Server.Toolkit;
 using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
+using ILogger = JustLogger.Interfaces.ILogger;
 
 namespace Roadnik.Modules.WebSocketController;
 
-[ExportClass(typeof(IWebSocketCtrl), Singleton: true)]
-public class WebSocketCtrlImpl : IWebSocketCtrl
+public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<WebSocketCtrlImpl>
 {
+  public static WebSocketCtrlImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ILogger _log, ISettingsController _settingsController, IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
+  }
+
   private readonly ILogger p_log;
+  private readonly ISettingsController p_settingsCtrl;
+  private readonly IReadOnlyLifetime p_lifetime;
   private readonly ConcurrentDictionary<int, WebSocketSession> p_sessions = new();
   private readonly Subject<object> p_incomingMsgs = new();
   private readonly Subject<WebSocketSession> p_clientConnectedFlow = new();
   private int p_sessionsCount = 0;
 
   public WebSocketCtrlImpl(
-      ILogger _log)
+    ILogger _log,
+    ISettingsController _settingsController,
+    IReadOnlyLifetime _lifetime)
   {
     p_log = _log["ws"];
+    p_settingsCtrl = _settingsController;
+    p_lifetime = _lifetime;
+
+    WsHelper.RegisterMsType("ws-msg-hello", typeof(WsMsgHello));
+    WsHelper.RegisterMsType("ws-msg-path-wiped", typeof(WsMsgPathWiped));
+    WsHelper.RegisterMsType("ws-msg-room-points-updated", typeof(WsMsgRoomPointsUpdated));
+    WsHelper.RegisterMsType("ws-msg-data-updated", typeof(WsMsgUpdateAvailable));
+    WsHelper.RegisterSerializationContext(WebSocketJsonCtx.Default);
   }
 
   public IObservable<object> IncomingMessages => p_incomingMsgs;
   public IObservable<WebSocketSession> ClientConnected => p_clientConnectedFlow;
 
-  public async Task<bool> AcceptSocket(string _key, WebSocket _webSocket)
+  public async Task<bool> AcceptSocketAsync(string _roomId, WebSocket _webSocket)
   {
     if (_webSocket.State != WebSocketState.Open)
       return false;
 
-    var session = new WebSocketSession(_key, _webSocket);
-    var mre = new ManualResetEvent(false);
+    var session = new WebSocketSession(_roomId, _webSocket);
+    using var semaphore = new SemaphoreSlim(0, 1);
+    using var scheduler = new EventLoopScheduler();
 
-    await Task.Factory.StartNew(async () => await CreateNewLoopAsync(session, mre), TaskCreationOptions.LongRunning);
-    mre.WaitOne();
+    scheduler.ScheduleAsync(async (_s, _ct) => await CreateNewLoopAsync(session, semaphore));
+    await semaphore.WaitAsync(p_lifetime.Token);
+
     return true;
   }
 
   public async Task<int> BroadcastMsgAsync<T>(T _msg, CancellationToken _ct) where T : notnull
   {
-    var attr = GetAttribute<WebSocketMsgAttribute>(typeof(T));
-    if (attr is null)
-      throw new FormatException($"Data object must have '{nameof(WebSocketMsgAttribute)}' attribute!");
-
-    var baseMsg = new WsBaseMsg(attr.Type, JToken.FromObject(_msg));
-    var json = JsonConvert.SerializeObject(baseMsg);
-    var buffer = Encoding.UTF8.GetBytes(json);
+    var buffer = WsHelper.CreateWsMessage(_msg);
 
     var totalSent = 0;
     foreach (var (index, session) in p_sessions)
@@ -78,13 +90,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
 
   public async Task SendMsgAsync<T>(WebSocketSession _session, T _msg, CancellationToken _ct) where T : notnull
   {
-    var attr = GetAttribute<WebSocketMsgAttribute>(typeof(T));
-    if (attr is null)
-      throw new FormatException($"Data object must have '{nameof(WebSocketMsgAttribute)}' attribute!");
-
-    var baseMsg = new WsBaseMsg(attr.Type, JToken.FromObject(_msg));
-    var json = JsonConvert.SerializeObject(baseMsg);
-    var buffer = Encoding.UTF8.GetBytes(json);
+    var buffer = WsHelper.CreateWsMessage(_msg);
 
     try
     {
@@ -97,18 +103,18 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
   }
 
-  public async Task SendMsgByKeyAsync<T>(string _key, T _msg, CancellationToken _ct) where T : notnull
+  public async Task SendMsgByRoomIdAsync<T>(string _roomId, T _msg, CancellationToken _ct) where T : notnull
   {
     foreach (var (_, session) in p_sessions)
     {
-      if (session.Key != _key)
+      if (session.RoomId != _roomId)
         continue;
 
       await SendMsgAsync(session, _msg, _ct);
     }
   }
 
-  private async Task CreateNewLoopAsync(WebSocketSession _session, ManualResetEvent _completeSignal)
+  private async Task CreateNewLoopAsync(WebSocketSession _session, SemaphoreSlim _completeSignal)
   {
     var session = _session;
     var sessionIndex = Interlocked.Increment(ref p_sessionsCount);
@@ -122,7 +128,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
 
     try
     {
-      var helloMsg = WsHelper.CreateWsMessage(new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+      var maxPoints = p_settingsCtrl.Settings.Value?.GetWebMaxPoints() ?? int.MaxValue;
+      var helloMsgData = new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), maxPoints);
+      var helloMsg = WsHelper.CreateWsMessage(helloMsgData);
+
       await session.Socket.SendAsync(helloMsg, WebSocketMessageType.Text, true, cts.Token);
       p_clientConnectedFlow.OnNext(session);
 
@@ -132,16 +141,16 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
       {
         cts.CancelAfter(TimeSpan.FromMinutes(5));
 
-        var msg = WsHelper.ParseWsMessage(buffer, receiveResult.Count);
-        if (msg is null)
+        try
+        {
+          var msg = WsHelper.ParseWsMessage(buffer, receiveResult.Count);
+          if (msg != null)
+            p_incomingMsgs.OnNext(msg);
+        }
+        finally
         {
           receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
-          continue;
         }
-
-        p_incomingMsgs.OnNext(msg);
-
-        receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
       }
     }
     catch (OperationCanceledException)
@@ -150,7 +159,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
     }
     catch (WebSocketException wsEx) when (wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
     {
-      p_log.Info($"WS connection '{sessionIndex}' was closed prematurely for key '{session.Key}'");
+      // don't care
     }
     catch (Exception ex)
     {
@@ -177,14 +186,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl
       p_log.Error($"Error occured while closing websocket: {ex}");
     }
 
-    p_sessions.TryRemove(sessionIndex, out _);
-    _completeSignal.Set();
-  }
-
-  private static T? GetAttribute<T>(Type _type) where T : Attribute
-  {
-    var attr = Attribute.GetCustomAttribute(_type, typeof(T)) as T;
-    return attr;
+    _completeSignal.Release();
   }
 
 }

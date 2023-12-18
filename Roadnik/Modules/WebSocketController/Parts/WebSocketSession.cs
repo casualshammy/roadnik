@@ -2,4 +2,4 @@
 
 namespace Roadnik.Modules.WebSocketController.Parts;
 
-public record WebSocketSession(string Key, WebSocket Socket);
+public record WebSocketSession(string RoomId, WebSocket Socket);

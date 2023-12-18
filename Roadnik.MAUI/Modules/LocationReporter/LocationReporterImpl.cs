@@ -1,92 +1,87 @@
-﻿#if ANDROID
-using global::Android.Telephony;
-#endif
-using Ax.Fw;
-using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
-using System.Globalization;
-using System.Reactive;
+using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
-[ExportClass(typeof(ILocationReporter), Singleton: true, ActivateOnStart: true)]
-internal class LocationReporterImpl : ILocationReporter
+internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationReporterImpl>
 {
+  public static LocationReporterImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance(
+      (IReadOnlyLifetime _lifetime,
+      ILogger _log,
+      IPreferencesStorage _storage,
+      IHttpClientProvider _httpClientProvider,
+      ILocationProvider _locationProvider,
+      ITelephonyMgrProvider _telephonyMgrProvider)
+      => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _locationProvider, _telephonyMgrProvider));
+  }
+
   record ForceReqData(DateTimeOffset DateTime, bool Ok);
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
-  private readonly Subject<Unit> p_forceReload = new();
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
+  private readonly IPreferencesStorage p_storage;
+  private readonly IHttpClientProvider p_httpClientProvider;
 
-  public LocationReporterImpl(
+  private LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
     ILogger _log,
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
-    ILocationProvider _locationProvider)
+    ILocationProvider _locationProvider,
+    ITelephonyMgrProvider _telephonyMgrProvider)
   {
     p_log = _log["location-reporter"];
+    p_storage = _storage;
+    p_httpClientProvider = _httpClientProvider;
+
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
       {
         ServerAddress = _storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS),
-        ServerKey = _storage.GetValueOrDefault<string>(PREF_SERVER_KEY),
+        RoomId = _storage.GetValueOrDefault<string>(PREF_ROOM),
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
-        UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
-        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY)
+        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
+        Username = _storage.GetValueOrDefault<string>(PREF_USERNAME)
       })
       .Replay(1)
       .RefCount();
 
-    var batteryStatsFlow = Observable
-      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
-      .Select(_ => _.EventArgs)
-      .StartWith(new BatteryInfoChangedEventArgs(Battery.Default.ChargeLevel, Battery.Default.State, Battery.Default.PowerSource));
-
-    var signalStrengthFlow = Observable
-      .Interval(TimeSpan.FromMinutes(1))
-      .StartWithDefault()
-      .Select(_ => GetSignalStrength());
-
-    var reportInterval = TimeSpan.FromSeconds(10);
-
-    var forceReqFlow = p_forceReload
-      .Scan(new ForceReqData(DateTimeOffset.MinValue, true), (_acc, _entry) =>
+    var timerFlow = prefsFlow
+      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval))
+      .Select(_prefs =>
       {
-        var now = DateTimeOffset.UtcNow;
-        if (now - _acc.DateTime < reportInterval)
-          return _acc with { Ok = false };
+        if (_prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
+          return Observable
+            .Interval(_prefs.TimeInterval)
+            .StartWithDefault();
 
-        return new ForceReqData(now, true);
+        return Observable
+          .Return(0L);
       })
-      .Where(_ => _.Ok)
+      .Switch()
       .ToUnit();
 
     var locationFlow = _locationProvider.Location
-      .CombineLatest(prefsFlow)
-      .Where(_ =>
-      {
-        var (location, prefs) = _;
-        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
-      })
-      .Select(_ => _.First);
-
-    var filteredLocationFlow = _locationProvider.FilteredLocation
-      .CombineLatest(prefsFlow)
+      .WithLatestFrom(prefsFlow)
       .Where(_ =>
       {
         var (location, prefs) = _;
@@ -96,14 +91,10 @@ internal class LocationReporterImpl : ILocationReporter
 
     var counter = 0L;
     var stats = LocationReporterSessionStats.Empty;
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var scheduler));
 
-    var reportFlow = Observable
-      .Interval(TimeSpan.FromSeconds(1.01), scheduler)
-      .ToUnit()
-      .Merge(forceReqFlow)
-      .CombineLatest(batteryStatsFlow, signalStrengthFlow, prefsFlow, locationFlow, filteredLocationFlow)
-      .Sample(TimeSpan.FromSeconds(1), scheduler)
+    var reportFlow = timerFlow
+      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow)
+      .Sample(TimeSpan.FromSeconds(1), reportScheduler)
       .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
       {
@@ -114,14 +105,14 @@ internal class LocationReporterImpl : ILocationReporter
         Interlocked.Decrement(ref counter);
         return false;
       })
-      .ObserveOn(scheduler)
+      .ObserveOn(reportScheduler)
       .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
       {
-        var (_, batteryStat, signalStrength, prefs, location, filteredLocation) = _entry;
+        var (_, signalStrength, prefs, location) = _entry;
         var now = DateTimeOffset.UtcNow;
         try
         {
-          if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.ServerKey))
+          if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.RoomId))
             return _acc;
 
           var distance = _acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
@@ -139,16 +130,29 @@ internal class LocationReporterImpl : ILocationReporter
               return _acc;
           }
 
+          var batteryCharge = Battery.Default.ChargeLevel;
+
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          var url = GetUrl(prefs.ServerAddress, prefs.ServerKey, prefs.UserMsg, location, batteryStat, signalStrength);
-          var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
-          res.EnsureSuccessStatusCode();
+          p_log.Info($"Sending location data, lat: *{location.Latitude % 10}, lng: *{location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
 
-          var filteredUrl = GetUrl(prefs.ServerAddress, $"{prefs.ServerKey}-f", prefs.UserMsg, filteredLocation, batteryStat, signalStrength);
-          var resFiltered = await _httpClientProvider.Value.GetAsync(filteredUrl, _lifetime.Token);
-          resFiltered.EnsureSuccessStatusCode();
+          var reqData = new StorePathPointReq()
+          {
+            RoomId = prefs.RoomId,
+            Username = prefs.Username ?? prefs.RoomId,
+            Lat = (float)location.Latitude,
+            Lng = (float)location.Longitude,
+            Alt = (float)(location.Altitude ?? 0d),
+            Speed = (float)(location.Speed ?? 0d),
+            Acc = (float)(location.Accuracy ?? 100d),
+            Battery = (float)batteryCharge,
+            GsmSignal = (float?)signalStrength,
+            Bearing = (float)(location.Course ?? 0d),
+          };
+
+          using var res = await _httpClientProvider.Value.PostAsJsonAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", reqData, _lifetime.Token);
+          res.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1 };
           p_statsFlow.OnNext(stats);
@@ -179,43 +183,30 @@ internal class LocationReporterImpl : ILocationReporter
       })
       .Do(_ => Interlocked.Decrement(ref counter));
 
-    _lifetime.DisposeOnCompleted(Pool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
 
     p_enableFlow
       .ObserveOn(locationProviderStateScheduler)
-      .Scan((ILifetime?)null, (_acc, _enable) =>
+      .HotAlive(_lifetime, (_enable, _life) =>
       {
-        if (_enable)
+        if (!_enable)
+          return;
+
+        _life.DoOnEnding(() =>
         {
-          if (_acc != null)
-            return _acc;
-
-          var life = _lifetime.GetChildLifetime();
-          if (life == null)
-            return _acc;
-
-          life.DoOnCompleted(() => stats = LocationReporterSessionStats.Empty);
-          life.DoOnCompleted(_locationProvider.Disable);
-
-          _locationProvider.Enable();
-          reportFlow.Subscribe(life);
-          return life;
-        }
-        else
-        {
-          if (_acc == null)
-            return _acc;
-
-          _acc.Complete();
-          return null;
-        }
-      })
-      .Subscribe(_lifetime);
+          stats = LocationReporterSessionStats.Empty;
+          p_statsFlow.OnNext(stats);
+        });
+        _life.DoOnEnding(_locationProvider.Disable);
+        _locationProvider.Enable();
+        reportFlow.Subscribe(_life);
+      });
 
     p_enableFlow.OnNext(false);
 
     prefsFlow
       .ObserveOn(locationProviderStateScheduler)
+      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval, _.DistanceInterval))
       .Subscribe(_ =>
       {
         if (_.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
@@ -227,134 +218,51 @@ internal class LocationReporterImpl : ILocationReporter
 
   public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;
 
-  public async Task<bool> IsEnabled() => await p_enableFlow.FirstOrDefaultAsync();
+  public async Task<bool> IsEnabledAsync() => await p_enableFlow.FirstOrDefaultAsync();
 
   public void SetState(bool _enabled)
   {
     p_enableFlow.OnNext(_enabled);
-    if (_enabled)
-      p_forceReload.OnNext();
-
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
   }
 
-  public async Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  public async Task ReportStartNewPathAsync(CancellationToken _ct = default)
   {
-    try
-    {
-      var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
-      var location = await Geolocation.GetLocationAsync(request, _ct);
-      return location;
-    }
-    catch (FeatureNotSupportedException)
-    {
-      return null;
-    }
-    catch (FeatureNotEnabledException)
-    {
-      return null;
-    }
-    catch (PermissionException)
-    {
-      return null;
-    }
-  }
+    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    if (serverAddress.IsNullOrWhiteSpace())
+      return;
 
-  public async Task<Location?> GetCurrentAnyLocationAsync(TimeSpan _timeout, CancellationToken _ct)
-  {
-    try
-    {
-      var request = new GeolocationRequest(GeolocationAccuracy.Medium, _timeout);
-      var location = await Geolocation.GetLocationAsync(request, _ct);
-      return location;
-    }
-    catch (FeatureNotSupportedException)
-    {
-      return null;
-    }
-    catch (FeatureNotEnabledException)
-    {
-      return null;
-    }
-    catch (PermissionException)
-    {
-      return null;
-    }
-  }
+    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    if (roomId.IsNullOrWhiteSpace())
+      return;
 
-  private static double? GetSignalStrength()
-  {
-#if ANDROID
-    var service = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
-    if (service == null || service.AllCellInfo == null)
-      return null;
+    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+    if (username.IsNullOrWhiteSpace())
+      return;
 
-    static double normalize(int _level)
+    var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
+
+    var counter = 10;
+    while (counter-- > 0 && !_ct.IsCancellationRequested)
     {
-      if (_level == 0)
-        return 0.01;
-
-      return (_level + 1) * 20 / 100d;
+      try
+      {
+        p_log.Info($"Sending request to start new track '{roomId}/{username}'; retry: '{counter}'...");
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
+        using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
+        req.Content = content;
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var res = await p_httpClientProvider.Value.SendAsync(req, cts.Token);
+        res.EnsureSuccessStatusCode();
+        p_log.Info($"Sent request to start new track '{roomId}/{username}'");
+        break;
+      }
+      catch (Exception ex)
+      {
+        p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error (retry: '{counter}')", ex);
+        await Task.Delay(TimeSpan.FromSeconds(6), _ct);
+      }
     }
-
-    var signalStrength = 0d;
-    foreach (var info in service.AllCellInfo)
-    {
-      // we cast to specific type because getting value of abstract field `CellSignalStrength` raises exception
-      if (info is CellInfoWcdma wcdma && wcdma.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(wcdma.CellSignalStrength.Level));
-      else if (info is CellInfoGsm gsm && gsm.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(gsm.CellSignalStrength.Level));
-      else if (info is CellInfoLte lte && lte.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(lte.CellSignalStrength.Level));
-      else if (info is CellInfoCdma cdma && cdma.CellSignalStrength != null)
-        signalStrength = Math.Max(signalStrength, normalize(cdma.CellSignalStrength.Level));
-    }
-    return signalStrength;
-#else
-    return null;
-#endif
-  }
-
-  private static string GetUrl(
-    string _serverAddress,
-    string _serverKey,
-    string? _userMsg,
-    Location _location,
-    BatteryInfoChangedEventArgs _batteryInfo,
-    double? _signalStrength)
-  {
-    var culture = CultureInfo.InvariantCulture;
-    var sb = new StringBuilder();
-    sb.Append(_serverAddress.TrimEnd('/'));
-    sb.Append("/store?key=");
-    sb.Append(_serverKey);
-    sb.Append("&lat=");
-    sb.Append(_location.Latitude.ToString(culture));
-    sb.Append("&lon=");
-    sb.Append(_location.Longitude.ToString(culture));
-    sb.Append("&alt=");
-    sb.Append(_location.Altitude?.ToString(culture) ?? "0");
-    sb.Append("&speed=");
-    sb.Append(_location.Speed?.ToString(culture) ?? "0");
-    sb.Append("&acc=");
-    sb.Append(_location.Accuracy?.ToString(culture) ?? "100");
-    sb.Append("&bearing=");
-    sb.Append(_location.Course?.ToString(culture) ?? "0");
-    sb.Append("&battery=");
-    sb.Append((_batteryInfo.ChargeLevel * 100).ToString(culture));
-    if (_signalStrength != null)
-    {
-      sb.Append("&gsm_signal=");
-      sb.Append((_signalStrength.Value * 100).ToString(culture));
-    }
-    if (_userMsg?.Length > 0)
-    {
-      sb.Append("&var=");
-      sb.Append(_userMsg);
-    }
-
-    return sb.ToString();
   }
 
 }

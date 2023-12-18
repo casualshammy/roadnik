@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import build_common.packages
 import build_common.git as git
@@ -13,23 +14,22 @@ argParser.add_argument('--framework', type=str, default= "net6.0-android", requi
 args = argParser.parse_args()
 framework: str = args.framework
 
+artifactsDir = os.path.join(os.getcwd(), "artifacts")
+if (not os.path.isdir(artifactsDir)):
+    os.makedirs(artifactsDir)
+
 outputDir = os.path.join(os.getcwd(), "output")
 if (os.path.isdir(outputDir)):
     shutil.rmtree(outputDir, ignore_errors=True)
 
-extension = ""
+outputFileRegex = ""
 if (framework.endswith("android")):
-    extension = "apk"
+    outputFileRegex = r"-(Signed)\.apk$|-(Signed)\.aab$"
 
-if (extension == ""):
+if (outputFileRegex == ""):
     raise FileNotFoundError(f"Can't find pkg format for framework '{framework}'")
 
-pkgFile = os.path.join(os.getcwd(), f"roadnik.{extension}")
-
-if (os.path.isfile(pkgFile)):
-    os.remove(pkgFile)
-
-branch = git.get_current_branch()
+branch = git.get_version_from_current_branch()
 commitIndex = git.get_last_commit_index()
 version = f"{branch}.{commitIndex}"
 
@@ -51,16 +51,18 @@ build_common.packages.callThrowIfError("dotnet workload install maui")
 build_common.packages.callThrowIfError(f"dotnet publish {sourceDirName} -c Release -p:AndroidSigningKeyPass={signingPassword} -p:AndroidSigningStorePass={signingPassword} -f {framework} -o \"{outputDir}\"")
 
 print(f"===========================================", flush=True)
-print(f"Creating pkg '{pkgFile}'...", flush=True)
+print(f"Creating pkg...", flush=True)
 print(f"===========================================", flush=True)
 for entry in os.listdir(outputDir):
     entryPath = os.path.join(outputDir, entry)
-    if (os.path.isfile(entryPath) and entryPath.endswith(extension)):
-        shutil.move(entryPath, pkgFile)
-        break
+    if (os.path.isfile(entryPath) ):
+        match = re.search(outputFileRegex, entryPath)
+        if (match != None):
+            newName = entry.replace(match.group(1) or match.group(2), version)
+            shutil.move(entryPath, os.path.join(artifactsDir, newName))
 
 print(f"===========================================", flush=True)
-print(f"Done! Package file is '{pkgFile}'", flush=True)
+print(f"Done!", flush=True)
 print(f"===========================================", flush=True)
 
 git.create_tag_and_push(version)

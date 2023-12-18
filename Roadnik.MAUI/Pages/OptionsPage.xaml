@@ -1,53 +1,204 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<tookit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
              xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+             xmlns:converters="clr-namespace:Roadnik.MAUI.Toolkit.XamlConverters"
+             xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
+             xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
              x:Class="Roadnik.MAUI.Pages.OptionsPage"
              Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:OptionsPageViewModel />
     </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <converters:BoolToEnabledDisabledTextConverter x:Key="BoolToEnabledDisabledText" />
+    </ContentPage.Resources>
 
-    <TableView Intent="Settings">
-        <TableRoot>
-            <TableSection Title="Server settings"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell
-                    Text="Server address"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="ServerAddress_Tapped"
-                    Detail="{Binding ServerName}"/>
-                <TextCell
-                    Text="Server key"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="ServerKey_Tapped"
-                    Detail="{Binding ServerKey}"/>
-            </TableSection>
-            <TableSection Title="Reporting settings"
-                          TextColor="{AppThemeBinding Dark=LightBlue, Light=Blue}">
-                <TextCell
-                    Text="Time interval between reported trackpoints"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinimumInterval_Tapped"
-                    Detail="{Binding MinimumTime}"/>
-                <TextCell
-                    Text="Distance between reported trackpoints"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinimumDistance_Tapped"
-                    Detail="{Binding MinimumDistance}"/>
-                <TextCell
-                    Text="Trackpoint reporting condition"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="TrackpointReportingCondition_Tapped"
-                    Detail="{Binding TrackpointReportingConditionText}"/>
-                <TextCell
-                    Text="Required location accuracy"
-                    TextColor="{AppThemeBinding Dark=White, Light=Black}"
-                    Tapped="MinAccuracy_Tapped"
-                    Detail="{Binding MinAccuracy}"/>
-            </TableSection>
-        </TableRoot>
-    </TableView>
+    <ScrollView>
+        <VerticalStackLayout>
+            <!-- SERVER SETTINGS  -->
+            <Grid
+                Margin="20, 0"
+                HeightRequest="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2" />
+                </Grid.RowDefinitions>
+                <Label 
+                Text="Connection settings"
+                FontAttributes="Bold"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                <Rectangle 
+                    Grid.Column="0"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    VerticalOptions="End"
+                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Margin="-20, 0"
+                    HeightRequest="2"/>
+            </Grid>
+            <controls:OptionsItem
+                Grid.Row="1"
+                Title="Server address"
+                DetailsText="{Binding ServerName}"
+                TapCommand="{Binding ServerAddressCommand}"/>
+            <controls:OptionsItem
+                Grid.Row="2"
+                Title="Room ID"
+                DetailsText="{Binding RoomId}"
+                TapCommand="{Binding RoomIdCommand}"/>
+            <controls:OptionsItem
+                Grid.Row="3"
+                Title="Nickname"
+                DetailsText="{Binding Nickname}"
+                TapCommand="{Binding UsernameCommand}"
+                ShowBottomLine="False"/>
 
-</ContentPage>
+            <!-- TRACKING SETTINGS  -->
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2" />
+                </Grid.RowDefinitions>
+                <Label 
+                Text="Tracking settings"
+                    FontAttributes="Bold"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+            </Grid>
+            <controls:OptionsItem
+                Grid.Row="5"
+                Title="Time interval between reported trackpoints"
+                DetailsText="{Binding MinimumTime}"
+                TapCommand="{Binding MinimumIntervalCommand }"/>
+            <controls:OptionsItem
+                Grid.Row="6"
+                Title="Distance between reported trackpoints"
+                DetailsText="{Binding MinimumDistance}"
+                TapCommand="{Binding MinimumDistanceCommand }"/>
+            <controls:OptionsItem
+                Grid.Row="7"
+                Title="Trackpoint reporting condition"
+                DetailsText="{Binding TrackpointReportingConditionText}"
+                TapCommand="{Binding TrackpointReportingConditionCommand }"/>
+            <controls:OptionsItem
+                Grid.Row="8"
+                Title="Required location accuracy"
+                DetailsText="{Binding MinAccuracy}"
+                TapCommand="{Binding MinAccuracyCommand }"/>
+            <controls:OptionsItem
+                x:Name="p_deleteOldRouteOnNew"
+                Grid.Row="9"
+                Title="Delete old track when starting a new one"
+                DetailsText=""
+                ShowSwitch="True"
+                SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
+                ShowBottomLine="False"/>
+
+            <!-- MAP APPEARANCE -->
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2" />
+                </Grid.RowDefinitions>
+                <Label 
+                Text="Map appearance"
+                    FontAttributes="Bold"
+                VerticalOptions="Center"
+                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                <Rectangle 
+                Grid.Column="0"
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                VerticalOptions="End"
+                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                Margin="-20, 0"
+                HeightRequest="2"/>
+            </Grid>
+            <controls:OptionsItem
+                Grid.Row="11"
+                Title="What to show on map opening"
+                DetailsText="{Binding MapOpenBehavior}"
+                TapCommand="{Binding MapOpenBehaviorCommand}"/>
+            <controls:OptionsItem
+                x:Name="p_mapCacheToggle"
+                Grid.Row="12"
+                Title="Map data caching"
+                DetailsText="Will help in case of slow internet connection.&#10;Supported on Android 8+"
+                ShowSwitch="True"
+                SwitchTapped="{Binding MapCacheCommand}"
+                ShowBottomLine="False"/>
+
+            <!-- NOTIFICATIONS -->
+            <Grid Margin="20, 0"
+                  HeightRequest="40">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2" />
+                </Grid.RowDefinitions>
+                <Label 
+                    Text="Notifications"
+                    FontAttributes="Bold"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                <Rectangle 
+                    Grid.Column="0"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    VerticalOptions="End"
+                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+                    Margin="-20, 0"
+                    HeightRequest="2"/>
+            </Grid>
+            <controls:OptionsItem
+                x:Name="p_notifyNewTrack"
+                Grid.Row="14"
+                Title="A new track was started"
+                DetailsText="New user has started to record their way"
+                ShowSwitch="True"
+                SwitchTapped="{Binding NotifyNewTrackCommand}"
+                ShowBottomLine="True"/>
+            <controls:OptionsItem
+                x:Name="p_notifyNewPoint"
+                Grid.Row="15"
+                Title="A new point was placed on the map"
+                DetailsText="Someone has created a new point"
+                ShowSwitch="True"
+                SwitchTapped="{Binding NotifyNewPointCommand}"
+                ShowBottomLine="False"/>
+        </VerticalStackLayout>
+        
+    </ScrollView>
+
+
+
+</tookit:CContentPage>

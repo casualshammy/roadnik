@@ -1,93 +1,171 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<toolkit:CContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
-             xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
-             x:Class="Roadnik.MAUI.Pages.AboutPage"
-             Title="{Binding Title}">
+<toolkit:CContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
+    xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
+    x:Class="Roadnik.MAUI.Pages.AboutPage"
+    Title="{Binding Title}">
 
     <ContentPage.BindingContext>
         <views:AboutPageViewModel />
     </ContentPage.BindingContext>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="50" />
-            <RowDefinition Height="50" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="50" />
-        </Grid.RowDefinitions>
-        <HorizontalStackLayout 
+    <ScrollView>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50" />
+                <RowDefinition Height="50" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="70" />
+            </Grid.RowDefinitions>
+
+            <!-- LOGO -->
+            <HorizontalStackLayout 
             Grid.Row="1"
             Grid.ColumnSpan="2"
             HorizontalOptions="Center"
             HeightRequest="50">
-            <Image
+                <Image
                 Source="{AppThemeBinding Dark=letter_r_blue.svg, Light=letter_r.svg}"
                 Aspect="AspectFill"/>
-            <Label 
+                <Label 
                 Margin="-8"
                 Text="oadnik"
                 TextTransform="Uppercase"
                 FontSize="40"
                 VerticalOptions="Center" 
                 HorizontalOptions="Center" />
-        </HorizontalStackLayout>
-        <VerticalStackLayout
-            Grid.Row="2"
-            Grid.ColumnSpan="2">
-            <Label
+            </HorizontalStackLayout>
+
+            <!-- SUPPORT -->
+            <VerticalStackLayout
+                Grid.Row="2"
+                Grid.ColumnSpan="2">
+                <Label
                 Text="Support"
                 TextTransform="Uppercase"
                 FontAttributes="Bold"
                 Margin="20, 20, 0, 0"/>
-            <Rectangle Fill="{AppThemeBinding Light=Gray, Dark=White}"
+                <Rectangle Fill="{AppThemeBinding Light=Gray, Dark=White}"
                        Stroke="{AppThemeBinding Light=Gray, Dark=White}"
                        Margin="16, 0"
                        HeightRequest="2"/>
-            <Label 
+                <Label 
                 Margin="20, 10, 20, 0"
                 Text="{Binding SupportText}">
-            </Label>
-            <Label Margin="20, 10, 0, 0"
+                </Label>
+                <Label Margin="20, 10, 0, 0"
                    Text="Roadnik app's website"
                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer 
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
                         CommandParameter="https://roadnik.app" />
-                </Label.GestureRecognizers>
-            </Label>
-            <Label Margin="20, 10, 0, 0"
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Margin="20, 10, 0, 0"
                    Text="Issue tracker"
                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer 
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
-                        CommandParameter="https://github.com/casualshammy/roadnik/issues" />
-                </Label.GestureRecognizers>
-            </Label>
-            <Label Margin="20, 10, 0, 0"
+                        CommandParameter="https://github.com/casualshammy/roadnik-public/issues" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label Margin="20, 10, 0, 0"
                    Text="Click here to send me an e-mail"
                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
-                <Label.GestureRecognizers>
-                    <TapGestureRecognizer 
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
-                        CommandParameter="mailto:axio.name?subject=Message from Roadnik app" />
-                </Label.GestureRecognizers>
-            </Label>
-            
-        </VerticalStackLayout>
+                        CommandParameter="mailto:feedback@roadnik.app?subject=Message from Roadnik app" />
+                    </Label.GestureRecognizers>
+                </Label>
 
-        <Label Grid.ColumnSpan="2"
-               Grid.Row="3"
-               HorizontalOptions="Center"
-               VerticalOptions="End"
-               Text="{Binding AppVersion}" />
-    </Grid>
+            </VerticalStackLayout>
+
+            <!-- CREDIT -->
+            <VerticalStackLayout
+                Grid.Row="3"
+                Grid.ColumnSpan="2">
+                <Label
+                    Text="Libraries &amp; Attributions"
+                    TextTransform="Uppercase"
+                    FontAttributes="Bold"
+                    Margin="20, 20, 0, 0"/>
+                <Rectangle 
+                    Fill="{AppThemeBinding Light=Gray, Dark=White}"
+                    Stroke="{AppThemeBinding Light=Gray, Dark=White}"
+                    Margin="16, 0"
+                    HeightRequest="2"/>
+                <Label 
+                    Margin="20, 10, 20, 0"
+                    Text="{Binding ThisAppUses}">
+                </Label>
+                <Label 
+                    Margin="20, 10, 0, 0"
+                    Text="1. Thunderforest Maps"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://www.thunderforest.com/" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label 
+                    Margin="20, 10, 0, 0"
+                    Text="2. Data provided by OpenStreetMap contributors"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://www.openstreetmap.org/copyright" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label 
+                    Margin="20, 10, 0, 0"
+                    Text="3. Google Maps"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://www.google.com/maps/" />
+                    </Label.GestureRecognizers>
+                </Label>
+                <Label 
+                    Margin="20, 10, 0, 0"
+                    Text="4. Leaflet library"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer 
+                        Command="{Binding GoWebCommand}"
+                        CommandParameter="https://leafletjs.com/" />
+                    </Label.GestureRecognizers>
+                </Label>
+
+            </VerticalStackLayout>
+
+            <VerticalStackLayout
+                Grid.ColumnSpan="2"
+                Grid.Row="4"
+                HorizontalOptions="Center"
+                VerticalOptions="End"
+                Margin="0, 0, 0, 5">
+
+                <Label 
+                    HorizontalOptions="Center"
+                    Text="{Binding AppVersion}"/>
+            </VerticalStackLayout>
+
+        </Grid>
+    </ScrollView>
+    
 
 </toolkit:CContentPage>

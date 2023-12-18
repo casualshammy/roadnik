@@ -3,4 +3,4 @@
 namespace Roadnik.Data;
 
 [SimpleDocument("user")]
-public record User(string Key, string Email, DateTimeOffset? ValidUntil);
+public record User(string RoomId, string Email, DateTimeOffset? ValidUntil);

@@ -1,68 +1,84 @@
-﻿#if ANDROID
-using Android.Content;
+﻿using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
-using Ax.Fw.Attributes;
+using Ax.Fw.DependencyInjection;
+using Ax.Fw.Extensions;
 using JustLogger.Interfaces;
-using Org.Apache.Commons.Logging;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Toolkit;
-using System.Collections.Immutable;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-[ExportClass(typeof(ILocationProvider), Singleton: true)]
-public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider
+public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider, IAppModule<AndroidLocationProviderImpl>
 {
+  public static AndroidLocationProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ILogger _logger) => new AndroidLocationProviderImpl(_logger));
+  }
+
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
-  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_filteredLocationFlow = new(1);
   private readonly ILogger p_logger;
-  private ImmutableHashSet<string> p_activeProviders = ImmutableHashSet<string>.Empty;
-  private readonly KalmanLocationFilter p_kalmanFilter;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
-  private volatile bool p_enabled;
+  private long p_enabled = 0;
 
-  public AndroidLocationProviderImpl(ILogger _logger)
+  private AndroidLocationProviderImpl(ILogger _logger)
   {
     p_logger = _logger["location-provider"];
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
 
-    p_kalmanFilter = new KalmanLocationFilter(20, 1, true);
+    Location = p_locationFlow
+      .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
   }
 
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location => p_locationFlow;
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> FilteredLocation => p_filteredLocationFlow;
+  public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
 
   public void Enable()
   {
-    if (p_enabled)
+    var oldEnabled = Interlocked.Exchange(ref p_enabled, 1);
+
+    if (oldEnabled == 1)
       return;
 
-    p_enabled = true;
+    var knownProviders = new[] { "gps", "passive" };
+    var providers = p_locationManager
+      .GetProviders(false)
+      .ToArray();
 
-    var providers = p_locationManager.GetProviders(false);
-    var allProviders = providers.ToArray();
-    p_activeProviders = providers
-      .Where(_ => p_locationManager.IsProviderEnabled(_))
-      .ToImmutableHashSet();
+    var usableProviders = providers
+      .Intersect(knownProviders)
+      .ToArray();
+
+    if (usableProviders.Length == 0)
+    {
+      p_logger.Error($"There is not known providers: <{string.Join(">, <", providers)}>");
+      return;
+    }
+
+    p_logger.Info($"Starting updates, providers: <{string.Join(">, <", providers)}>");
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
-      foreach (var provider in allProviders)
+      foreach (var provider in usableProviders)
+      {
         p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
+        p_logger.Info($"Subscribed to '{provider}' provider");
+      }
     });
   }
 
   public void Disable()
   {
-    if (!p_enabled)
+    var oldEnabled = Interlocked.Exchange(ref p_enabled, 0);
+
+    if (oldEnabled == 0)
       return;
 
-    p_enabled = false;
+    p_logger.Info($"Stopping updates...");
+
     try
     {
       MainThread.BeginInvokeOnMainThread(() => p_locationManager.RemoveUpdates(this));
@@ -78,7 +94,9 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_minTimePeriod = _minTime;
     p_minDistanceMeters = _minDistanceMeters;
 
-    if (p_enabled)
+    p_logger.Info($"Constrains were changed; min time: '{_minTime}', min distance: '{_minDistanceMeters}'");
+
+    if (Interlocked.Read(ref p_enabled) == 1)
     {
       Disable();
       Enable();
@@ -110,7 +128,6 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 #pragma warning restore CA1416 // Validate platform compatibility
 
       p_locationFlow.OnNext(location);
-      p_filteredLocationFlow.OnNext(p_kalmanFilter.Filter(location, timeStamp));
     }
     finally
     {
@@ -120,71 +137,42 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void OnStatusChanged(string? _provider, [GeneratedEnum] Availability _status, Bundle? _extras)
   {
+    if (_provider.IsNullOrWhiteSpace())
+      return;
 
+    p_logger.Info($"Provider '{_provider}' now in new state: '{_status}'");
   }
 
   public void OnProviderDisabled(string _provider)
   {
-    if (_provider == LocationManager.PassiveProvider)
-      return;
-
-    p_activeProviders = p_activeProviders.Remove(_provider);
+    p_logger.Info($"Provider '{_provider}' was disabled");
   }
 
   public void OnProviderEnabled(string _provider)
   {
-    if (_provider == LocationManager.PassiveProvider)
-      return;
-
-    p_activeProviders = p_activeProviders.Add(_provider);
+    p_logger.Info($"Provider '{_provider}' was enabled");
   }
 
-  private string GetBestProviderByAccuracy(string _provider1, string _provider2)
+  public async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
   {
-    // const int ACCURACY_FINE = 1;
-    // const int ACCURACY_COARSE = 2;
-
-    if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+    try
     {
-#pragma warning disable CA1416 // Validate platform compatibility
-      using var providerInfo1 = p_locationManager.GetProviderProperties(_provider1);
-      using var providerInfo2 = p_locationManager.GetProviderProperties(_provider2);
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
-      if (providerInfo1 == null && providerInfo2 == null)
-        return _provider1;
-      if (providerInfo1 == null)
-        return _provider2;
-      if (providerInfo2 == null)
-        return _provider1;
-
-      if (providerInfo1.Accuracy <= providerInfo2.Accuracy)
-        return _provider1;
-
-      return _provider2;
-#pragma warning restore CA1416 // Validate platform compatibility
+      var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
+      var location = await Geolocation.GetLocationAsync(request, _ct);
+      return location;
     }
-    else
+    catch (FeatureNotSupportedException)
     {
-#pragma warning disable CS0618 // Type or member is obsolete
-      using var providerInfo1 = p_locationManager.GetProvider(_provider1);
-      using var providerInfo2 = p_locationManager.GetProvider(_provider2);
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider1}: {providerInfo1?.Accuracy}");
-      System.Diagnostics.Debug.WriteLine($"Accuracy of {_provider2}: {providerInfo2?.Accuracy}");
-      if (providerInfo1 == null && providerInfo2 == null)
-        return _provider1;
-      if (providerInfo1 == null)
-        return _provider2;
-      if (providerInfo2 == null)
-        return _provider1;
-
-      if ((int)providerInfo1.Accuracy <= (int)providerInfo2.Accuracy)
-        return _provider1;
-
-      return _provider2;
-#pragma warning restore CS0618 // Type or member is obsolete
+      return null;
+    }
+    catch (FeatureNotEnabledException)
+    {
+      return null;
+    }
+    catch (PermissionException)
+    {
+      return null;
     }
   }
 
 }
-#endif

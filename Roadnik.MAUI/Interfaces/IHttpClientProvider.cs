@@ -1,6 +1,6 @@
 ﻿namespace Roadnik.MAUI.Interfaces;
 
-interface IHttpClientProvider
+public interface IHttpClientProvider
 {
     HttpClient Value { get; }
 }

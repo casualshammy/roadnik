@@ -6,8 +6,7 @@ public interface ILocationReporter
 {
   IObservable<LocationReporterSessionStats> Stats { get; }
 
-  Task<Location?> GetCurrentAnyLocationAsync(TimeSpan _timeout, CancellationToken _ct);
-  Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
-  Task<bool> IsEnabled();
+  Task<bool> IsEnabledAsync();
+  Task ReportStartNewPathAsync(CancellationToken _ct = default);
   void SetState(bool _enabled);
 }

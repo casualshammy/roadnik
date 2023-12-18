@@ -176,6 +176,7 @@ public partial class Program
       _depContainer.Locate<IReqRateLimiter>(),
       _depContainer.Locate<IFCMPublisher>());
 
+    app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
     app.MapGet("/", controller.GetIndexFile);
     app.MapGet("{**path}", controller.GetStaticFile);
     app.MapGet("/ping", () => Results.Ok());

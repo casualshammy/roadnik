@@ -1,15 +1,19 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.PageController;
 
-[ExportClass(typeof(IPagesController), Singleton: true)]
-internal class PagesControllerImpl : IPagesController
+internal class PagesControllerImpl : IPagesController, IAppModule<PagesControllerImpl>
 {
+  public static PagesControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return new PagesControllerImpl();
+  }
+
   private volatile Page? p_currentPage;
   private volatile Page? p_mainPage;
 
-  public PagesControllerImpl() { }
+  private PagesControllerImpl() { }
 
   public Page? CurrentPage => p_currentPage;
   public Page? MainPage => p_mainPage;

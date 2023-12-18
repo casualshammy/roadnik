@@ -2,19 +2,22 @@
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
-using Ax.Fw.Attributes;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
-using System.Collections.Immutable;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-[ExportClass(typeof(ILocationProvider), Singleton: true)]
-public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider
+public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider, IAppModule<AndroidLocationProviderImpl>
 {
+  public static AndroidLocationProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ILogger _logger) => new AndroidLocationProviderImpl(_logger));
+  }
+
   private readonly LocationManager p_locationManager;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
   private readonly ILogger p_logger;
@@ -22,7 +25,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private float p_minDistanceMeters = 0;
   private long p_enabled = 0;
 
-  public AndroidLocationProviderImpl(ILogger _logger)
+  private AndroidLocationProviderImpl(ILogger _logger)
   {
     p_logger = _logger["location-provider"];
     p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;

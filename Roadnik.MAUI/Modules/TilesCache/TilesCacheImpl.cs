@@ -1,5 +1,5 @@
-﻿using Ax.Fw.Attributes;
-using Ax.Fw.Cache;
+﻿using Ax.Fw.Cache;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
@@ -10,13 +10,21 @@ using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.TilesCache;
 
-[ExportClass(typeof(ITilesCache), Singleton: true)]
-internal class TilesCacheImpl : ITilesCache
+internal class TilesCacheImpl : ITilesCache, IAppModule<TilesCacheImpl>
 {
+  public static TilesCacheImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((
+      IReadOnlyLifetime _lifetime,
+      IHttpClientProvider _httpClientProvider,
+      ILogger _logger)
+      => new TilesCacheImpl(_lifetime, _httpClientProvider, _logger));
+  }
+
   private readonly Subject<string> p_workFlow = new();
   private readonly ILogger p_log;
 
-  public TilesCacheImpl(
+  private TilesCacheImpl(
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
     ILogger _logger)

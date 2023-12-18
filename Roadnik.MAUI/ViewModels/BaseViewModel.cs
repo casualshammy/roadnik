@@ -1,4 +1,4 @@
-﻿using Grace.DependencyInjection;
+﻿using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -15,14 +15,12 @@ internal abstract class BaseViewModel : INotifyPropertyChanged
       throw new ApplicationException($"Application is not {nameof(CMauiApplication)}");
 
     Container = app.Container;
-
-    Container.Inject(this);
   }
 
-  public IInjectionScope Container { get; }
+  public IReadOnlyDependencyContainer Container { get; }
 
   protected bool SetProperty<T>(
-    ref T _backingStore, 
+    ref T _backingStore,
     T _value,
     [CallerMemberName] string _propertyName = "",
     Action? _onChanged = null)

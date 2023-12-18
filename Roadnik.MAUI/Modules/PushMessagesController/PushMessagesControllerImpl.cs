@@ -1,4 +1,4 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
@@ -12,12 +12,20 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PushMessagesController;
 
-[ExportClass(typeof(IPushMessagesController), Singleton: true, ActivateOnStart: true)]
-internal class PushMessagesControllerImpl : IPushMessagesController
+internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<PushMessagesControllerImpl>
 {
+  public static PushMessagesControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((
+      IPreferencesStorage _preferencesStorage,
+      IReadOnlyLifetime _lifetime,
+      ILogger _log)
+      => new PushMessagesControllerImpl(_preferencesStorage, _lifetime, _log));
+  }
+
   private readonly ReplaySubject<PushNotificationEvent> p_pushMessagesSubj = new(1);
 
-  public PushMessagesControllerImpl(
+  private PushMessagesControllerImpl(
     IPreferencesStorage _preferencesStorage,
     IReadOnlyLifetime _lifetime,
     ILogger _log)

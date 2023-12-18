@@ -1,6 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Ax.Fw.Extensions;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 
 namespace Roadnik.Common.Toolkit;
 
@@ -41,12 +44,34 @@ public static class ReqResUtil
     return sb.ToString();
   }
 
-  public static string? GetMapAddress(string? _serverAddress, string? _roomId)
+  public static string? GetMapAddress(
+    string? _serverAddress, 
+    string? _roomId, 
+    string? _mapLayer,
+    double? _lat,
+    double? _lng,
+    int? _zoom)
   {
     if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
       return null;
 
-    var url = $"{_serverAddress.TrimEnd('/')}/r/?id={_roomId}";
+    var urlBuilder = new UriBuilder(_serverAddress);
+    urlBuilder.Path = "/r/";
+
+    var query = HttpUtility.ParseQueryString(urlBuilder.Query);
+    query["id"] = _roomId;
+    if (!_mapLayer.IsNullOrWhiteSpace())
+      query["map"] = _mapLayer;
+    if (_lat != null)
+      query["lat"] = _lat.Value.ToString(CultureInfo.InvariantCulture);
+    if (_lng != null)
+      query["lng"] = _lng.Value.ToString(CultureInfo.InvariantCulture);
+    if (_zoom != null)
+      query["zoom"] = _zoom.Value.ToString(CultureInfo.InvariantCulture);
+
+    urlBuilder.Query = query.ToString();
+
+    var url = urlBuilder.ToString();
     return url;
   }
 

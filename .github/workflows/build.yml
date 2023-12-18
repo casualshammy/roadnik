@@ -43,9 +43,9 @@ jobs:
         prerelease: false
         files: |
           artifacts/*.zip
-        name: "Roadnik Win-x64 Server ${{ env.tag }}"
+        name: "Release ${{ env.tag }}"
         tag_name: "${{ env.tag }}"
-        fail_on_unmatched_files: false
+        fail_on_unmatched_files: true
         token: ${{ secrets.GITHUB_TOKEN }}
         generate_release_notes: false
 
@@ -86,9 +86,9 @@ jobs:
         prerelease: false
         files: |
           artifacts/*.zip
-        name: "Roadnik Linux-x64 Server ${{ env.tag }}"
+        name: "Release ${{ env.tag }}"
         tag_name: "${{ env.tag }}"
-        fail_on_unmatched_files: false
+        fail_on_unmatched_files: true
         token: ${{ secrets.GITHUB_TOKEN }}
         generate_release_notes: false
 
@@ -127,9 +127,9 @@ jobs:
         files: |
           artifacts/*.apk
           artifacts/*.aab
-        name: "Roadnik Android Client ${{ env.tag }}"
+        name: "Release ${{ env.tag }}"
         tag_name: "${{ env.tag }}"
-        fail_on_unmatched_files: false
+        fail_on_unmatched_files: true
         token: ${{ secrets.GITHUB_TOKEN }}
         generate_release_notes: false
     

@@ -1,30 +1,33 @@
-﻿#if ANDROID
-using global::Android.Telephony;
-#endif
-using Ax.Fw;
-using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
-using System.Globalization;
+using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using static Roadnik.MAUI.Data.Consts;
-using Roadnik.Common.ReqRes;
-using System.Net.Http.Json;
-using System.Text.Json;
-using Roadnik.Common.Toolkit;
-using Ax.Fw.Pools;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
-[ExportClass(typeof(ILocationReporter), Singleton: true)]
-internal class LocationReporterImpl : ILocationReporter
+internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationReporterImpl>
 {
+  public static LocationReporterImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance(
+      (IReadOnlyLifetime _lifetime,
+      ILogger _log,
+      IPreferencesStorage _storage,
+      IHttpClientProvider _httpClientProvider,
+      ILocationProvider _locationProvider,
+      ITelephonyMgrProvider _telephonyMgrProvider)
+      => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _locationProvider, _telephonyMgrProvider));
+  }
+
   record ForceReqData(DateTimeOffset DateTime, bool Ok);
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
@@ -34,7 +37,7 @@ internal class LocationReporterImpl : ILocationReporter
   private readonly IPreferencesStorage p_storage;
   private readonly IHttpClientProvider p_httpClientProvider;
 
-  public LocationReporterImpl(
+  private LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
     ILogger _log,
     IPreferencesStorage _storage,
@@ -189,7 +192,11 @@ internal class LocationReporterImpl : ILocationReporter
         if (!_enable)
           return;
 
-        _life.DoOnEnding(() => stats = LocationReporterSessionStats.Empty);
+        _life.DoOnEnding(() =>
+        {
+          stats = LocationReporterSessionStats.Empty;
+          p_statsFlow.OnNext(stats);
+        });
         _life.DoOnEnding(_locationProvider.Disable);
         _locationProvider.Enable();
         reportFlow.Subscribe(_life);

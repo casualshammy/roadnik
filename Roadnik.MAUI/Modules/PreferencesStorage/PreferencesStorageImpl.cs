@@ -1,6 +1,6 @@
 ﻿using Ax.Fw;
-using Ax.Fw.Attributes;
 using Ax.Fw.Cache;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using JustLogger.Interfaces;
 using Roadnik.Common.Toolkit;
@@ -13,14 +13,18 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
 
-[ExportClass(typeof(IPreferencesStorage), Singleton: true)]
-internal class PreferencesStorageImpl : IPreferencesStorage
+internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<PreferencesStorageImpl>
 {
+  public static PreferencesStorageImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ILogger _log) => new PreferencesStorageImpl(_log));
+  }
+
   private readonly ILogger p_log;
   private readonly SyncCache<string, object?> p_cache = new(new SyncCacheSettings(100, 10, TimeSpan.FromHours(1)));
   private readonly ReplaySubject<Unit> p_prefChangedFlow = new(1);
 
-  public PreferencesStorageImpl(ILogger _log)
+  private PreferencesStorageImpl(ILogger _log)
   {
     p_log = _log["pref-storage"];
 
@@ -127,6 +131,16 @@ internal class PreferencesStorageImpl : IPreferencesStorage
         SetValue(PREF_ROOM, newRoomId);
         p_log.Info($"Migration 175: new room id: '{newRoomId}'");
       }
+    });
+    migrations.Add(192, () =>
+    {
+      var reportingCondition = GetValueOrDefault<int>(PREF_TRACKPOINT_REPORTING_CONDITION);
+      if (reportingCondition == default)
+        SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+
+      var mapOpenBehavior = GetValueOrDefault<int>(PREF_MAP_OPEN_BEHAVIOR);
+      if (mapOpenBehavior == default)
+        SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     });
 
     return migrations;

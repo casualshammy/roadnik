@@ -1,4 +1,4 @@
-﻿using Grace.DependencyInjection;
+﻿using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Toolkit;
@@ -10,6 +10,6 @@ public abstract class CMauiApplication : Application, IMauiApp
     Container = MauiProgram.Container;
   }
 
-  public IInjectionScope Container { get; }
+  public IReadOnlyDependencyContainer Container { get; }
 
 }

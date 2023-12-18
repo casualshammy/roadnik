@@ -1,8 +1,8 @@
-﻿using Grace.DependencyInjection;
+﻿using Ax.Fw.SharedTypes.Interfaces;
 
 namespace Roadnik.MAUI.Interfaces;
 
 public interface IMauiApp
 {
-    IInjectionScope Container { get; }
+  IReadOnlyDependencyContainer Container { get; }
 }

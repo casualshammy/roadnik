@@ -1,4 +1,4 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Interfaces;
 using System.Text.RegularExpressions;
@@ -6,17 +6,23 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.DeepLinksController;
 
-[ExportClass(typeof(IDeepLinksController), Singleton: true)]
-internal class DeepLinksControllerImpl : IDeepLinksController
+internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModule<DeepLinksControllerImpl>
 {
+  public static DeepLinksControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance(
+      (IPagesController _pagesController, IPreferencesStorage _preferencesStorage) =>
+      new DeepLinksControllerImpl(_pagesController, _preferencesStorage));
+  }
+
   public const string AndroidExtraKey = "open-link";
-  private static readonly Regex p_urlRegex = new(@"^(.+?)/r/\?id=([\w\-_]+)$");
+  private static readonly Regex p_urlRegex = UrlRegex();
 
   private readonly IPagesController p_pagesController;
   private readonly IPreferencesStorage p_preferencesStorage;
   private volatile bool p_mainPageStarted = false;
 
-  public DeepLinksControllerImpl(
+  private DeepLinksControllerImpl(
     IPagesController _pagesController,
     IPreferencesStorage _preferencesStorage)
   {
@@ -39,12 +45,10 @@ internal class DeepLinksControllerImpl : IDeepLinksController
     if (p_pagesController.CurrentPage == null && !p_mainPageStarted)
     {
       p_mainPageStarted = true;
-#if ANDROID
       var intent = new Android.Content.Intent(Android.App.Application.Context, typeof(MainActivity));
       intent.SetFlags(Android.Content.ActivityFlags.ClearTask | Android.Content.ActivityFlags.NewTask);
       intent.PutExtra(AndroidExtraKey, _url);
       Android.App.Application.Context.StartActivity(intent);
-#endif
       return;
     }
 
@@ -88,6 +92,9 @@ internal class DeepLinksControllerImpl : IDeepLinksController
         .Show(_ct);
     }
   }
+
+  [GeneratedRegex(@"^(.+?)/r/\?id=([\w\-_]+)$")]
+  private static partial Regex UrlRegex();
 
 }
 

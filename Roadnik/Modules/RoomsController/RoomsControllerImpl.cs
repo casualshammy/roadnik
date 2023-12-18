@@ -41,7 +41,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<RoomsControlle
     ILogger _log)
   {
     p_storage = _storage;
-    var log = _log["users-controller"];
+    var log = _log["rooms-controller"];
 
     _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var scheduler));
 

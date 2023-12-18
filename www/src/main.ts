@@ -35,10 +35,27 @@ let p_maxSavedPoints: number = 1000;
 const p_mapsData = GetMapLayers();
 const p_overlays = GetMapOverlayLayers();
 
+const queryLayout = urlParams.get('map');
+const queryLat = parseFloat(urlParams.get('lat') ?? "");
+const queryLng = parseFloat(urlParams.get('lng') ?? "");
+const queryZoom = parseInt(urlParams.get('zoom') ?? "");
+
+const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
+
+p_currentLayer = DEFAULT_MAP_LAYER;
+if (queryLayout !== null) {
+    p_currentLayer = queryLayout;
+}
+else if (!p_isRoadnikApp && cookieLayout !== undefined) {
+    p_currentLayer = cookieLayout;
+}
+
 const p_map = new L.Map('map', {
-    center: new L.LatLng(51.4768, 0.0006),
-    zoom: 14,
-    layers: [p_mapsData[DEFAULT_MAP_LAYER]]
+    center: new L.LatLng(
+        Number.isNaN(queryLat) ? 51.4768 : queryLat,
+        Number.isNaN(queryLng) ? 0.0006 : queryLng),
+    zoom: Number.isNaN(queryZoom) ? 14 : queryZoom,
+    layers: [p_mapsData[p_currentLayer]]
 });
 
 p_map.attributionControl.setPrefix(false);
@@ -72,10 +89,6 @@ p_map.on("contextmenu", function (_e) {
             p_storageApi.createRoomPointAsync(p_roomId, "", _e.latlng, msg);
     }
 });
-
-const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
-if (p_isRoadnikApp || cookieLayout === undefined || !setMapLayer(cookieLayout))
-    p_currentLayer = DEFAULT_MAP_LAYER;
 
 const p_layersControl = new L.Control.Layers(p_mapsData, p_overlays);
 p_map.addControl(p_layersControl);

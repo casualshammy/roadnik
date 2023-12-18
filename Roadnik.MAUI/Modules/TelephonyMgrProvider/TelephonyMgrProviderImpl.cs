@@ -1,27 +1,24 @@
-﻿#if ANDROID
-using Android.Telephony;
-using Ax.Fw;
-using Ax.Fw.Attributes;
+﻿using Android.Telephony;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Roadnik.MAUI.Modules.TelephonyMgrProvider;
 
-[ExportClass(typeof(ITelephonyMgrProvider), Singleton: true)]
-internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider
+internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<TelephonyMgrProviderImpl>
 {
+  public static TelephonyMgrProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((IReadOnlyLifetime _lifetime) => new TelephonyMgrProviderImpl(_lifetime));
+  }
+
   private readonly TelephonyManager? p_telephonyManager;
 
-  public TelephonyMgrProviderImpl(IReadOnlyLifetime _lifetime)
+  private TelephonyMgrProviderImpl(IReadOnlyLifetime _lifetime)
   {
     p_telephonyManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
 
@@ -72,4 +69,3 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider
   }
 
 }
-#endif

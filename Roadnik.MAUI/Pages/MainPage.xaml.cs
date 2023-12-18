@@ -12,6 +12,7 @@ using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Globalization;
@@ -99,7 +100,9 @@ public partial class MainPage : CContentPage
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
         var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-        var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
+        var mapLayer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
+        var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
+        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, mapLayer, mapViewState?.Location.Lat, mapViewState?.Location.Lng, (int?)mapViewState?.Zoom);
         if (url == null)
         {
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
@@ -193,25 +196,21 @@ public partial class MainPage : CContentPage
 
     if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
     {
-      var layer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
-      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
+      //var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
 
-      var command = "";
-      if (webAppState != null)
-        command += $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});";
+      //var command = "";
+      //if (mapViewState != null)
+      //  command += $"setLocation({mapViewState.Location.Lat}, {mapViewState.Location.Lng}, {mapViewState.Zoom});";
 
-      if (layer != null)
-        command += $"setMapLayer({Serialization.SerializeToCamelCaseJson(layer)});";
+      //if (command.IsNullOrWhiteSpace())
+      //  return;
 
-      if (command.IsNullOrWhiteSpace())
-        return;
-
-      await MainThread.InvokeOnMainThreadAsync(async () =>
-      {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Commands returned an error: '{command}'");
-      });
+      //await MainThread.InvokeOnMainThreadAsync(async () =>
+      //{
+      //  var result = await p_webView.EvaluateJavaScriptAsync(command);
+      //  if (result == null)
+      //    p_log.Error($"Commands returned an error: '{command}'");
+      //});
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
     {
@@ -267,7 +266,6 @@ public partial class MainPage : CContentPage
 
     // check permissions and run
     var locationReporter = Container.Locate<ILocationReporter>();
-    var locationReporterService = Container.Locate<ILocationReporterService>();
 
     if (!await locationReporter.IsEnabledAsync())
     {
@@ -280,7 +278,11 @@ public partial class MainPage : CContentPage
         p_log.Error($"Resource 'DangerLowBrush' is not found!");
 
       _ = Task.Run(async () => await locationReporter.ReportStartNewPathAsync(p_lifetime.Token));
-      locationReporterService.Start();
+
+      var context = global::Android.App.Application.Context;
+      var intent = new Android.Content.Intent(context, typeof(LocationReporterService));
+      intent.SetAction("START_SERVICE");
+      context.StartForegroundService(intent);
     }
     else
     {
@@ -289,7 +291,10 @@ public partial class MainPage : CContentPage
       else
         p_log.Error($"Resource 'PrimaryBrush' is not found!");
 
-      locationReporterService.Stop();
+      var context = global::Android.App.Application.Context;
+      var intent = new Android.Content.Intent(context, typeof(LocationReporterService));
+      intent.SetAction("STOP_SERVICE");
+      context.StartService(intent);
     }
   }
 
@@ -352,7 +357,7 @@ public partial class MainPage : CContentPage
   {
     var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
-    var url = ReqResUtil.GetMapAddress(serverAddress, roomId);
+    var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
     if (url == null)
     {
       await DisplayAlert("Server address or room id is invalid", null, "Ok");

@@ -2,16 +2,24 @@
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
-using Grace.DependencyInjection;
 using JustLogger;
 using JustLogger.Interfaces;
-using Roadnik.MAUI.Data;
-using System.Reflection;
+using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Modules.DeepLinksController;
+using Roadnik.MAUI.Modules.HttpClientProvider;
+using Roadnik.MAUI.Modules.LocationProvider;
+using Roadnik.MAUI.Modules.LocationReporter;
+using Roadnik.MAUI.Modules.PageController;
+using Roadnik.MAUI.Modules.PreferencesStorage;
+using Roadnik.MAUI.Modules.PushMessagesController;
+using Roadnik.MAUI.Modules.TelephonyMgrProvider;
+using Roadnik.MAUI.Modules.TilesCache;
+using Roadnik.MAUI.Platforms.Android.Services;
 using System.Text.RegularExpressions;
 
 namespace Roadnik.MAUI;
 
-public static class MauiProgram
+public static partial class MauiProgram
 {
   public static MauiApp CreateMauiApp()
   {
@@ -26,12 +34,8 @@ public static class MauiProgram
       Directory.CreateDirectory(logsFolder);
 
     var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 1000);
-#if ANDROID
-    var androidLogger = new Roadnik.MAUI.Platforms.Android.Toolkit.AndroidLogger("roadnik");
+    var androidLogger = new Platforms.Android.Toolkit.AndroidLogger("roadnik");
     var logger = lifetime.ToDisposeOnEnded(new CompositeLogger(androidLogger, fileLogger));
-#else
-    var logger = lifetime.ToDisposeOnEnded(fileLogger);
-#endif
 
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
     var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
@@ -45,40 +49,56 @@ public static class MauiProgram
       logger.Info("=========================================");
     });
 
-    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, new Regex(@"^.+\.log$"), TimeSpan.FromDays(30), null, _file =>
+    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, LogFileCleanerRegex(), TimeSpan.FromDays(30), null, _file =>
     {
       logger.Info($"Old file was removed: '{_file.Name}'");
     }));
 
-    var assembly = Assembly.GetExecutingAssembly();
-    var containerBuilder = DependencyManagerBuilder
-      .Create(lifetime, assembly)
+    logger.Info($"Installing dependencies...");
+
+    var appDeps = AppDependencyManager
+      .Create()
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ILogger>(logger)
-      .Build();
+      .AddModule<DeepLinksControllerImpl, IDeepLinksController>()
+      .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
+      .AddModule<AndroidLocationProviderImpl, ILocationProvider>()
+      .AddModule<LocationReporterImpl, ILocationReporter>()
+      .AddModule<PagesControllerImpl, IPagesController>()
+      .AddModule<PreferencesStorageImpl, IPreferencesStorage>()
+      .AddModule<PushMessagesControllerImpl, IPushMessagesController>()
+      .AddModule<TelephonyMgrProviderImpl, ITelephonyMgrProvider>()
+      .AddModule<TilesCacheImpl, ITilesCache>()
+      .ActivateOnStart<IPushMessagesController>();
+
+    Container = appDeps;
 
     logger.Info($"Dependencies are installed");
 
-    Container = containerBuilder.ServiceProvider;
+    logger.Info($"Building maui app...");
 
-    var builder = MauiApp.CreateBuilder();
-    builder
+    var app = MauiApp
+      .CreateBuilder()
       .UseMauiApp<App>()
       .UseMauiCommunityToolkit()
       .ConfigureFonts(_fonts =>
       {
         _fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
         _fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-      });
+      })
+      .Build();
 
-    logger.Info($"MauiApp is building...");
+    logger.Info($"Maui app is built");
 
-    return builder.Build();
+    return app;
   }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-  public static IInjectionScope Container { get; private set; }
+  public static IReadOnlyDependencyContainer Container { get; private set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+
+  [GeneratedRegex(@"^.+\.log$")]
+  private static partial Regex LogFileCleanerRegex();
 
 }

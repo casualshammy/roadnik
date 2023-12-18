@@ -13,10 +13,9 @@ internal static class Consts
   public const string PREF_USERNAME = "settings.network.username";
   public const string PREF_TIME_INTERVAL = "settings.report.time-interval";
   public const string PREF_DISTANCE_INTERVAL = "settings.report.distance-interval";
-  public const string PREF_TRACKPOINT_REPORTING_CONDITION = "settings.report.trackpoint-reporting-condition";
-  public const string PREF_USER_MSG = "settings.report.user-msg";
+  public const string PREF_TRACKPOINT_REPORTING_CONDITION = "settings.report.trackpoint-reporting-condition.v2";
   public const string PREF_MIN_ACCURACY = "settings.report.min-accuracy";
-  public const string PREF_MAP_OPEN_BEHAVIOR = "settings.appearance.map-open-behavior";
+  public const string PREF_MAP_OPEN_BEHAVIOR = "settings.appearance.map-open-behavior.v2";
   public const string PREF_MAP_CACHE_ENABLED = "settings.appearance.map-cache-enabled";
   public const string PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED = "settings.appearance.wipe-old-track-on-new-enabled";
   public const string PREF_NOTIFY_NEW_TRACK = "settings.notifications.on-new-track";
@@ -35,7 +34,7 @@ internal static class Consts
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
 
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
-  public const int NOTIFICATION_NEW_POINT = 10000;
-  public const int NOTIFICATION_NEW_TRACK = 10001;
+  public const int PUSH_MSG_NEW_POINT = 10000;
+  public const int PUSH_MSG_NEW_TRACK = 10001;
 
 }

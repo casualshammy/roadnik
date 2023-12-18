@@ -13,10 +13,14 @@ argParser.add_argument('--platform', type=str, default= "win-x64", required=Fals
 args = argParser.parse_args()
 platform = args.platform
 
+artifactsDir = os.path.join(os.getcwd(), "artifacts")
+if (not os.path.isdir(artifactsDir)):
+    os.makedirs(artifactsDir)
+
 outputDir = os.path.join(os.getcwd(), "output")
 if (os.path.isdir(outputDir)):
     shutil.rmtree(outputDir, ignore_errors=True)
-pkgFile = os.path.join(os.getcwd(), f"server-{platform}.zip")
+pkgFile = os.path.join(artifactsDir, f"server-{platform}.zip")
 if (os.path.isfile(pkgFile)):
     os.remove(pkgFile)
 
@@ -34,7 +38,7 @@ print(f"Version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
 serverOutputDir = os.path.join(outputDir, "bin")
 packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
-utils.callThrowIfError(f"dotnet build {sourceDirName} -c release -r {platform} --self-contained -o \"{serverOutputDir}\"")
+utils.callThrowIfError(f"dotnet publish {sourceDirName} -r {platform} --self-contained -o \"{serverOutputDir}\"")
 
 print(f"===========================================", flush=True)
 print(f"Compiling web...", flush=True)

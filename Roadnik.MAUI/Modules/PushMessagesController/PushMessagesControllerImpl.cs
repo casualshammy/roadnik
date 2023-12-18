@@ -1,27 +1,24 @@
-﻿#if ANDROID
-using Ax.Fw.Attributes;
+﻿using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using JustLogger.Interfaces;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Platforms.Android.Toolkit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
-using System.Threading.Tasks;
 using static Roadnik.MAUI.Data.Consts;
 
-namespace Roadnik.MAUI.Modules.FirebaseMessaging;
+namespace Roadnik.MAUI.Modules.PushMessagesController;
 
-[ExportClass(typeof(FirebaseMessagingImpl), Singleton: true, ActivateOnStart: true)]
-internal class FirebaseMessagingImpl
+[ExportClass(typeof(IPushMessagesController), Singleton: true, ActivateOnStart: true)]
+internal class PushMessagesControllerImpl : IPushMessagesController
 {
-  public FirebaseMessagingImpl(
-    IPreferencesStorage _preferencesStorage, 
+  private readonly ReplaySubject<PushNotificationEvent> p_pushMessagesSubj = new(1);
+
+  public PushMessagesControllerImpl(
+    IPreferencesStorage _preferencesStorage,
     IReadOnlyLifetime _lifetime,
     ILogger _log)
   {
@@ -77,6 +74,9 @@ internal class FirebaseMessagingImpl
       })
       .Subscribe(_lifetime);
   }
-}
 
-#endif
+  public IObservable<PushNotificationEvent> PushMessages => p_pushMessagesSubj;
+
+  public void AddPushMsg(PushNotificationEvent _event) => p_pushMessagesSubj.OnNext(_event);
+
+}

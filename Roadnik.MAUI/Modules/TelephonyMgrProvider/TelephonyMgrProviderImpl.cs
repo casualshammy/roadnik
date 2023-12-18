@@ -3,6 +3,7 @@ using Android.Telephony;
 using Ax.Fw;
 using Ax.Fw.Attributes;
 using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System;
@@ -24,7 +25,7 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider
   {
     p_telephonyManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
 
-    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var scheduler));
 
     SignalLevel = Observable.Create<double?>(_observer =>
     {

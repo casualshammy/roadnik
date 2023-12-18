@@ -1,9 +1,6 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-
-namespace Roadnik.Modules.FCMProvider.Parts;
+﻿namespace Roadnik.Server.Modules.FCMProvider.Parts;
 
 internal record FirebaseTokenResponse(
-  [property: JsonProperty("access_token")] string AccessToken,
-  [property: JsonProperty("token_type")] string TokenType,
-  [property: JsonProperty("expires_in")] int ExpiresIn);
+  string access_token,
+  string token_type,
+  int expires_in);

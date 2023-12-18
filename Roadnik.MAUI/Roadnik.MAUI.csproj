@@ -1,113 +1,114 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFrameworks>net6.0-android;net6.0-ios</TargetFrameworks>
+		<PropertyGroup>
+				<TargetFramework>net8.0-android</TargetFramework>
 
-		<OutputType>Exe</OutputType>
-		<RootNamespace>Roadnik.MAUI</RootNamespace>
-		<UseMaui>true</UseMaui>
-		<SingleProject>true</SingleProject>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
+				<OutputType>Exe</OutputType>
+				<RootNamespace>Roadnik.MAUI</RootNamespace>
+				<UseMaui>true</UseMaui>
+				<SingleProject>true</SingleProject>
+				<ImplicitUsings>enable</ImplicitUsings>
+				<Nullable>enable</Nullable>
 
-		<ApplicationTitle>Roadnik</ApplicationTitle>
-		<ApplicationId>com.axiolab.roadnik</ApplicationId>
-		<ApplicationIdGuid>6158dfe0-f703-445a-8bed-303eb8f49c34</ApplicationIdGuid>
+				<ApplicationTitle>Roadnik</ApplicationTitle>
+				<ApplicationId>com.axiolab.roadnik</ApplicationId>
+				<ApplicationIdGuid>6158dfe0-f703-445a-8bed-303eb8f49c34</ApplicationIdGuid>
 
-		<ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
-		<ApplicationVersion>124</ApplicationVersion>
+				<ApplicationDisplayVersion>1.0.2</ApplicationDisplayVersion>
+				<ApplicationVersion>176</ApplicationVersion>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">25.0</SupportedOSPlatformVersion>
-		<TargetPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">33</TargetPlatformVersion>
-	</PropertyGroup>
-	<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
-		<AndroidKeyStore>True</AndroidKeyStore>
-		<AndroidSigningKeyStore>com.axiolab.roadnik</AndroidSigningKeyStore>
-		<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
-	</PropertyGroup>
+				<SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
+		</PropertyGroup>
+		<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
+				<AndroidKeyStore>True</AndroidKeyStore>
+				<AndroidSigningKeyStore>com.axiolab.roadnik</AndroidSigningKeyStore>
+				<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
+				<EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+		</PropertyGroup>
 
-	<ItemGroup>
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="CornflowerBlue" />
-		<MauiSplashScreen Include="Resources\Splash\splashscreen.svg" />
+		<ItemGroup>
+				<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="CornflowerBlue" />
+				<MauiSplashScreen Include="Resources\Splash\splashscreen.svg" />
 
-		<MauiImage Include="Resources\Images\*" />
-		<MauiFont Include="Resources\Fonts\*" />
-		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-	</ItemGroup>
+				<MauiImage Include="Resources\Images\*" />
+				<MauiFont Include="Resources\Fonts\*" />
+				<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		</ItemGroup>
 
-	<ItemGroup>
-		<None Remove="google-services.json" />
-	</ItemGroup>
+		<ItemGroup>
+				<None Remove="google-services.json" />
+		</ItemGroup>
 
-	<ItemGroup>
-		<GoogleServicesJson Include="google-services.json" />
-	</ItemGroup>
+		<ItemGroup>
+				<GoogleServicesJson Include="google-services.json" />
+		</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Maui" Version="[2.0.0]" />
-		<PackageReference Include="JustLogger" Version="2.3.1" />
-		<PackageReference Include="Plugin.LocalNotification" Version="10.1.8" />
-		<PackageReference Include="QRCoder" Version="1.4.3" />
-	</ItemGroup>
+		<ItemGroup>
+				<PackageReference Include="CommunityToolkit.Maui" Version="[2.0.0]" />
+				<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 
-	<ItemGroup Condition="$(TargetFramework.Contains('-android'))">
-		<PackageReference Include="Xamarin.Firebase.Iid" Version="[121.1.0]" />
-		<PackageReference Include="Xamarin.Firebase.Messaging" Version="[122.0.0]" />
-		<PackageReference Include="Xamarin.Google.Dagger" Version="[2.39.1]" />
-		<PackageReference Include="Xamarin.GooglePlayServices.Base" Version="[118.1.0.1]" />
-	</ItemGroup>
+				<PackageReference Include="JustLogger" Version="3.0.1" />
+				<PackageReference Include="QRCoder" Version="1.4.3" />
 
-	<ItemGroup>
-		<ProjectReference Include="..\Roadnik.Common\Roadnik.Common.csproj" />
-	</ItemGroup>
+				<PackageReference Include="Xamarin.Firebase.Iid" Version="[121.1.0]" />
+				<PackageReference Include="Xamarin.Firebase.Messaging" Version="[122.0.0]" />
+				<PackageReference Include="Xamarin.Google.Dagger" Version="[2.39.1]" />
+				<PackageReference Include="Xamarin.GooglePlayServices.Base" Version="[118.1.0.1]" />
+		</ItemGroup>
 
-	<ItemGroup>
-		<Compile Update="Controls\ImagePopup.xaml.cs">
-			<DependentUpon>ImagePopup.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="Controls\AgreementsPopup.xaml.cs">
-		  <DependentUpon>AgreementsPopup.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="Pages\MainPage.xaml.cs">
-			<DependentUpon>MainPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="Pages\BookmarksPage.xaml.cs">
-			<DependentUpon>BookmarksPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="Pages\OptionsPage.xaml.cs">
-			<DependentUpon>OptionsPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="Resources\Strings\AppResources.Designer.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>AppResources.resx</DependentUpon>
-		</Compile>
-	</ItemGroup>
+		<ItemGroup>
+				<ProjectReference Include="..\Roadnik.Common\Roadnik.Common.csproj" />
+		</ItemGroup>
 
-	<ItemGroup>
-		<EmbeddedResource Update="Resources\Strings\AppResources.resx">
-			<Generator>ResXFileCodeGenerator</Generator>
-			<LastGenOutput>AppResources.Designer.cs</LastGenOutput>
-		</EmbeddedResource>
-	</ItemGroup>
+		<ItemGroup>
+				<Compile Update="Controls\ImagePopup.xaml.cs">
+						<DependentUpon>ImagePopup.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Controls\AgreementsPopup.xaml.cs">
+						<DependentUpon>AgreementsPopup.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Pages\MainPage.xaml.cs">
+						<DependentUpon>MainPage.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Pages\BookmarksPage.xaml.cs">
+						<DependentUpon>BookmarksPage.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Pages\OptionsPage.xaml.cs">
+						<DependentUpon>OptionsPage.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Resources\Strings\AppResources.Designer.cs">
+						<DesignTime>True</DesignTime>
+						<AutoGen>True</AutoGen>
+						<DependentUpon>AppResources.resx</DependentUpon>
+				</Compile>
+		</ItemGroup>
 
-	<ItemGroup>
-		<MauiXaml Update="Controls\ImagePopup.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Controls\AgreementsPopup.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Controls\OptionsItem.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Pages\MainPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Pages\BookmarksPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-	</ItemGroup>
+		<ItemGroup>
+				<EmbeddedResource Update="Resources\Strings\AppResources.resx">
+						<Generator>ResXFileCodeGenerator</Generator>
+						<LastGenOutput>AppResources.Designer.cs</LastGenOutput>
+				</EmbeddedResource>
+		</ItemGroup>
+
+		<ItemGroup>
+				<MauiXaml Update="Controls\ImagePopup.xaml">
+						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\AgreementsPopup.xaml">
+						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\OptionsItem.xaml">
+						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Pages\MainPage.xaml">
+						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Pages\BookmarksPage.xaml">
+						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+		</ItemGroup>
 
 </Project>

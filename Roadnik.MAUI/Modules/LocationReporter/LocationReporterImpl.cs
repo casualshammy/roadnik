@@ -16,6 +16,9 @@ using System.Text;
 using static Roadnik.MAUI.Data.Consts;
 using Roadnik.Common.ReqRes;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Roadnik.Common.Toolkit;
+using Ax.Fw.Pools;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -43,7 +46,7 @@ internal class LocationReporterImpl : ILocationReporter
     p_storage = _storage;
     p_httpClientProvider = _httpClientProvider;
 
-    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var reportScheduler));
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
@@ -53,7 +56,6 @@ internal class LocationReporterImpl : ILocationReporter
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
-        UserMsg = _storage.GetValueOrDefault<string>(PREF_USER_MSG),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME)
       })
@@ -131,8 +133,22 @@ internal class LocationReporterImpl : ILocationReporter
           p_statsFlow.OnNext(stats);
 
           p_log.Info($"Sending location data, lat: *{location.Latitude % 10}, lng: *{location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
-          var url = GetUrl(prefs.ServerAddress, prefs.RoomId, prefs.Username, prefs.UserMsg, location, batteryCharge, signalStrength);
-          var res = await _httpClientProvider.Value.GetAsync(url, _lifetime.Token);
+
+          var reqData = new StorePathPointReq()
+          {
+            RoomId = prefs.RoomId,
+            Username = prefs.Username ?? prefs.RoomId,
+            Lat = (float)location.Latitude,
+            Lng = (float)location.Longitude,
+            Alt = (float)(location.Altitude ?? 0d),
+            Speed = (float)(location.Speed ?? 0d),
+            Acc = (float)(location.Accuracy ?? 100d),
+            Battery = (float)batteryCharge,
+            GsmSignal = (float?)signalStrength,
+            Bearing = (float)(location.Course ?? 0d),
+          };
+
+          using var res = await _httpClientProvider.Value.PostAsJsonAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", reqData, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1 };
@@ -164,7 +180,7 @@ internal class LocationReporterImpl : ILocationReporter
       })
       .Do(_ => Interlocked.Decrement(ref counter));
 
-    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
 
     p_enableFlow
       .ObserveOn(locationProviderStateScheduler)
@@ -240,50 +256,6 @@ internal class LocationReporterImpl : ILocationReporter
         await Task.Delay(TimeSpan.FromSeconds(6), _ct);
       }
     }
-  }
-
-  private static string GetUrl(
-    string _serverAddress,
-    string _roomId,
-    string? _username,
-    string? _userMsg,
-    Location _location,
-    double _batteryCharge,
-    double? _signalStrength)
-  {
-    var culture = CultureInfo.InvariantCulture;
-    var sb = new StringBuilder();
-    sb.Append(_serverAddress.TrimEnd('/'));
-    sb.Append("/store?roomId=");
-    sb.Append(_roomId);
-    sb.Append("&username=");
-    sb.Append(_username ?? _roomId);
-    sb.Append("&lat=");
-    sb.Append(_location.Latitude.ToString(culture));
-    sb.Append("&lon=");
-    sb.Append(_location.Longitude.ToString(culture));
-    sb.Append("&alt=");
-    sb.Append(_location.Altitude?.ToString(culture) ?? "0");
-    sb.Append("&speed=");
-    sb.Append(_location.Speed?.ToString(culture) ?? "0");
-    sb.Append("&acc=");
-    sb.Append(_location.Accuracy?.ToString(culture) ?? "100");
-    sb.Append("&bearing=");
-    sb.Append(_location.Course?.ToString(culture) ?? "0");
-    sb.Append("&battery=");
-    sb.Append(((float)(_batteryCharge * 100)).ToString(culture));
-    if (_signalStrength != null)
-    {
-      sb.Append("&gsm_signal=");
-      sb.Append(((float)(_signalStrength.Value * 100)).ToString(culture));
-    }
-    if (_userMsg?.Length > 0)
-    {
-      sb.Append("&var=");
-      sb.Append(_userMsg);
-    }
-
-    return sb.ToString();
   }
 
 }

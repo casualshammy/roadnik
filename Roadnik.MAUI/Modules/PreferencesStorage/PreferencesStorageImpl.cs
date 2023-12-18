@@ -3,12 +3,12 @@ using Ax.Fw.Attributes;
 using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using JustLogger.Interfaces;
-using Newtonsoft.Json;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Subjects;
+using System.Text.Json;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
@@ -41,14 +41,14 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     if (preferenceValue == null)
       return default;
 
-    obj = JsonConvert.DeserializeObject<T>(preferenceValue);
+    obj = JsonSerializer.Deserialize<T>(preferenceValue);
     p_cache.Put(_key, obj);
     return (T?)obj;
   }
 
   public void SetValue<T>(string _key, T? _value)
   {
-    var json = JsonConvert.SerializeObject(_value);
+    var json = JsonSerializer.Serialize(_value);
     Preferences.Default.Set(_key, json);
     p_cache.Put(_key, _value);
     p_prefChangedFlow.OnNext();
@@ -73,7 +73,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage
     SetValue(PREF_TIME_INTERVAL, 10);
     SetValue(PREF_DISTANCE_INTERVAL, 100);
     SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
-    SetValue(PREF_USER_MSG, "Hi there!");
     SetValue(PREF_MIN_ACCURACY, 30);
     SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}");
     SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);

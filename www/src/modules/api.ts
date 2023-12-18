@@ -27,7 +27,6 @@ export interface TimedStorageEntry {
     Battery?: number | undefined | null;
     GsmSignal?: number | undefined | null;
     Bearing?: number | undefined | null;
-    Message?: string | undefined | null;
 }
 
 export interface GetPathResData {

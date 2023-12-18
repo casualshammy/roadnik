@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System.Text.Json;
 
 namespace Roadnik.Common.ReqRes.PushMessages;
 
-public record PushMsg(PushMsgType Type, JToken Data);
+public record PushMsg(PushMsgType Type, JsonElement Data);

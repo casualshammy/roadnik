@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System.Text.Json;
 
 namespace Roadnik.MAUI.Data;
 
-public record JsToCSharpMsg(string MsgType, JToken Data);
+public record JsToCSharpMsg(string MsgType, JsonElement Data);

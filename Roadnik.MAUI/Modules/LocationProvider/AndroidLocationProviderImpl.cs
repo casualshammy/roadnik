@@ -1,5 +1,4 @@
-﻿#if ANDROID
-using Android.Content;
+﻿using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
@@ -50,7 +49,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
       .Intersect(knownProviders)
       .ToArray();
 
-    if (!usableProviders.Any())
+    if (usableProviders.Length == 0)
     {
       p_logger.Error($"There is not known providers: <{string.Join(">, <", providers)}>");
       return;
@@ -174,4 +173,3 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   }
 
 }
-#endif

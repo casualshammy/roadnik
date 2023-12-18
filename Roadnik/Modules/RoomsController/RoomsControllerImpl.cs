@@ -1,29 +1,40 @@
-﻿using Ax.Fw;
-using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
-using JustLogger.Interfaces;
+using AxToolsServerNet.Data.Serializers;
 using Roadnik.Data;
 using Roadnik.Interfaces;
+using Roadnik.Server.Data.WebSockets;
+using Roadnik.Server.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Runtime;
+using ILogger = JustLogger.Interfaces.ILogger;
 
 namespace Roadnik.Modules.RoomsController;
 
-[ExportClass(typeof(IRoomsController), Singleton: true)]
-internal class RoomsControllerImpl : IRoomsController
+internal class RoomsControllerImpl : IRoomsController, IAppModule<RoomsControllerImpl>
 {
+  public static RoomsControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance(
+      (IDocumentStorageAot _storage,
+      IReadOnlyLifetime _lifetime,
+      ISettingsController _settingsController,
+      IWebSocketCtrl _webSocketCtrl,
+      ILogger _log) => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log));
+  }
+
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
 
-  private readonly IDocumentStorage p_storage;
+  private readonly IDocumentStorageAot p_storage;
   private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
 
-  public RoomsControllerImpl(
-    IDocumentStorage _storage,
+  private RoomsControllerImpl(
+    IDocumentStorageAot _storage,
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
     IWebSocketCtrl _webSocketCtrl,
@@ -32,7 +43,7 @@ internal class RoomsControllerImpl : IRoomsController
     p_storage = _storage;
     var log = _log["users-controller"];
 
-    _lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var scheduler));
 
     _settingsController.Settings
       .WhereNotNull()
@@ -45,10 +56,18 @@ internal class RoomsControllerImpl : IRoomsController
           .ObserveOn(scheduler)
           .SelectAsync(async (_, _ct) =>
           {
-            var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(_ct: _ct);
+            var entries = p_storage.ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, _ct: _ct);
 
             await foreach (var roomGroup in entries.GroupBy(_ => _.Data.RoomId))
             {
+              if (roomGroup.Key.IsNullOrEmpty())
+              {
+                await foreach (var entry in roomGroup)
+                  await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+
+                continue;
+              }
+
               var limit = _conf.AnonymousMaxPoints;
               var user = await GetRoomAsync(roomGroup.Key, _ct);
               if (user != null)
@@ -77,7 +96,7 @@ internal class RoomsControllerImpl : IRoomsController
 
         try
         {
-          var entries = p_storage.ListSimpleDocumentsAsync<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"), _to: to, _ct: _ct);
+          var entries = p_storage.ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_data.RoomId}.%"), _to: to, _ct: _ct);
 
           var entriesDeleted = 0L;
           await foreach (var entry in entries)
@@ -104,7 +123,7 @@ internal class RoomsControllerImpl : IRoomsController
 
   public async Task RegisterRoomAsync(string _roomId, string _email, CancellationToken _ct)
   {
-    await p_storage.WriteSimpleDocumentAsync(_roomId, new User(_roomId, _email, null), _ct);
+    await p_storage.WriteSimpleDocumentAsync(_roomId, new User(_roomId, _email, null), DocStorageJsonCtx.Default.User, _ct);
   }
 
   public async Task UnregisterRoomAsync(string _roomId, CancellationToken _ct)
@@ -114,14 +133,14 @@ internal class RoomsControllerImpl : IRoomsController
 
   public async Task<User?> GetRoomAsync(string _roomId, CancellationToken _ct)
   {
-    var doc = await p_storage.ReadSimpleDocumentAsync<User>(_roomId, _ct);
+    var doc = await p_storage.ReadSimpleDocumentAsync(_roomId, DocStorageJsonCtx.Default.User, _ct);
     return doc?.Data;
   }
 
   public async Task<IReadOnlyList<User>> ListRegisteredRoomsAsync(CancellationToken _ct)
   {
     var users = await p_storage
-      .ListSimpleDocumentsAsync<User>(_ct: _ct)
+      .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.User, _ct: _ct)
       .Select(_ => _.Data)
       .ToListAsync(_ct);
 

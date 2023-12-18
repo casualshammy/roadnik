@@ -1,9 +1,9 @@
 ﻿using Ax.Fw.SharedTypes.Interfaces;
-using Roadnik.Modules.Settings;
+using Roadnik.Server.Data.Settings;
 
-namespace Roadnik.Interfaces;
+namespace Roadnik.Server.Interfaces;
 
 public interface ISettingsController
 {
-    IRxProperty<SettingsImpl?> Settings { get; }
+  IRxProperty<AppSettings?> Settings { get; }
 }

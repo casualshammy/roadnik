@@ -276,8 +276,7 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
 
     const popUpText =
-        `<center><b>${_user}</b>: ${_entry.Message ?? "Hi!"}</center>
-        </br>
+        `<center><b>${_user}</b> (${elapsedString})</center>
         <p>
         ${kmh.toFixed(2)} km/h @ ${Math.ceil(_entry.Altitude)} m @ ${Math.round(_entry.Bearing ?? -1)}°
         </br>
@@ -287,8 +286,6 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         Battery: ${_entry.Battery}%
         </br>
         GSM power: ${_entry.GsmSignal}%
-        <br/>
-        Updated ${elapsedString}
         </p>`;
 
     return popUpText;

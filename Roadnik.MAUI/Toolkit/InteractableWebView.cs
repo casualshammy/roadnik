@@ -1,9 +1,10 @@
 ﻿using JustLogger.Interfaces;
-using Newtonsoft.Json.Linq;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 
 namespace Roadnik.MAUI.Toolkit;
 
@@ -14,7 +15,7 @@ public partial class InteractableWebView : WebView
   private readonly IPreferencesStorage? p_storage;
   private readonly Subject<JsToCSharpMsg> p_jsonDataFlow = new();
   private readonly Subject<(string MsgLevel, string Msg)> p_consoleMsgFlow = new();
-  
+
   public InteractableWebView() : base()
   {
     var cMauiApp = Application.Current as CMauiApplication;
@@ -53,13 +54,9 @@ public partial class InteractableWebView : WebView
   {
     try
     {
-      var jToken = JToken.Parse(_data);
-      if (jToken != null)
-      {
-        var msg = jToken.ToObject<JsToCSharpMsg>();
-        if (msg != null)
-          p_jsonDataFlow.OnNext(msg);
-      }
+      var msg = JsonSerializer.Deserialize<JsToCSharpMsg>(_data, GenericSerializationOptions.CaseInsensitive);
+      if (msg != null)
+        p_jsonDataFlow.OnNext(msg);
     }
     catch { }
   }

@@ -1,24 +1,30 @@
-﻿using Ax.Fw.Attributes;
+﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger.Interfaces;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using AxToolsServerNet.Data.Serializers;
 using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.Common.Serializers;
 using Roadnik.Interfaces;
+using Roadnik.Modules.FCMProvider;
 using Roadnik.Modules.FCMProvider.Parts;
+using Roadnik.Server.Interfaces;
+using Roadnik.Server.Modules.FCMProvider.Parts;
 using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using ILogger = JustLogger.Interfaces.ILogger;
 
-namespace Roadnik.Modules.FCMProvider;
+namespace Roadnik.Server.Modules.FCMProvider;
 
-[ExportClass(typeof(IFCMPublisher), Singleton: true)]
-internal class FCMPublisherImpl : IFCMPublisher
+internal class FCMPublisherImpl : IFCMPublisher, IAppModule<FCMPublisherImpl>
 {
+  public static FCMPublisherImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime, ILogger _log) => new FCMPublisherImpl(_settingsController, _lifetime, _log));
+  }
+
   private readonly ILogger p_log;
-  private readonly JsonSerializerSettings p_camelCaseSerializer;
   private readonly IRxProperty<FCMSettions?> p_fcmSettings;
   private readonly HttpClient p_httpClient = new();
   private volatile FCMAccessToken? p_accessToken;
@@ -30,15 +36,6 @@ internal class FCMPublisherImpl : IFCMPublisher
   {
     p_log = _log["fcm-provider"];
 
-    p_camelCaseSerializer = new JsonSerializerSettings()
-    {
-      ContractResolver = new DefaultContractResolver
-      {
-        NamingStrategy = new CamelCaseNamingStrategy()
-      },
-      Formatting = Formatting.Indented
-    };
-
     p_fcmSettings = _settingsController.Settings
       .Select(_ =>
       {
@@ -49,8 +46,8 @@ internal class FCMPublisherImpl : IFCMPublisher
 
         try
         {
-          var json = System.IO.File.ReadAllText(_.FCMServiceAccountJsonPath, Encoding.UTF8);
-          var data = JsonConvert.DeserializeObject<ServiceAccountAuthData>(json);
+          var json = File.ReadAllText(_.FCMServiceAccountJsonPath, Encoding.UTF8);
+          var data = JsonSerializer.Deserialize(json, FcmPushJsonCtx.Default.ServiceAccountAuthData);
           if (data == null)
             return null;
 
@@ -71,29 +68,33 @@ internal class FCMPublisherImpl : IFCMPublisher
     if (settings == null)
       return false;
 
-    var payload = new
+    var payload = new FcmMsg()
     {
-      Message = new
+      Message = new FcmMsgContent()
       {
         Topic = _topic,
-        Data = new
+        Data = new FcmMsgContentData()
         {
-          JsonData = JToken.FromObject(_pushMsg).ToString(Formatting.None)
+          JsonData = JsonSerializer.Serialize(_pushMsg, AndroidPushJsonCtx.Default.PushMsg)
         },
-        Android = new
+        Android = new FcmMsgContentAndroid()
         {
           Ttl = "3600s"
         }
       }
     };
 
-    var json = JsonConvert.SerializeObject(payload, p_camelCaseSerializer);
+    var json = JsonSerializer.Serialize(payload, FcmPushJsonCtx.Default.FcmMsg);
 
     using var message = new HttpRequestMessage(
       HttpMethod.Post,
       $"https://fcm.googleapis.com/v1/projects/{settings.ProjectId}/messages:send");
 
     var token = await GetJwtTokenAsync(settings.Data, _ct);
+
+#if DEBUG
+    p_log.Warn($"FCM JWT: {token}");
+#endif
 
     message.Headers.Add("Authorization", $"Bearer {token}");
     using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -116,7 +117,7 @@ internal class FCMPublisherImpl : IFCMPublisher
 
     p_log.Info($"Generating new FCM access token...");
 
-    using var message = new HttpRequestMessage(HttpMethod.Post, _data.TokenUri);
+    using var message = new HttpRequestMessage(HttpMethod.Post, _data.token_uri);
     using var form = new MultipartFormDataContent();
     var authToken = GetMasterToken(_data);
     using var tokenContent = new StringContent(authToken);
@@ -130,31 +131,29 @@ internal class FCMPublisherImpl : IFCMPublisher
 
     response.EnsureSuccessStatusCode();
 
-    var token = JsonConvert.DeserializeObject<FirebaseTokenResponse>(content, p_camelCaseSerializer);
-    if (token == null || token.AccessToken.IsNullOrWhiteSpace() || token.ExpiresIn < 10)
+    var token = JsonSerializer.Deserialize(content, FcmPushJsonCtx.Default.FirebaseTokenResponse);
+    if (token == null || token.access_token.IsNullOrWhiteSpace() || token.expires_in < 10)
       throw new InvalidOperationException("Token is invalid!");
 
-    var validUntil = now.AddSeconds(token.ExpiresIn - 60);
-    p_accessToken = new FCMAccessToken(token.AccessToken, validUntil);
+    var validUntil = now.AddSeconds(token.expires_in - 60);
+    p_accessToken = new FCMAccessToken(token.access_token, validUntil);
 
     p_log.Info($"Generated new FCM access token, valid until '{validUntil}'");
 
-    return token.AccessToken;
+    return token.access_token;
   }
 
-  private string GetMasterToken(ServiceAccountAuthData _data)
+  private static string GetMasterToken(ServiceAccountAuthData _data)
   {
     var now = DateTimeOffset.UtcNow;
 
-    var header = JsonConvert.SerializeObject(new { alg = "RS256", typ = "JWT" }, p_camelCaseSerializer);
-    var payload = JsonConvert.SerializeObject(new
-    {
-      iss = _data.ClientEmail,
-      aud = _data.TokenUri,
-      scope = "https://www.googleapis.com/auth/firebase.messaging",
-      iat = now.ToUnixTimeSeconds(),
-      exp = now.ToUnixTimeSeconds() + 3600
-    }, p_camelCaseSerializer);
+    var header = JsonSerializer.Serialize(new FcmMasterTokenReqHeader("RS256", "JWT"), FcmPushJsonCtx.Default.FcmMasterTokenReqHeader);
+    var payload = JsonSerializer.Serialize(new FcmMasterTokenReqBody(
+      _data.client_email,
+      _data.token_uri,
+      "https://www.googleapis.com/auth/firebase.messaging",
+      now.ToUnixTimeSeconds(),
+      now.ToUnixTimeSeconds() + 3600), FcmPushJsonCtx.Default.FcmMasterTokenReqBody);
 
     var headerBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(header));
     var payloadBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
@@ -162,7 +161,7 @@ internal class FCMPublisherImpl : IFCMPublisher
     var unsignedJwtBytes = Encoding.UTF8.GetBytes(unsignedJwtData);
 
     using var rsa = RSA.Create();
-    rsa.ImportFromPem(_data.PrivateKey.ToCharArray());
+    rsa.ImportFromPem(_data.private_key.ToCharArray());
 
     var signature = rsa.SignData(unsignedJwtBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
     var signatureBase64 = Convert.ToBase64String(signature);

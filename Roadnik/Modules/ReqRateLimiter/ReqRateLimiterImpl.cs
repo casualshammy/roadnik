@@ -1,12 +1,10 @@
 ﻿using Ax.Fw;
-using Ax.Fw.Attributes;
 using Roadnik.Interfaces;
 using System.Collections.Concurrent;
 using System.Net;
 
 namespace Roadnik.Modules.ReqRateLimiter;
 
-[ExportClass(typeof(IReqRateLimiter), Singleton: true)]
 internal class ReqRateLimiterImpl : IReqRateLimiter
 {
   private readonly ConcurrentDictionary<string, ConcurrentDictionary<IPAddress, long>> p_limiter = new();

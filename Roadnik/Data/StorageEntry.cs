@@ -13,5 +13,4 @@ internal record StorageEntry(
   float? Accuracy = null,
   float? Battery = null,
   float? GsmSignal = null,
-  float? Bearing = null,
-  string? Message = null);
+  float? Bearing = null);

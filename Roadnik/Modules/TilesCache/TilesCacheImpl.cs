@@ -1,19 +1,24 @@
-﻿using Ax.Fw.Attributes;
-using Ax.Fw.Cache;
+﻿using Ax.Fw.Cache;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
+using Roadnik.Server.Interfaces;
 using System.Reactive.Subjects;
 using System.Text;
 
 namespace Roadnik.Modules.TilesCache;
 
-[ExportClass(typeof(ITilesCache), Singleton: true)]
-internal class TilesCacheImpl : ITilesCache
+internal class TilesCacheImpl : ITilesCache, IAppModule<TilesCacheImpl>
 {
+  public static TilesCacheImpl ExportInstance(IAppDependencyCtx _ctx)
+  {
+    return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime) => new TilesCacheImpl(_settingsController, _lifetime));
+  }
+
   private readonly IRxProperty<FileCache?> p_cacheProp;
 
-  public TilesCacheImpl(
+  private TilesCacheImpl(
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime)
   {

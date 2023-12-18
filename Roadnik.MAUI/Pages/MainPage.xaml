@@ -32,25 +32,6 @@
         <Grid
             IsVisible="{Binding CanShowRegilarView}"
             AbsoluteLayout.LayoutFlags="PositionProportional"
-            AbsoluteLayout.LayoutBounds="0.00, 0.95, 60, 50">
-            <Button
-                WidthRequest="40"
-                HeightRequest="40"
-                CornerRadius="45"
-                Background="{StaticResource PrimaryBrush}"
-                Clicked="Message_Clicked" 
-                SemanticProperties.Description="{Binding MsgButtonDescription}" >
-            </Button>
-            <ImageButton 
-                WidthRequest="30"
-                HeightRequest="30"
-                Source="message.svg"
-                InputTransparent="True" />
-        </Grid>
-
-        <Grid
-            IsVisible="{Binding CanShowRegilarView}"
-            AbsoluteLayout.LayoutFlags="PositionProportional"
             AbsoluteLayout.LayoutBounds="0.95, 0.95, 140, 130">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />

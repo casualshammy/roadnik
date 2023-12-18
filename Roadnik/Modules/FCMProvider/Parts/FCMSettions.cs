@@ -1,3 +1,3 @@
-﻿namespace Roadnik.Modules.FCMProvider.Parts;
+﻿namespace Roadnik.Server.Modules.FCMProvider.Parts;
 
 internal record FCMSettions(ServiceAccountAuthData Data, string ProjectId);

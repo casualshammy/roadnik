@@ -13,10 +13,9 @@ internal record TimedStorageEntry(
   float? Accuracy = null,
   float? Battery = null,
   float? GsmSignal = null,
-  float? Bearing = null,
-  string? Message = null)
+  float? Bearing = null)
 {
-  public static TimedStorageEntry FromStorageEntry(DocumentTypedEntry<StorageEntry> _document)
+  public static TimedStorageEntry FromStorageEntry(DocumentEntry<StorageEntry> _document)
   {
     var data = _document.Data;
     return new TimedStorageEntry(
@@ -30,7 +29,6 @@ internal record TimedStorageEntry(
       data.Accuracy,
       data.Battery,
       data.GsmSignal,
-      data.Bearing,
-      data.Message);
+      data.Bearing);
   }
 }

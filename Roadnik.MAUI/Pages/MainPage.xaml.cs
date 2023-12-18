@@ -1,5 +1,5 @@
-﻿using Ax.Fw;
-using Ax.Fw.Extensions;
+﻿using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
@@ -10,6 +10,7 @@ using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
@@ -18,6 +19,7 @@ using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Pages;
@@ -29,7 +31,8 @@ public partial class MainPage : CContentPage
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILogger p_log;
-  private readonly Subject<bool> p_pageVisibleChangeFlow = new();
+  private readonly IObservable<bool> p_pageIsVisible;
+  private readonly Subject<bool> p_pageAppearedChangeFlow = new();
   private readonly Subject<bool> p_webAppDataReceivedSubj = new();
   private readonly MainPageViewModel p_bindingCtx;
 
@@ -43,11 +46,10 @@ public partial class MainPage : CContentPage
     var pageController = Container.Locate<IPagesController>();
     pageController.OnMainPage(this);
 
-    var notificationMgr = Container.Locate<INotificationMgr>();
-
     p_storage = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
+    var pushMsgCtrl = Container.Locate<IPushMessagesController>();
 
     if (BindingContext is not MainPageViewModel bindingCtx)
     {
@@ -57,7 +59,19 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx = bindingCtx;
 
-    p_lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var scheduler));
+    p_pageIsVisible = p_pageAppearedChangeFlow
+      .CombineLatest(App.WindowActivated)
+      .Throttle(TimeSpan.FromSeconds(1))
+      .Scan(false, (_acc, _tuple) =>
+      {
+        var (appeared, appWindowActivated) = _tuple;
+        if (!appeared)
+          return false;
+
+        return appWindowActivated;
+      });
+
+    p_lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var scheduler));
 
     p_storage.PreferencesChanged
       .Select(_ =>
@@ -69,7 +83,7 @@ public partial class MainPage : CContentPage
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
       .Sample(TimeSpan.FromSeconds(1), scheduler)
-      .CombineLatest(p_pageVisibleChangeFlow)
+      .CombineLatest(p_pageIsVisible)
       .ObserveOn(scheduler)
       .SelectAsync(async (_entry, _ct) =>
       {
@@ -99,8 +113,8 @@ public partial class MainPage : CContentPage
         {
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
           using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
-          using var req = new HttpRequestMessage(HttpMethod.Head, url);
-          using var res = await p_httpClient.Value.SendAsync(req, linkedCts.Token);
+          using var req = new HttpRequestMessage(HttpMethod.Get, url);
+          using var res = await p_httpClient.Value.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
           res.EnsureSuccessStatusCode();
           p_bindingCtx.WebViewUrl = url;
           bindingCtx.IsRemoteServerNotResponding = false;
@@ -114,23 +128,19 @@ public partial class MainPage : CContentPage
       }, scheduler)
       .Subscribe(p_lifetime);
 
-    p_lifetime.ToDisposeOnEnded(Pool<EventLoopScheduler>.Get(out var webAppDataScheduler));
+    p_lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var webAppDataScheduler));
 
     p_webView.JsonData
       .ObserveOn(webAppDataScheduler)
-      .WithLatestFrom(p_pageVisibleChangeFlow)
+      .WithLatestFrom(p_pageIsVisible)
       .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
 
-    notificationMgr.Events
-      .CombineLatest(p_webAppDataReceivedSubj)
-      .Where(_ => _.Second)
-      .Select(_ => _.First)
-      .Where(_ =>
-      {
-        var diff = Environment.TickCount64 - _.Timestamp;
-        return diff < 15 * 1000;
-      })
+    pushMsgCtrl.PushMessages
+      .CombineLatest(p_webAppDataReceivedSubj, (_pushEvent, _webAppIsReady) => (PushEvent: _pushEvent, WebAppIsReady: _webAppIsReady))
+      .Where(_ => _.WebAppIsReady)
+      .Select(_ => _.PushEvent)
+      .Throttle(TimeSpan.FromMilliseconds(250))
       .SelectAsync(OnNotificationAsync)
       .Subscribe(p_lifetime);
 
@@ -140,13 +150,13 @@ public partial class MainPage : CContentPage
   protected override void OnAppearing()
   {
     base.OnAppearing();
-    p_pageVisibleChangeFlow.OnNext(true);
+    p_pageAppearedChangeFlow.OnNext(true);
   }
 
   protected override void OnDisappearing()
   {
     base.OnDisappearing();
-    p_pageVisibleChangeFlow.OnNext(false);
+    p_pageAppearedChangeFlow.OnNext(false);
     p_webAppDataReceivedSubj.OnNext(false);
   }
 
@@ -205,7 +215,7 @@ public partial class MainPage : CContentPage
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
     {
-      var layer = msg.Data.ToObject<string>();
+      var layer = msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive);
       if (layer == null)
         return;
 
@@ -213,7 +223,7 @@ public partial class MainPage : CContentPage
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
     {
-      var mapViewState = msg.Data.ToObject<MapViewState>();
+      var mapViewState = msg.Data.Deserialize<MapViewState>(GenericSerializationOptions.CaseInsensitive);
       if (mapViewState == null)
         return;
 
@@ -225,7 +235,7 @@ public partial class MainPage : CContentPage
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.ToObject<string>());
+      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive));
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
     {
@@ -335,7 +345,7 @@ public partial class MainPage : CContentPage
   private void Reload_Clicked(object _sender, EventArgs _e)
   {
     p_bindingCtx.IsRemoteServerNotResponding = false;
-    p_pageVisibleChangeFlow.OnNext(true);
+    p_pageAppearedChangeFlow.OnNext(true);
   }
 
   private async void Share_Clicked(object _sender, EventArgs _e)
@@ -377,25 +387,11 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async void Message_Clicked(object _sender, EventArgs _e)
-  {
-    var msg = await DisplayPromptAsync(
-      "Message:",
-      "Some special characters are not allowed",
-      maxLength: ReqResUtil.MaxUserMsgLength,
-      initialValue: p_storage.GetValueOrDefault<string>(PREF_USER_MSG));
-
-    if (msg == null)
-      return;
-
-    p_storage.SetValue(PREF_USER_MSG, ReqResUtil.ClearUserMsg(msg));
-  }
-
   private async Task OnJsMsgHostMsgRequestDoneAsync(JsToCSharpMsg _msg)
   {
     p_bindingCtx.IsSpinnerRequired = false;
 
-    var msgData = _msg.Data.ToObject<HostMsgRequestDoneData>();
+    var msgData = _msg.Data.Deserialize<HostMsgRequestDoneData>(GenericSerializationOptions.CaseInsensitive);
     if (msgData == null)
     {
       p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_REQUEST_DONE)}': '{_msg.Data}'");
@@ -446,10 +442,10 @@ public partial class MainPage : CContentPage
     if (username.IsNullOrWhiteSpace())
       return;
 
-    var latLng = _msg.Data.ToObject<LatLng>();
+    var latLng = _msg.Data.Deserialize<LatLng>(GenericSerializationOptions.CaseInsensitive);
     if (latLng == null)
     {
-      p_log.Error($"Tried to create new point, but could not parse location!\n{_msg.Data.ToString(Newtonsoft.Json.Formatting.Indented)}");
+      p_log.ErrorJson($"Tried to create new point, but could not parse location!", _msg.Data);
       return;
     }
 
@@ -475,12 +471,12 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async Task OnNotificationAsync(NotificationTapEvent _e, CancellationToken _ct)
+  private async Task OnNotificationAsync(PushNotificationEvent _e, CancellationToken _ct)
   {
-    if (_e.NotificationId == NOTIFICATION_NEW_POINT)
+    if (_e.NotificationId == PUSH_MSG_NEW_POINT)
     {
-      var data = _e.Data?.ToObject<LatLng>();
-      if (data == null)
+      var data = _e.Data.Deserialize<LatLng>();
+      if (data == default)
         return;
 
       var command = $"setLocation({data.Lat}, {data.Lng}, {15});";
@@ -492,9 +488,9 @@ public partial class MainPage : CContentPage
           p_log.Error($"Command returned an error: '{command}'");
       });
     }
-    else if (_e.NotificationId == NOTIFICATION_NEW_TRACK)
+    else if (_e.NotificationId == PUSH_MSG_NEW_TRACK)
     {
-      var username = _e.Data?.ToObject<string>();
+      var username = _e.Data.Deserialize<string>();
       if (username == null)
         return;
 

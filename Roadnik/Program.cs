@@ -3,40 +3,52 @@ using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
-using Ax.Fw.Storage.Extensions;
-using CommandLine;
-using Grace.DependencyInjection;
+using Ax.Fw.Storage.Interfaces;
+using AxToolsServerNet.Data.Serializers;
+using FluentArgs;
 using JustLogger;
 using JustLogger.Interfaces;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Roadnik.Common.ReqRes;
 using Roadnik.Interfaces;
+using Roadnik.Modules.Controllers;
+using Roadnik.Modules.ReqRateLimiter;
+using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.Settings;
-using Roadnik.Toolkit;
+using Roadnik.Modules.TilesCache;
+using Roadnik.Modules.WebSocketController;
+using Roadnik.Server.Data.Settings;
+using Roadnik.Server.Interfaces;
+using Roadnik.Server.Modules.FCMProvider;
+using Roadnik.Server.Modules.WebServer.Middlewares;
+using System;
 using System.Net;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
-using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using ILogger = JustLogger.Interfaces.ILogger;
 
 namespace Roadnik;
 
-public class Program
+public partial class Program
 {
-  public static void Main(string[] _args)
+  public static async Task Main(string[] _args)
   {
-    var assembly = Assembly.GetExecutingAssembly() ?? throw new Exception("Can't get assembly!");
-    var workingDir = Path.GetDirectoryName(assembly.Location) ?? throw new Exception("Can't get working dir!");
+    //var assembly = Assembly.GetEntryAssembly() ?? throw new Exception("Can't get assembly!");
+    var workingDir = AppContext.BaseDirectory;
 
-    var configFilePath = Parser.Default
-      .ParseArguments<Options>(_args)
-      .MapResult(_x => _x.ConfigFilePath, _ => null) ?? Path.Combine(workingDir, "../_config.json");
+    var configFilePath = (string?)null;
+    FluentArgsBuilder
+      .New()
+      .Parameter("-c", "--config").WithDescription("Path to config file").IsOptional()
+      .Call(_configPath =>
+      {
+        configFilePath = _configPath;
+      })
+      .Parse(_args);
+
+    configFilePath ??= Path.Combine(workingDir, "../_config.json");
 
     if (!File.Exists(configFilePath))
     {
@@ -49,30 +61,27 @@ public class Program
 
     var settingsController = new SettingsController(configFilePath, lifetime);
 
-    var settings = JsonConvert.DeserializeObject<SettingsImpl>(File.ReadAllText(configFilePath, Encoding.UTF8))
-      ?? throw new FormatException($"Settings file is corrupted!");
+    var settings = await settingsController.Settings
+      .TakeUntil(DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5), TaskPoolScheduler.Default)
+      .WhereNotNull()
+      .FirstOrDefaultAsync();
+
+    if (settings == null)
+      throw new FormatException($"Settings file is corrupted!");
 
     if (!Directory.Exists(settings.LogDirPath))
       Directory.CreateDirectory(settings.LogDirPath);
 
-    using var logger = new CompositeLogger(new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000), new ConsoleLogger());
+    using var logger = new CompositeLogger(
+      new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000),
+      new ConsoleLogger());
 
-    lifetime.DoOnEnded(() =>
-    {
-      logger.Info($"-------------------------------------------");
-      logger.Info($"Server stopped");
-      logger.Info($"-------------------------------------------");
-    });
-
-    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, new Regex(@".+\.log"), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
+    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
 
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
-    var docStorage = new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"))
-      .WithCache(1000, TimeSpan.FromHours(1));
-
-    lifetime.ToDisposeOnEnding(docStorage);
+    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorageAot(Path.Combine(settings.DataDirPath, "data.v0.db")));
 
     Observable
       .Interval(TimeSpan.FromHours(6))
@@ -80,20 +89,24 @@ public class Program
       .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
       .Subscribe(lifetime);
 
-    var depMgr = DependencyManagerBuilder
-      .Create(lifetime, assembly)
-      .AddSingleton<JustLogger.Interfaces.ILogger>(logger)
+    var depMgr = AppDependencyManager
+      .Create()
+      .AddSingleton<ILogger>(logger)
       .AddSingleton<ILoggerDisposable>(logger)
-      .AddSingleton(docStorage)
+      .AddSingleton<IDocumentStorageAot>(docStorage)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
-      .AddSingleton<ISettings>(settings)
       .AddSingleton<ISettingsController>(settingsController)
+      .AddSingleton<IReqRateLimiter>(new ReqRateLimiterImpl())
+      .AddModule<FCMPublisherImpl, IFCMPublisher>()
+      .AddModule<RoomsControllerImpl, IRoomsController>()
+      .AddModule<TilesCacheImpl, ITilesCache>()
+      .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .Build();
 
-    var webApp = CreateWebApp(_args, depMgr);
+    var webApp = CreateWebHost(depMgr, settings);
 
-    var version = new SerializableVersion(assembly.GetName().Version ?? new Version(0, 0, 0, 0));
+    var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
     logger.Info($"-------------------------------------------");
     logger.Info($"Roadnik Server Started");
     logger.Info($"Version: {version}");
@@ -102,38 +115,86 @@ public class Program
     logger.Info($"Config file: '{configFilePath}'");
     logger.Info($"-------------------------------------------");
 
+    lifetime.InstallConsoleCtrlCHook();
+
     webApp.Run();
-    lifetime.End();
+
+    logger.Info($"-------------------------------------------");
+    logger.Info($"Server stopped");
+    logger.Info($"-------------------------------------------");
   }
 
-  public static WebApplication CreateWebApp(string[] _args, DependencyManager _depMgr)
+  public static IHost CreateWebHost(IReadOnlyDependencyContainer _depContainer, AppSettings _appSettings)
   {
-    var settings = _depMgr.Locate<ISettings>();
+    var builder = WebApplication.CreateSlimBuilder();
 
-    var builder = WebApplication.CreateBuilder(_args);
-    builder.Host.ConfigureLogging((_ctx, _logBuilder) => _logBuilder.ClearProviders());
-    builder.Host.UseGraceContainer(_depMgr.ServiceProvider);
-    builder.Host.ConfigureServices(_ => _.AddResponseCompression(_options => _options.EnableForHttps = true));
-    builder.WebHost.ConfigureKestrel(_options =>
+    builder.Logging.ClearProviders();
+
+    builder.Services.ConfigureHttpJsonOptions(_opt =>
     {
-      _options.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
-      _options.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
-      _options.Listen(IPAddress.Parse(settings.IpBind), settings.PortBind);
+      _opt.SerializerOptions.TypeInfoResolverChain.Insert(0, ControllersJsonCtx.Default);
+      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, SettingsJsonCtx.Default);
+      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, UserAggregatorJsonCtx.Default);
+      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, PackagesJsonCtx.Default);
     });
 
-    builder.Services.AddControllers(_options => _options.Filters.Add<ApiKeyFilter>());
-    builder.Services.AddRazorPages();
+    builder.Services.AddResponseCompression(_options => _options.EnableForHttps = true);
+    builder.WebHost.ConfigureKestrel(_opt =>
+    {
+      _opt.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
+      _opt.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
+      _opt.Listen(IPAddress.Parse(_appSettings.IpBind), _appSettings.PortBind);
+    });
 
     var app = builder.Build();
+
+    var reqAllowedWithoutAuth = new HashSet<string>()
+    {
+      "register-room",
+      "unregister-room",
+      "list-registered-rooms"
+    };
+
     app
-      .UseRouting()
-      .UseWebSockets(new WebSocketOptions()
-      {
-        KeepAliveInterval = TimeSpan.FromSeconds(60)
-      })
+      //.UseHttpsRedirection()
+      //.UseRouting()
       .Use(ForwardProxyHeadersMiddlewareAsync)
       .UseResponseCompression()
-      .UseEndpoints(_endpoints => _endpoints.MapControllers());
+      .UseMiddleware<AdminAccessMiddleware>(reqAllowedWithoutAuth, _depContainer.Locate<ISettingsController>())
+      .UseWebSockets(new WebSocketOptions()
+      {
+        KeepAliveInterval = TimeSpan.FromSeconds(30)
+      });
+
+    var controller = new ApiControllerV0(
+      _depContainer.Locate<ISettingsController>(),
+      _depContainer.Locate<IDocumentStorageAot>(),
+      _depContainer.Locate<ILogger>(),
+      _depContainer.Locate<IWebSocketCtrl>(),
+      _depContainer.Locate<IRoomsController>(),
+      _depContainer.Locate<ITilesCache>(),
+      _depContainer.Locate<IReqRateLimiter>(),
+      _depContainer.Locate<IFCMPublisher>());
+
+    app.MapGet("/", controller.GetIndexFile);
+    app.MapGet("{**path}", controller.GetStaticFile);
+    app.MapGet("/ping", () => Results.Ok());
+    app.MapGet("/r/{**path}", controller.GetRoom);
+    app.MapGet("/thunderforest", controller.GetThunderforestImageAsync);
+    app.MapGet(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointGetAsync);
+    app.MapPost(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointPostAsync);
+    app.MapGet(ReqPaths.GET_ROOM_PATHS, controller.GetRoomPathsAsync);
+    app.MapPost(ReqPaths.START_NEW_PATH, controller.StartNewPathAsync);
+    app.MapPost(ReqPaths.CREATE_NEW_POINT, controller.CreateNewPointAsync);
+    app.MapGet(ReqPaths.LIST_ROOM_POINTS, controller.GetRoomPointsAsync);
+    app.MapPost(ReqPaths.DELETE_ROOM_POINT, controller.DeleteRoomPointAsync);
+    app.MapGet(ReqPaths.GET_FREE_ROOM_ID, controller.GetFreeRoomIdAsync);
+    app.MapPost(ReqPaths.UPLOAD_LOG, controller.UploadLogAsync);
+    app.MapGet(ReqPaths.IS_ROOM_ID_VALID, controller.IsRoomIdValid);
+    app.MapGet("/ws", controller.StartWebSocketAsync);
+    app.MapPost("/register-room", controller.RegisterRoomAsync);
+    app.MapPost("/unregister-room", controller.DeleteRoomRegistrationAsync);
+    app.MapGet("/list-registered-rooms", controller.ListUsersAsync);
 
     return app;
   }
@@ -167,10 +228,7 @@ public class Program
     return _next(_ctx);
   }
 
-}
+  [GeneratedRegex(@".+\.log")]
+  private static partial Regex GetLogFilesCleanerRegex();
 
-public class Options
-{
-  [Option('c', "config", Required = false, HelpText = "Set config file path")]
-  public string? ConfigFilePath { get; set; }
 }

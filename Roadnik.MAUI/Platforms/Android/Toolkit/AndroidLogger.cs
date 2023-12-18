@@ -2,8 +2,8 @@
 using JustLogger;
 using JustLogger.Interfaces;
 using JustLogger.Toolkit;
-using Newtonsoft.Json.Linq;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
@@ -11,6 +11,8 @@ internal class AndroidLogger : ILogger
 {
   private readonly string p_tag;
   private readonly ConcurrentDictionary<LogEntryType, long> p_stats = new();
+
+  ILogger ILogger.this[string _scope] => throw new NotImplementedException();
 
   public AndroidLogger(string _tag)
   {
@@ -31,10 +33,22 @@ internal class AndroidLogger : ILogger
     Log.Error(p_tag, $"{_text}{Environment.NewLine}{_ex.Message}");
   }
 
+  public void ErrorJson<T>(string _text, T _object, string? _scope = null) where T : notnull
+  {
+    p_stats.AddOrUpdate(LogEntryType.ERROR, 1, (_, _prevValue) => ++_prevValue);
+    Log.Error(p_tag, $"{_text}{Environment.NewLine}{JsonSerializer.Serialize(_object)}");
+  }
+
   public void Warn(string _text, string? _name = null)
   {
     p_stats.AddOrUpdate(LogEntryType.WARN, 1, (_, _prevValue) => ++_prevValue);
     Log.Warn(p_tag, _text);
+  }
+
+  public void WarnJson<T>(string _text, T _object, string? _scope = null) where T : notnull
+  {
+    p_stats.AddOrUpdate(LogEntryType.WARN, 1, (_, _prevValue) => ++_prevValue);
+    Log.Warn(p_tag, $"{_text}{Environment.NewLine}{JsonSerializer.Serialize(_object)}");
   }
 
   public void Info(string _text, string? _name = null)
@@ -43,10 +57,10 @@ internal class AndroidLogger : ILogger
     Log.Info(p_tag, _text);
   }
 
-  public void InfoJson(string _text, JToken _object, string? _name = null)
+  public void InfoJson<T>(string _text, T _object, string? _scope = null) where T : notnull
   {
     p_stats.AddOrUpdate(LogEntryType.INFO, 1, (_, _prevValue) => ++_prevValue);
-    Log.Info(p_tag, $"{_text}{Environment.NewLine}{_object.ToString(Newtonsoft.Json.Formatting.Indented)}");
+    Log.Info(p_tag, $"{_text}{Environment.NewLine}{JsonSerializer.Serialize(_object)}");
   }
 
   public long GetEntriesCount(LogEntryType _type)

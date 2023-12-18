@@ -6,7 +6,8 @@ on:
       - 'dev/**'
 
 jobs:
-  build:
+		
+  windows server:
 
     runs-on: windows-latest
     permissions: write-all
@@ -15,7 +16,7 @@ jobs:
     - name: Get dotnet
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '7.0.x'
+        dotnet-version: '8.0.x'
       
     - name: Install Python3   
       uses: actions/setup-python@v4
@@ -36,11 +37,86 @@ jobs:
     - name: Build Server Windows x64
       run: python build-server.py --platform win-x64
 
+    - name: Create Github Release
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/*.zip
+        name: "Roadnik Win-x64 Server ${{ env.tag }}"
+        tag_name: "${{ env.tag }}"
+        fail_on_unmatched_files: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generate_release_notes: false
+		
+  linux server:
+
+    runs-on: ubuntu-20.04
+    permissions: write-all
+      
+    steps:
+    - name: Get dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+      
+    - name: Install Python3   
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        architecture: 'x64'
+      
+    - name: Install Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '>=18.16.0'
+      
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
+
     - name: Build Server Ubuntu 18.04 x64
-      run: python build-server.py --platform ubuntu.18.04-x64
+      run: python build-server.py --platform linux-x64
+
+    - name: Create Github Release
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/*.zip
+        name: "Roadnik Linux-x64 Server ${{ env.tag }}"
+        tag_name: "${{ env.tag }}"
+        fail_on_unmatched_files: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generate_release_notes: false
+		
+  android client:
+
+    runs-on: windows-latest
+    permissions: write-all
+      
+    steps:
+    - name: Get dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+      
+    - name: Install Python3   
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        architecture: 'x64'
+      
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
 
     - name: Build Client Android
-      run: python build-client.py --framework net6.0-android
+      run: python build-client.py --framework net8.0-android
       env:
         ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
 
@@ -50,10 +126,9 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          *.zip
           artifacts/*.apk
           artifacts/*.aab
-        name: "Release ${{ env.tag }}"
+        name: "Roadnik Android Client ${{ env.tag }}"
         tag_name: "${{ env.tag }}"
         fail_on_unmatched_files: false
         token: ${{ secrets.GITHUB_TOKEN }}

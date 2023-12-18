@@ -66,4 +66,4 @@ print(f"Done! Package file is '{pkgFile}'", flush=True)
 print(f"===========================================", flush=True)
 
 git.create_tag_and_push(version, "origin", "casualshammy", True)
-git.merge("main", git.get_current_branch_name(), True, "casualshammy", True)
+# git.merge("main", git.get_current_branch_name(), True, "casualshammy", True)

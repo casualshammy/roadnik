@@ -24,9 +24,7 @@ pkgFile = os.path.join(artifactsDir, f"server-{platform}.zip")
 if (os.path.isfile(pkgFile)):
     os.remove(pkgFile)
 
-branch = git.get_current_branch()
-commitIndex = git.get_last_commit_index()
-version = f"{branch}.{commitIndex}"
+version = f"{git.get_version_from_current_branch()}.{git.get_last_commit_index()}"
 
 print(f"===========================================", flush=True)
 print(f"Output folder: '{outputDir}'", flush=True)

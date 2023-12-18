@@ -6,8 +6,7 @@ on:
       - 'dev/**'
 
 jobs:
-		
-  windows server:
+  windows-server:
 
     runs-on: windows-latest
     permissions: write-all
@@ -49,8 +48,8 @@ jobs:
         fail_on_unmatched_files: false
         token: ${{ secrets.GITHUB_TOKEN }}
         generate_release_notes: false
-		
-  linux server:
+
+  linux-server:
 
     runs-on: ubuntu-20.04
     permissions: write-all
@@ -92,8 +91,8 @@ jobs:
         fail_on_unmatched_files: false
         token: ${{ secrets.GITHUB_TOKEN }}
         generate_release_notes: false
-		
-  android client:
+
+  android-client:
 
     runs-on: windows-latest
     permissions: write-all

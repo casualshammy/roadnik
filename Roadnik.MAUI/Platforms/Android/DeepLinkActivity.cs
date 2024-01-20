@@ -7,8 +7,8 @@ namespace Roadnik.MAUI;
 
 [Activity(Exported = true)]
 [IntentFilter(
-  new[] { Intent.ActionView }, 
-  Categories = new[] { Intent.ActionView, Intent.CategoryDefault, Intent.CategoryBrowsable },
+  [Intent.ActionView], 
+  Categories = [Intent.ActionView, Intent.CategoryDefault, Intent.CategoryBrowsable],
   DataScheme = "https", 
   DataHost = "roadnik.app", 
   DataPathPattern = "/r/", 

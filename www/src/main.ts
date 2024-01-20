@@ -296,9 +296,9 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         Accuracy: ${Math.ceil(_entry.Accuracy ?? 100)} m
         </p>
         <p>
-        Battery: ${_entry.Battery}%
+        Battery: ${((_entry.Battery ?? 0) * 100).toFixed(0)}%
         </br>
-        GSM power: ${_entry.GsmSignal}%
+        GSM power: ${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}%
         </p>`;
 
     return popUpText;

@@ -66,4 +66,5 @@ print(f"Done!", flush=True)
 print(f"===========================================", flush=True)
 
 git.create_tag_and_push(version)
+build_common.packages.callThrowIfError("git stash")
 git.merge("main", git.get_current_branch_name(), True, "casualshammy", True)

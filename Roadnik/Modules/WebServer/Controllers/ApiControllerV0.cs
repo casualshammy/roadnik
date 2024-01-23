@@ -139,7 +139,7 @@ public class ApiControllerV0
       return Results.BadRequest("Y is null!");
     if (_z is null)
       return Results.BadRequest("Z is null!");
-    if (string.IsNullOrWhiteSpace(_type))
+    if (_type.IsNullOrWhiteSpace())
       return Results.BadRequest("Type is null!");
     if (!ReqResUtil.ValidMapTypes.Contains(_type))
       return Results.BadRequest("Type is incorrect!");
@@ -167,15 +167,16 @@ public class ApiControllerV0
     if (tfCacheSize == null || tfCacheSize.Value <= 0)
       return Results.Stream(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
 
-    var ms = new MemoryStream();
     using (var stream = await p_httpClient.GetStreamAsync(url, _ct))
-      await stream.CopyToAsync(ms, _ct);
+      await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, stream, _ct);
 
-    ms.Position = 0;
-    await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, ms, _ct);
+    var newCachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
+    if (newCachedStream != null)
+      return Results.Stream(newCachedStream, MimeMapping.KnownMimeTypes.Png);
 
-    ms.Position = 0;
-    return Results.Stream(ms, MimeMapping.KnownMimeTypes.Png);
+    var errMsg = $"Can't find cached thunderforest tile: x:{_x.Value};y:{_y.Value};z:{_z.Value};t:{_type}";
+    log.Error(errMsg);
+    return InternalServerError(errMsg);
   }
 
   //[HttpGet(ReqPaths.STORE_PATH_POINT)]

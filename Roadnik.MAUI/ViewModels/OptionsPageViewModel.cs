@@ -26,7 +26,6 @@ internal class OptionsPageViewModel : BaseViewModel
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
   private MapOpeningBehavior p_mapOpeningBehavior;
-  private bool p_mapCacheEnabled;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
@@ -46,7 +45,6 @@ internal class OptionsPageViewModel : BaseViewModel
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
     MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
-    MapCacheCommand = new Command(OnMapCache);
     WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
@@ -65,7 +63,6 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
         SetProperty(ref p_mapOpeningBehavior, p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR), nameof(MapOpenBehavior));
-        SetProperty(ref p_mapCacheEnabled, p_storage.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED), nameof(MapCacheEnabled));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
@@ -173,15 +170,6 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, p_mapOpeningBehavior);
     }
   }
-  public bool MapCacheEnabled
-  {
-    get => p_mapCacheEnabled;
-    set
-    {
-      SetProperty(ref p_mapCacheEnabled, value);
-      p_storage.SetValue(PREF_MAP_CACHE_ENABLED, p_mapCacheEnabled);
-    }
-  }
   public bool WipeOldTrackOnNewEnabled
   {
     get => p_wipeOldTrackOnNewEnabled;
@@ -218,7 +206,6 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
   public ICommand MapOpenBehaviorCommand { get; }
-  public ICommand MapCacheCommand { get; }
   public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
@@ -414,14 +401,6 @@ internal class OptionsPageViewModel : BaseViewModel
       MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
     else if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack)
       MapOpenBehavior = MapOpeningBehavior.LastTrackedRoute.ToString();
-  }
-
-  private void OnMapCache(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
-    MapCacheEnabled = toggled;
   }
 
   private void OnWipeOldTrackOnNew(object? _arg)

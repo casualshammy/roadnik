@@ -1,14 +1,15 @@
 # Server documentation
 
 ## OS
-Roadnik Server is the .NET 6 application so it can be builded for any .NET-supported platform. Also, every release contains `ubuntu-18.04` and `windows` binaries.
+Roadnik Server is the .NET 8 application so it can be builded for any .NET-supported platform. Also, every github release contains `linux-x64` and `windows-x64` binaries.
 
 ## Config file
 By default, server looks for `_config.json` file in __parent__ directory (../_config.json). Also, you can specify path to config by passing `-c` argument:
 ```bash
 roadnik -c "/path/to/config.json"
 ```
-Build-in config file is ready to be used.
+Or you can specify path to config file using enviroment variable `ROADNIK_CONFIG`.
+Config file in distributive package (github release) is ready to be used as is.
 
 Config file's options description:
 ```json
@@ -22,10 +23,10 @@ Config file's options description:
 	"IpBind": "0.0.0.0",					// ip to bind to (default: "0.0.0.0")
 	"AdminApiKey": null,					// admin api key (required for user management)
 	"AllowAnonymousPublish": true,			// allows unregistered users to publish geolocation data (**default: true**)
-	"AnonymousMaxPoints": 100,				// max geolocation points to store for unregistered users (default: 100)
-	"RegisteredMaxPoints": 1000,			// max geolocation points to store for registered users (default: 1000)
-	"AnonymousMinInterval": "00:00:10",		// minimum allowed interval between storage requests for unregistered users (default: 10 sec)
-	"RegisteredMinInterval": "00:00:01",	// minimum allowed interval between storage requests for registered users (default: 1 sec)
+	"AnonymousMaxPoints": 100,				// max geolocation points to store for unregistered users (default: 100); old point will be purged first
+	"RegisteredMaxPoints": 1000,			// max geolocation points to store for registered users (default: 1000); old point will be purged first
+	"AnonymousMinIntervalMs": 9900,			// minimum allowed interval between storage requests for unregistered users (default: 10 sec)
+	"RegisteredMinIntervalMs": 900,			// minimum allowed interval between storage requests for registered users (default: 1 sec)
 }
 ```
 Roadnik Server will serve all files from config's `WebrootDirPath`. Don't place your secrets there!
@@ -56,27 +57,26 @@ server {
 
 ## API
 
-### HTTP GET `/store`
+### HTTP GET `/store-path-point`
 Stores information about geolocation
 Query parameters:
 ```C#
-string key;         // unique key
+string roomId;      // room id
+string username;	// username
 float lat;          // latitude in format xx.xx
-float lon;          // longitude in format xx.xx
+float lng;          // longitude in format xx.xx
 float alt;          // altitude in metres
 float? speed;       // speed in metres per second (optional)
 float? acc;         // accuracy in metres (optional)
-float? battery;     // battery level in percent (optional, 0.0 - 100.0)
-float? gsm_signal;  // signal in percent (optional, 0.0 - 100.0)
+float? battery;     // battery level in percent (optional, 0.0 - 1.0)
+float? gsmSignal;   // signal in percent (optional, 0.0 - 1.0)
 float? bearing;     // bearing in degrees (optional, 0 - 360)
-string? var;        // user message (optional)
 ```
 
 ### HTTP GET `/get`
 Retreives a list of geolocation points
 Query parameters:
 ```C#
-string key;         // unique key
-int? limit;         // number of returned entries; new entries are returned first (optional)
-long? offset;       // (optional)
+string roomId;      // room id
+long? offset;       // timestamp offset
 ```

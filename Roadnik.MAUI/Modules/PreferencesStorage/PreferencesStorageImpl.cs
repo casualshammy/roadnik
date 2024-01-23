@@ -83,7 +83,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<Preferen
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
-    SetValue(PREF_MAP_CACHE_ENABLED, true);
   }
 
   private void MigratePreferences()

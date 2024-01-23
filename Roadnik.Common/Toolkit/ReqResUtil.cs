@@ -7,11 +7,11 @@ using System.Web;
 
 namespace Roadnik.Common.Toolkit;
 
-public static class ReqResUtil
+public static partial class ReqResUtil
 {
-  private static readonly Regex p_roomIdRegex = new(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled);
-  private static readonly Regex p_safeUserMessageRegex = new(@"^[\d\w\-_\s\!\,\.\:\?]*$", RegexOptions.Compiled);
-  private static readonly Regex p_safeUsernameRegex = new(@"^[a-zA-Z0-9\-_\@\#\$]*$", RegexOptions.Compiled);
+  private static readonly Regex p_roomIdRegex = GetRoomIdRegex();
+  private static readonly Regex p_safeUserMessageRegex = GetSafeUserMsgRegex();
+  private static readonly Regex p_safeUsernameRegex = GetSafeUsernameRegex();
 
   public static int MaxUserMsgLength { get; } = 1024;
 
@@ -23,7 +23,7 @@ public static class ReqResUtil
 
   public static string UserAgent { get; } = "RoadnikApp";
 
-  public static string[] ValidMapTypes { get; } = new[] { "cycle", "transport", "landscape", "outdoors" };
+  public static HashSet<string> ValidMapTypes { get; } = ["cycle", "transport", "landscape", "outdoors"];
 
   public static bool IsRoomIdValid([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_roomIdRegex.IsMatch(_data);
   public static bool IsUsernameSafe([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinUsernameLength && _data.Length <= MaxUsernameLength && p_safeUsernameRegex.IsMatch(_data);
@@ -75,4 +75,10 @@ public static class ReqResUtil
     return url;
   }
 
+  [GeneratedRegex(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled)]
+  private static partial Regex GetRoomIdRegex();
+  [GeneratedRegex(@"^[\d\w\-_\s\!\,\.\:\?]*$", RegexOptions.Compiled)]
+  private static partial Regex GetSafeUserMsgRegex();
+  [GeneratedRegex(@"^[a-zA-Z0-9\-_\@\#\$]*$", RegexOptions.Compiled)]
+  private static partial Regex GetSafeUsernameRegex();
 }

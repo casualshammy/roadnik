@@ -77,7 +77,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<Preferen
     SetValue(PREF_TIME_INTERVAL, 10);
     SetValue(PREF_DISTANCE_INTERVAL, 100);
     SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
-    SetValue(PREF_MIN_ACCURACY, 30);
+    SetValue(PREF_MIN_ACCURACY, 20);
     SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}");
     SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     SetValue(PREF_NOTIFY_NEW_POINT, true);

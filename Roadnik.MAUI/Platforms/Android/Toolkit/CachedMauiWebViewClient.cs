@@ -4,20 +4,19 @@ using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;
 using System.Text.RegularExpressions;
-using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 public partial class CachedMauiWebViewClient : MauiWebViewClient
 {
-  private static readonly Regex[] p_cacheRegexes = {
-    new Regex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$"),
-    new Regex(@"img/map_icon_\d+\.png$"),
-    new Regex(@"favicon\.ico$"),
-    new Regex(@"/r/\?id=[\w\-_]+$"),
-    new Regex(@"\.js$"),
-    new Regex(@"openstreetmap\.org/\d+/\d+/\d+\.png$"),
-  };
+  private static readonly Regex[] p_cacheRegexes = [
+    CacheRegexThunderforest(),
+    CacheRegexMapIcon(),
+    CacheRegexFavicon(),
+    CacheRegexRoomHtml(),
+    CacheRegexJs(),
+    CacheRegexOsm(),
+  ];
   private readonly ITilesCache? p_tilesCache;
   private readonly IPreferencesStorage? p_storage;
   private readonly ILogger? p_log;
@@ -38,10 +37,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     IWebResourceRequest? _request)
   {
     if (p_tilesCache == null)
-      return base.ShouldInterceptRequest(_view, _request);
-
-    var cacheEnabled = p_storage?.GetValueOrDefault<bool>(PREF_MAP_CACHE_ENABLED);
-    if (cacheEnabled != true)
       return base.ShouldInterceptRequest(_view, _request);
 
     var url = _request?.Url?.ToString();
@@ -65,5 +60,18 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     p_tilesCache.EnqueueDownload(url);
     return base.ShouldInterceptRequest(_view, _request);
   }
+
+  [GeneratedRegex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$")]
+  private static partial Regex CacheRegexThunderforest();
+  [GeneratedRegex(@"img/map_icon_\d+\.png$")]
+  private static partial Regex CacheRegexMapIcon();
+  [GeneratedRegex(@"favicon\.ico$")]
+  private static partial Regex CacheRegexFavicon();
+  [GeneratedRegex(@"/r/\?id=[\w\-_]+$")]
+  private static partial Regex CacheRegexRoomHtml();
+  [GeneratedRegex(@"\.js$")]
+  private static partial Regex CacheRegexJs();
+  [GeneratedRegex(@"openstreetmap\.org/\d+/\d+/\d+\.png$")]
+  private static partial Regex CacheRegexOsm();
 
 }

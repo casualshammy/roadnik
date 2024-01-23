@@ -15,7 +15,6 @@ namespace Roadnik.MAUI.Platforms.Android.Services;
 public class LocationReporterService : CAndroidService
 {
   private const int NOTIFICATION_ID = 100;
-  private const int REQUEST_POST_NOTIFICATIONS = 1000;
   private readonly IReadOnlyLifetime p_globalLifetime;
   private readonly ILocationReporter p_locationReporter;
   private ILifetime? p_lifetime;
@@ -99,14 +98,6 @@ public class LocationReporterService : CAndroidService
     var context = global::Android.App.Application.Context;
     var manager = (NotificationManager)context.GetSystemService(NotificationService)!;
     var activity = PendingIntent.GetActivity(context, 0, Platform.CurrentActivity?.Intent, PendingIntentFlags.Immutable);
-
-    if (Build.VERSION.SdkInt > BuildVersionCodes.SV2 && Platform.CurrentActivity != null)
-    {
-      if (ActivityCompat.ShouldShowRequestPermissionRationale(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS"))
-      {
-        ActivityCompat.RequestPermissions(Platform.CurrentActivity, new[] { "android.permission.POST_NOTIFICATIONS" }, REQUEST_POST_NOTIFICATIONS);
-      }
-    }
 
     var channelId = "ServiceChannel";
     var channel = new NotificationChannel(channelId, "Notify when recording is active", NotificationImportance.Max);

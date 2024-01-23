@@ -1,4 +1,6 @@
-﻿using Ax.Fw.Extensions;
+﻿using Android.OS;
+using AndroidX.Core.App;
+using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
@@ -147,6 +149,21 @@ public partial class MainPage : CContentPage
       .SelectAsync(OnNotificationAsync)
       .Subscribe(p_lifetime);
 
+    p_pageAppearedChangeFlow
+      .Where(_ => _)
+      .Throttle(TimeSpan.FromSeconds(1))
+      .Subscribe(_ =>
+      {
+        if (Build.VERSION.SdkInt > BuildVersionCodes.SV2 && Platform.CurrentActivity != null)
+        {
+          // ActivityCompat.ShouldShowRequestPermissionRationale(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS") // always returns false!!!
+
+          var granted = ActivityCompat.CheckSelfPermission(Platform.CurrentActivity, "android.permission.POST_NOTIFICATIONS");
+          if (granted != Android.Content.PM.Permission.Granted)
+            ActivityCompat.RequestPermissions(Platform.CurrentActivity, ["android.permission.POST_NOTIFICATIONS"], 1000);
+        }
+      }, p_lifetime);
+
     p_log.Info($"Main page is opened");
   }
 
@@ -169,19 +186,15 @@ public partial class MainPage : CContentPage
     if (permission == PermissionStatus.Granted)
       return true;
 
-    var platform = DeviceInfo.Platform;
     var osVersion = DeviceInfo.Current.Version;
-    if (platform == DevicePlatform.Android)
+    if (osVersion.Major < 11)
     {
-      if (osVersion.Major < 11)
-      {
-        return (await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted);
-      }
-      else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
-      {
-        p_bindingCtx.IsPermissionWindowShowing = true;
-        return false;
-      }
+      return await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted;
+    }
+    else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
+    {
+      p_bindingCtx.IsPermissionWindowShowing = true;
+      return false;
     }
     throw new NotImplementedException();
   }

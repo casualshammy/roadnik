@@ -30,10 +30,11 @@
                     <RowDefinition Height="2" />
                 </Grid.RowDefinitions>
                 <Label 
-                Text="Connection settings"
-                FontAttributes="Bold"
-                VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                    Text="Connection settings"
+                    FontAttributes="Italic"
+                    FontSize="Medium"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
                     Grid.Column="0"
                     Grid.Row="1"
@@ -73,7 +74,8 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Tracking settings"
-                    FontAttributes="Bold"
+                    FontAttributes="Italic"
+                    FontSize="Medium"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
@@ -109,8 +111,8 @@
             <controls:OptionsItem
                 x:Name="p_deleteOldRouteOnNew"
                 Grid.Row="9"
-                Title="Delete old track when starting a new one"
-                DetailsText=""
+                Title="Purge old track"
+                DetailsText="Your track from previous recording session will not be preserved when you'll begin a new session"
                 ShowSwitch="True"
                 SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
                 ShowBottomLine="False"/>
@@ -126,10 +128,11 @@
                     <RowDefinition Height="2" />
                 </Grid.RowDefinitions>
                 <Label 
-                Text="Map appearance"
-                    FontAttributes="Bold"
-                VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+                    Text="Map appearance"
+                    FontAttributes="Italic"
+                    FontSize="Medium"
+                    VerticalOptions="Center"
+                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
                 Grid.Column="0"
                 Grid.Row="1"
@@ -144,14 +147,7 @@
                 Grid.Row="11"
                 Title="What to show on map opening"
                 DetailsText="{Binding MapOpenBehavior}"
-                TapCommand="{Binding MapOpenBehaviorCommand}"/>
-            <controls:OptionsItem
-                x:Name="p_mapCacheToggle"
-                Grid.Row="12"
-                Title="Map data caching"
-                DetailsText="Will help in case of slow internet connection.&#10;Supported on Android 8+"
-                ShowSwitch="True"
-                SwitchTapped="{Binding MapCacheCommand}"
+                TapCommand="{Binding MapOpenBehaviorCommand}"
                 ShowBottomLine="False"/>
 
             <!-- NOTIFICATIONS -->
@@ -166,7 +162,8 @@
                 </Grid.RowDefinitions>
                 <Label 
                     Text="Notifications"
-                    FontAttributes="Bold"
+                    FontAttributes="Italic"
+                    FontSize="Medium"
                     VerticalOptions="Center"
                     TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
                 <Rectangle 
@@ -196,7 +193,7 @@
                 SwitchTapped="{Binding NotifyNewPointCommand}"
                 ShowBottomLine="False"/>
         </VerticalStackLayout>
-        
+
     </ScrollView>
 
 

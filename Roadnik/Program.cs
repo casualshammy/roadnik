@@ -48,6 +48,7 @@ public partial class Program
       })
       .Parse(_args);
 
+    configFilePath ??= Environment.GetEnvironmentVariable("ROADNIK_CONFIG");
     configFilePath ??= Path.Combine(workingDir, "../_config.json");
 
     if (!File.Exists(configFilePath))
@@ -124,7 +125,7 @@ public partial class Program
     logger.Info($"-------------------------------------------");
   }
 
-  public static IHost CreateWebHost(IReadOnlyDependencyContainer _depContainer, AppSettings _appSettings)
+  private static IHost CreateWebHost(IReadOnlyDependencyContainer _depContainer, AppSettings _appSettings)
   {
     var builder = WebApplication.CreateSlimBuilder();
 

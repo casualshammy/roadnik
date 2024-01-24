@@ -17,6 +17,7 @@ using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
+using System;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -53,6 +54,7 @@ public partial class MainPage : CContentPage
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
     var pushMsgCtrl = Container.Locate<IPushMessagesController>();
+    var locationReporter = Container.Locate<ILocationReporter>();
 
     if (BindingContext is not MainPageViewModel bindingCtx)
     {
@@ -162,6 +164,29 @@ public partial class MainPage : CContentPage
           if (granted != Android.Content.PM.Permission.Granted)
             ActivityCompat.RequestPermissions(Platform.CurrentActivity, ["android.permission.POST_NOTIFICATIONS"], 1000);
         }
+      }, p_lifetime);
+
+    locationReporter.Enabled
+      .DistinctUntilChanged()
+      .Subscribe(_enabled =>
+      {
+        _ = MainThread.InvokeOnMainThreadAsync(() =>
+        {
+          if (_enabled)
+          {
+            if (Application.Current?.Resources.TryGetValue("DangerLowBrush", out var rawBrush) == true && rawBrush is Brush brush)
+              p_startRecordButton.Background = brush;
+            else
+              p_log.Error($"Resource 'DangerLowBrush' is not found!");
+          }
+          else
+          {
+            if (Application.Current?.Resources.TryGetValue("PrimaryBrush", out var rawBrush) == true && rawBrush is Brush brush)
+              p_startRecordButton.Background = brush;
+            else
+              p_log.Error($"Resource 'PrimaryBrush' is not found!");
+          }
+        });
       }, p_lifetime);
 
     p_log.Info($"Main page is opened");
@@ -285,29 +310,11 @@ public partial class MainPage : CContentPage
       if (!await IsLocationPermissionOkAsync())
         return;
 
-      if (Application.Current?.Resources.TryGetValue("DangerLowBrush", out var rawBrush) == true && rawBrush is Brush brush)
-        p_startRecordButton.Background = brush;
-      else
-        p_log.Error($"Resource 'DangerLowBrush' is not found!");
-
-      _ = Task.Run(async () => await locationReporter.ReportStartNewPathAsync(p_lifetime.Token));
-
-      var context = global::Android.App.Application.Context;
-      var intent = new Android.Content.Intent(context, typeof(LocationReporterService));
-      intent.SetAction("START_SERVICE");
-      context.StartForegroundService(intent);
+      locationReporter.SetState(true);
     }
     else
     {
-      if (Application.Current?.Resources.TryGetValue("PrimaryBrush", out var rawBrush) == true && rawBrush is Brush brush)
-        p_startRecordButton.Background = brush;
-      else
-        p_log.Error($"Resource 'PrimaryBrush' is not found!");
-
-      var context = global::Android.App.Application.Context;
-      var intent = new Android.Content.Intent(context, typeof(LocationReporterService));
-      intent.SetAction("STOP_SERVICE");
-      context.StartService(intent);
+      locationReporter.SetState(false);
     }
   }
 

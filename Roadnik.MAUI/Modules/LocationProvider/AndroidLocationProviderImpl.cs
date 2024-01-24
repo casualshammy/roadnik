@@ -18,8 +18,10 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     return _ctx.CreateInstance((ILogger _logger) => new AndroidLocationProviderImpl(_logger));
   }
 
-  private readonly LocationManager p_locationManager;
+  private readonly LocationManager p_locationService;
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
+  private readonly Subject<string> p_providerDisabledSubj = new();
+  private readonly Subject<string> p_providerEnabledSubj = new();
   private readonly ILogger p_logger;
   private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
   private float p_minDistanceMeters = 0;
@@ -28,49 +30,40 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private AndroidLocationProviderImpl(ILogger _logger)
   {
     p_logger = _logger["location-provider"];
-    p_locationManager = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
+    p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
 
     Location = p_locationFlow
       .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
+
+    ProviderDisabled = p_providerDisabledSubj;
+    ProviderEnabled = p_providerEnabledSubj;
   }
 
   public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
+  public IObservable<string> ProviderDisabled { get; }
+  public IObservable<string> ProviderEnabled { get; }
 
-  public void Enable()
+  public void StartLocationWatcher(out bool _providerEnabled)
   {
+    _providerEnabled = 
+      p_locationService.IsLocationEnabled && 
+      p_locationService.IsProviderEnabled(LocationManager.GpsProvider);
+
     var oldEnabled = Interlocked.Exchange(ref p_enabled, 1);
 
     if (oldEnabled == 1)
       return;
 
-    var knownProviders = new[] { "gps", "passive" };
-    var providers = p_locationManager
-      .GetProviders(false)
-      .ToArray();
-
-    var usableProviders = providers
-      .Intersect(knownProviders)
-      .ToArray();
-
-    if (usableProviders.Length == 0)
-    {
-      p_logger.Error($"There is not known providers: <{string.Join(">, <", providers)}>");
-      return;
-    }
-
-    p_logger.Info($"Starting updates, providers: <{string.Join(">, <", providers)}>");
+    p_logger.Info($"Starting updates, providers: <{LocationManager.GpsProvider}>");
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
-      foreach (var provider in usableProviders)
-      {
-        p_locationManager.RequestLocationUpdates(provider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
-        p_logger.Info($"Subscribed to '{provider}' provider");
-      }
+      p_locationService.RequestLocationUpdates(LocationManager.GpsProvider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
+      p_logger.Info($"Subscribed to '{LocationManager.GpsProvider}' provider");
     });
   }
 
-  public void Disable()
+  public void StopLocationWatcher()
   {
     var oldEnabled = Interlocked.Exchange(ref p_enabled, 0);
 
@@ -81,7 +74,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
     try
     {
-      MainThread.BeginInvokeOnMainThread(() => p_locationManager.RemoveUpdates(this));
+      MainThread.BeginInvokeOnMainThread(() => p_locationService.RemoveUpdates(this));
     }
     catch (Exception ex)
     {
@@ -98,8 +91,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
     if (Interlocked.Read(ref p_enabled) == 1)
     {
-      Disable();
-      Enable();
+      StopLocationWatcher();
+      StartLocationWatcher(out _);
     }
   }
 
@@ -121,11 +114,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
         Course = _location.HasBearing ? _location.Bearing : null,
         Speed = _location.HasSpeed ? _location.Speed : null,
         Timestamp = timeStamp,
+        VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null,
       };
-      if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-#pragma warning disable CA1416 // Validate platform compatibility
-        location.VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null;
-#pragma warning restore CA1416 // Validate platform compatibility
 
       p_locationFlow.OnNext(location);
     }
@@ -145,11 +135,13 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
 
   public void OnProviderDisabled(string _provider)
   {
+    p_providerDisabledSubj.OnNext(_provider);
     p_logger.Info($"Provider '{_provider}' was disabled");
   }
 
   public void OnProviderEnabled(string _provider)
   {
+    p_providerEnabledSubj.OnNext(_provider);
     p_logger.Info($"Provider '{_provider}' was enabled");
   }
 

@@ -33,6 +33,9 @@ internal static class Consts
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
 
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
+  public const int NOTIFICATION_ID_RECORDING = 100;
+  public const int NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED = 101;
+
   public const int PUSH_MSG_NEW_POINT = 10000;
   public const int PUSH_MSG_NEW_TRACK = 10001;
 

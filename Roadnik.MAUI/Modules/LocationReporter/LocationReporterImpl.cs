@@ -1,4 +1,7 @@
-﻿using Ax.Fw.DependencyInjection;
+﻿using Android.App;
+using Android.Content;
+using Ax.Fw;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
@@ -6,6 +9,7 @@ using JustLogger.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Platforms.Android.Services;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -28,7 +32,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationRepo
       => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _locationProvider, _telephonyMgrProvider));
   }
 
-  record ForceReqData(DateTimeOffset DateTime, bool Ok);
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
@@ -197,8 +200,29 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationRepo
           stats = LocationReporterSessionStats.Empty;
           p_statsFlow.OnNext(stats);
         });
-        _life.DoOnEnding(_locationProvider.Disable);
-        _locationProvider.Enable();
+        _life.DoOnEnding(_locationProvider.StopLocationWatcher);
+
+        _life.DoOnEnding(async () =>
+        {
+          await MainThread.InvokeOnMainThreadAsync(() =>
+          {
+            var context = Android.App.Application.Context;
+            var intent = new Intent(context, typeof(BackgroundService));
+            intent.SetAction("STOP_SERVICE");
+            context.StartService(intent);
+          });
+        });
+
+        MainThread.InvokeOnMainThreadAsync(() =>
+        {
+          var context = Android.App.Application.Context;
+          var intent = new Intent(context, typeof(BackgroundService));
+          intent.SetAction("START_SERVICE");
+          context.StartForegroundService(intent);
+        });
+
+        _ = Task.Run(async () => await ReportStartNewPathAsync(_life.Token));
+        _locationProvider.StartLocationWatcher(out var locProviderEnabled);
         reportFlow.Subscribe(_life);
       });
 
@@ -214,9 +238,58 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationRepo
         else
           _locationProvider.ChangeConstrains(_.TimeInterval, 0f);
       });
+
+    _locationProvider.ProviderDisabled
+      .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))
+      .Where(_ => _.Enabled && _.ProviderDisabled == Android.Locations.LocationManager.GpsProvider)
+      .ToUnit()
+      .Subscribe(_unit =>
+      {
+        var context = Android.App.Application.Context;
+        var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
+        var activity = PendingIntent.GetActivity(
+          context,
+          0,
+          new Intent(Android.Provider.Settings.ActionLocationSourceSettings),
+          PendingIntentFlags.Immutable);
+
+        var channelId = "LocationProviderIsDisabled";
+        var channel = new NotificationChannel(channelId, "Notify when location provider is disabled", NotificationImportance.Max);
+        notificationMgr.CreateNotificationChannel(channel);
+        var notification = new Notification.Builder(context, channelId)
+          .SetContentTitle("Location provider is disabled")
+          .SetContentText("Please enable location provider in your phone's settings")
+          .SetContentIntent(activity)
+          .SetSmallIcon(Resource.Drawable.letter_r)
+          .SetAutoCancel(true)
+          .Build();
+
+        notificationMgr.Notify(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED, notification);
+
+        var page = Shell.Current.CurrentPage;
+        if (page != null && page.IsVisible)
+        {
+          _ = page.DisplayAlert(
+            "Location provider is disabled",
+            "Please enable location provider in your phone's settings\n\nYou can click notification in the notification drawer to open location settings",
+            "Okay");
+        }
+      }, _lifetime);
+
+    _locationProvider.ProviderEnabled
+      .Where(_ => _ == Android.Locations.LocationManager.GpsProvider)
+      .ToUnit()
+      .Subscribe(_unit =>
+      {
+        var context = Android.App.Application.Context;
+        var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
+        notificationMgr.Cancel(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED);
+      }, _lifetime);
   }
 
   public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;
+
+  public IObservable<bool> Enabled => p_enableFlow;
 
   public async Task<bool> IsEnabledAsync() => await p_enableFlow.FirstOrDefaultAsync();
 
@@ -226,7 +299,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationRepo
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
   }
 
-  public async Task ReportStartNewPathAsync(CancellationToken _ct = default)
+  private async Task ReportStartNewPathAsync(CancellationToken _ct = default)
   {
     var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     if (serverAddress.IsNullOrWhiteSpace())

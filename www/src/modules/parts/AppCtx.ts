@@ -1,4 +1,4 @@
-export interface AppCtx {
+export interface IAppCtx {
     isRoadnikApp: boolean;
     roomId: string | null;
     tracksDataReceived: boolean;
@@ -6,9 +6,11 @@ export interface AppCtx {
     userColorIndex: number;
     currentLayer: string | undefined;
     lastTracksOffset: number;
+    currentLocationMarker: L.Marker | undefined;
+    currentLocationCircle: L.Circle | undefined;
 }
 
-export function CreateAppCtx(): AppCtx {
+export function CreateAppCtx(): IAppCtx {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const roomId = urlParams.get('id');
@@ -20,6 +22,8 @@ export function CreateAppCtx(): AppCtx {
         pointsDataReceived: false,
         userColorIndex: 0,
         currentLayer: undefined,
-        lastTracksOffset: 0
+        lastTracksOffset: 0,
+        currentLocationMarker: undefined,
+        currentLocationCircle: undefined
     };
 }

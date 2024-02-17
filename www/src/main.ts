@@ -6,10 +6,12 @@ import { Pool, groupBy, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
-import { DEFAULT_MAP_LAYER, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
+import { DEFAULT_MAP_LAYER, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
+import { CreateAppCtx } from "./modules/parts/AppCtx";
 
 const p_storageApi = new Api.StorageApi();
+const p_appCtx = CreateAppCtx();
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
@@ -162,12 +164,13 @@ function initControlsForUser(_user: string): void {
     const colorFile = `img/map_icon_${p_userColorIndex}.png`;
 
     if (p_markers.get(_user) === undefined) {
-        const icon = L.icon({
-            iconUrl: colorFile,
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
-        });
+        // const icon = L.icon({
+        //     iconUrl: colorFile,
+        //     iconSize: [40, 40],
+        //     iconAnchor: [20, 40],
+        //     popupAnchor: [0, -40]
+        // });
+        const icon = GeneratePulsatingCircleIcon(15, color);
         const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
             .bindPopup("<b>Unknown track!</b>")
@@ -477,5 +480,30 @@ function setViewToTrack(_pathName: string, _zoom: number): boolean {
     return true;
 }
 (window as any).setViewToTrack = setViewToTrack;
+
+function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number) : boolean {
+    if (p_appCtx.currentLocationMarker === undefined) {
+        const icon = GeneratePulsatingCircleIcon(10, "black");
+        p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { title: "It's you", icon: icon});
+        console.log("Created current location merker");
+    }
+    if (p_appCtx.currentLocationCircle === undefined) {
+        const circle = L.circle([_lat, _lng], 100, { color: "black", fillColor: '*', fillOpacity: 0.3 });
+        p_appCtx.currentLocationCircle = circle;
+        console.log("Created current location circle");
+    }
+
+    p_appCtx.currentLocationMarker
+        .setLatLng([_lat, _lng])
+        .addTo(p_map);
+
+    p_appCtx.currentLocationCircle
+        .setLatLng([_lat, _lng])
+        .setRadius(_accuracy)
+        .addTo(p_map);
+
+    return true;
+}
+(window as any).updateCurrentLocation = updateCurrentLocation;
 
 sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

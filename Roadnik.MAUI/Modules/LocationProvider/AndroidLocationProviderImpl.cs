@@ -4,16 +4,16 @@ using Android.OS;
 using Android.Runtime;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
-using JustLogger.Interfaces;
+using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider, IAppModule<AndroidLocationProviderImpl>
+public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider, IAppModule<ILocationProvider>
 {
-  public static AndroidLocationProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static ILocationProvider ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((ILogger _logger) => new AndroidLocationProviderImpl(_logger));
   }

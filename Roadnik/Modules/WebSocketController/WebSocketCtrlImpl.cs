@@ -12,13 +12,13 @@ using System.Net.WebSockets;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ILogger = JustLogger.Interfaces.ILogger;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik.Modules.WebSocketController;
 
-public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<WebSocketCtrlImpl>
+public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 {
-  public static WebSocketCtrlImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IWebSocketCtrl ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((ILogger _log, ISettingsController _settingsController, IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
   }

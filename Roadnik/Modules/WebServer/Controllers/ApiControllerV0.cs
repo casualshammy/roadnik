@@ -16,7 +16,7 @@ using Roadnik.Server.Interfaces;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using ILogger = JustLogger.Interfaces.ILogger;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik.Modules.Controllers;
 

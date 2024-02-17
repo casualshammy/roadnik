@@ -1,6 +1,5 @@
 ﻿using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
-using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI;

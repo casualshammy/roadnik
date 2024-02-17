@@ -6,13 +6,13 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.DeepLinksController;
 
-internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModule<DeepLinksControllerImpl>
+internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModule<IDeepLinksController>
 {
-  public static DeepLinksControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IDeepLinksController ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance(
-      (IPagesController _pagesController, IPreferencesStorage _preferencesStorage) =>
-      new DeepLinksControllerImpl(_pagesController, _preferencesStorage));
+    return _ctx.CreateInstance((
+      IPagesController _pagesController, 
+      IPreferencesStorage _preferencesStorage) => new DeepLinksControllerImpl(_pagesController, _preferencesStorage));
   }
 
   public const string AndroidExtraKey = "open-link";

@@ -12,9 +12,6 @@
     <ContentPage.BindingContext>
         <views:OptionsPageViewModel />
     </ContentPage.BindingContext>
-    <ContentPage.Resources>
-        <converters:BoolToEnabledDisabledTextConverter x:Key="BoolToEnabledDisabledText" />
-    </ContentPage.Resources>
 
     <ScrollView>
         <VerticalStackLayout>

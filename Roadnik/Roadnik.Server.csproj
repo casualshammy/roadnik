@@ -16,9 +16,9 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Storage" Version="13.0.197" />
-				<PackageReference Include="JustLogger" Version="3.0.1" />
-				<PackageReference Include="MimeMapping" Version="2.0.0" />
+				<PackageReference Include="Ax.Fw.Log" Version="14.0.203" />
+				<PackageReference Include="Ax.Fw.Storage" Version="14.0.203" />
+				<PackageReference Include="MimeMapping" Version="3.0.1" />
 				<PackageReference Include="System.Linq.Async" Version="6.0.1" />
 				<PackageReference Include="FluentArgs" Version="0.9.7" />
 		</ItemGroup>

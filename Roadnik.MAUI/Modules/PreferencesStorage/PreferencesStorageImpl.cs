@@ -2,7 +2,7 @@
 using Ax.Fw.Cache;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
-using JustLogger.Interfaces;
+using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
@@ -13,9 +13,9 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
 
-internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<PreferencesStorageImpl>
+internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPreferencesStorage>
 {
-  public static PreferencesStorageImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IPreferencesStorage ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((ILogger _log) => new PreferencesStorageImpl(_log));
   }

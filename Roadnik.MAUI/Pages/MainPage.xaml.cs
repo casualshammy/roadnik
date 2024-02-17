@@ -6,7 +6,6 @@ using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
-using JustLogger.Interfaces;
 using QRCoder;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
@@ -14,10 +13,9 @@ using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Platforms.Android.Services;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -37,7 +35,7 @@ public partial class MainPage : CContentPage
   private readonly ILogger p_log;
   private readonly IObservable<bool> p_pageIsVisible;
   private readonly Subject<bool> p_pageAppearedChangeFlow = new();
-  private readonly Subject<bool> p_webAppDataReceivedSubj = new();
+  private readonly Subject<bool> p_webAppTracksSynchonizedSubj = new();
   private readonly MainPageViewModel p_bindingCtx;
 
   public MainPage()
@@ -144,7 +142,7 @@ public partial class MainPage : CContentPage
       .Subscribe(p_lifetime);
 
     pushMsgCtrl.PushMessages
-      .CombineLatest(p_webAppDataReceivedSubj, (_pushEvent, _webAppIsReady) => (PushEvent: _pushEvent, WebAppIsReady: _webAppIsReady))
+      .CombineLatest(p_webAppTracksSynchonizedSubj, (_pushEvent, _webAppIsReady) => (PushEvent: _pushEvent, WebAppIsReady: _webAppIsReady))
       .Where(_ => _.WebAppIsReady)
       .Select(_ => _.PushEvent)
       .Throttle(TimeSpan.FromMilliseconds(250))
@@ -189,6 +187,57 @@ public partial class MainPage : CContentPage
         });
       }, p_lifetime);
 
+    p_webAppTracksSynchonizedSubj
+      .HotAlive(p_lifetime, (_active, _life) =>
+      {
+        if (!_active)
+          return;
+
+        void Geolocation_LocationChanged(object? _s, GeolocationLocationChangedEventArgs _e)
+        {
+          Task.Run(async () =>
+          {
+            try
+            {
+              var lat = _e.Location.Latitude.ToString(CultureInfo.InvariantCulture);
+              var lng = _e.Location.Longitude.ToString(CultureInfo.InvariantCulture);
+              var acc = _e.Location.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
+
+              await MainThread.InvokeOnMainThreadAsync(async () =>
+              {
+                var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
+                if (result == null)
+                  p_log.Error($"Can't send current location to web app: js code returned false");
+              });
+            }
+            catch (Exception ex)
+            {
+              p_log.Error($"Can't send current location to web app: {ex}");
+            }
+          });
+        }
+
+        _ = Task.Run(async () =>
+        {
+          try
+          {
+            if (!await IsLocationPermissionOkAsync())
+              return;
+
+            Geolocation.LocationChanged += Geolocation_LocationChanged;
+            _life.DoOnEnding(() => Geolocation.LocationChanged -= Geolocation_LocationChanged);
+
+            var request = new GeolocationListeningRequest(GeolocationAccuracy.Best);
+            var success = await Geolocation.StartListeningForegroundAsync(request);
+            _life.DoOnEnding(() => Geolocation.StopListeningForeground());
+          }
+          catch (Exception ex)
+          {
+            p_log.Error($"Can't start sending current location to web app due to geolocation error: {ex}");
+          }
+        });
+      });
+
     p_log.Info($"Main page is opened");
   }
 
@@ -202,7 +251,7 @@ public partial class MainPage : CContentPage
   {
     base.OnDisappearing();
     p_pageAppearedChangeFlow.OnNext(false);
-    p_webAppDataReceivedSubj.OnNext(false);
+    p_webAppTracksSynchonizedSubj.OnNext(false);
   }
 
   private async Task<bool> IsLocationPermissionOkAsync()
@@ -266,9 +315,9 @@ public partial class MainPage : CContentPage
 
       p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
     }
-    else if (msg.MsgType == HOST_MSG_REQUEST_DONE)
+    else if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
     {
-      await OnJsMsgHostMsgRequestDoneAsync(msg);
+      await OnHostMsgTracksSynchronizedAsync(msg);
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
@@ -412,23 +461,23 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async Task OnJsMsgHostMsgRequestDoneAsync(JsToCSharpMsg _msg)
+  private async Task OnHostMsgTracksSynchronizedAsync(JsToCSharpMsg _msg)
   {
     p_bindingCtx.IsSpinnerRequired = false;
 
-    var msgData = _msg.Data.Deserialize<HostMsgRequestDoneData>(GenericSerializationOptions.CaseInsensitive);
+    var msgData = _msg.Data.Deserialize(JsBridgeJsonCtx.Default.HostMsgTracksSynchronizedData);
     if (msgData == null)
     {
-      p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_REQUEST_DONE)}': '{_msg.Data}'");
+      p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_TRACKS_SYNCHRONIZED)}': '{_msg.Data}'");
       return;
     }
 
-    if (msgData.FirstDataPart)
+    if (msgData.IsFirstSync)
     {
       var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
       if (webAppState == null)
       {
-        p_webAppDataReceivedSubj.OnNext(true);
+        p_webAppTracksSynchonizedSubj.OnNext(true);
         return;
       }
 
@@ -448,7 +497,7 @@ public partial class MainPage : CContentPage
         if (result == null)
           p_log.Error($"Command returned an error: '{command}'");
 
-        p_webAppDataReceivedSubj.OnNext(true);
+        p_webAppTracksSynchonizedSubj.OnNext(true);
       });
     }
   }

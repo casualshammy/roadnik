@@ -1,7 +1,6 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Platforms.Android.Toolkit;
@@ -12,9 +11,9 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PushMessagesController;
 
-internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<PushMessagesControllerImpl>
+internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<IPushMessagesController>
 {
-  public static PushMessagesControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IPushMessagesController ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
       IPreferencesStorage _preferencesStorage,

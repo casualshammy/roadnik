@@ -1,15 +1,17 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
-import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, HostMsgRequestDoneData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HOST_MSG_NEW_POINT, HOST_MSG_TRACKS_SYNCHRONIZED, HostMsgTracksSynchronizedData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { Pool, groupBy, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
-import { DEFAULT_MAP_LAYER, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
+import { DEFAULT_MAP_LAYER, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
+import { CreateAppCtx } from "./modules/parts/AppCtx";
 
 const p_storageApi = new Api.StorageApi();
+const p_appCtx = CreateAppCtx();
 
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
@@ -25,7 +27,7 @@ const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 const p_tracksUpdateRequired$ = new Subject<void>();
 
-let p_firstDataReceived = false;
+let p_firstTracksSyncCompleted = false;
 let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
@@ -112,7 +114,7 @@ async function updatePathsAsync() {
 
     const prevOffset = p_lastOffset;
     p_lastOffset = data.LastUpdateUnixMs;
-    console.log(`New last offset: ${p_lastOffset}`);
+    console.log(`New last offset: ${p_lastOffset}; points to process: ${data.Entries.length}`);
 
     const usersMap = groupBy(data.Entries, _ => _.Username);
     const users = Object.keys(usersMap);
@@ -126,9 +128,14 @@ async function updatePathsAsync() {
         const userData = usersMap[user];
         updateControlsForUser(user, userData, prevOffset === 0);
     }
-
-    if (!p_firstDataReceived) {
-        p_firstDataReceived = true;
+    
+    document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
+    if (data.MoreEntriesAvailable) {
+        p_tracksUpdateRequired$.next();
+        return;
+    }
+    
+    if (!p_firstTracksSyncCompleted) {
         if (!p_isRoadnikApp) {
             const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_USER);
             if (cookieSelectedUser === undefined || !setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
@@ -137,26 +144,19 @@ async function updatePathsAsync() {
             }
         }
         else {
-            const msgData: HostMsgRequestDoneData = {
-                dataReceived: true,
-                firstDataPart: true
+            const msgData: HostMsgTracksSynchronizedData = {
+                isFirstSync: true
             };
-            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
+            sendDataToHost({ msgType: HOST_MSG_TRACKS_SYNCHRONIZED, data: msgData });
         }
+        p_firstTracksSyncCompleted = true;
     }
     else {
-        if (p_isRoadnikApp) {
-            const msgData: HostMsgRequestDoneData = {
-                dataReceived: true,
-                firstDataPart: false
-            };
-            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
-        }
+        const msgData: HostMsgTracksSynchronizedData = {
+            isFirstSync: false
+        };
+        sendDataToHost({ msgType: HOST_MSG_TRACKS_SYNCHRONIZED, data: msgData });
     }
-
-    document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
-    if (data.MoreEntriesAvailable)
-        p_tracksUpdateRequired$.next();
 }
 
 function initControlsForUser(_user: string): void {
@@ -164,12 +164,13 @@ function initControlsForUser(_user: string): void {
     const colorFile = `img/map_icon_${p_userColorIndex}.png`;
 
     if (p_markers.get(_user) === undefined) {
-        const icon = L.icon({
-            iconUrl: colorFile,
-            iconSize: [40, 40],
-            iconAnchor: [20, 40],
-            popupAnchor: [0, -40]
-        });
+        // const icon = L.icon({
+        //     iconUrl: colorFile,
+        //     iconSize: [40, 40],
+        //     iconAnchor: [20, 40],
+        //     popupAnchor: [0, -40]
+        // });
+        const icon = GeneratePulsatingCircleIcon(15, color);
         const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
             .bindPopup("<b>Unknown track!</b>")
@@ -479,5 +480,30 @@ function setViewToTrack(_pathName: string, _zoom: number): boolean {
     return true;
 }
 (window as any).setViewToTrack = setViewToTrack;
+
+function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number) : boolean {
+    if (p_appCtx.currentLocationMarker === undefined) {
+        const icon = GeneratePulsatingCircleIcon(10, "black");
+        p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { title: "It's you", icon: icon});
+        console.log("Created current location merker");
+    }
+    if (p_appCtx.currentLocationCircle === undefined) {
+        const circle = L.circle([_lat, _lng], 100, { color: "black", fillColor: '*', fillOpacity: 0.3 });
+        p_appCtx.currentLocationCircle = circle;
+        console.log("Created current location circle");
+    }
+
+    p_appCtx.currentLocationMarker
+        .setLatLng([_lat, _lng])
+        .addTo(p_map);
+
+    p_appCtx.currentLocationCircle
+        .setLatLng([_lat, _lng])
+        .setRadius(_accuracy)
+        .addTo(p_map);
+
+    return true;
+}
+(window as any).updateCurrentLocation = updateCurrentLocation;
 
 sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

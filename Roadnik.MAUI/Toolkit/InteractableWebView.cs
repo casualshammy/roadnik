@@ -1,4 +1,4 @@
-﻿using JustLogger.Interfaces;
+﻿using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;

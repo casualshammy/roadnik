@@ -4,9 +4,9 @@ using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.HttpClientProvider;
 
-internal class HttpClientProviderImpl : IHttpClientProvider, IAppModule<HttpClientProviderImpl>
+internal class HttpClientProviderImpl : IHttpClientProvider, IAppModule<IHttpClientProvider>
 {
-  public static HttpClientProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IHttpClientProvider ExportInstance(IAppDependencyCtx _ctx)
   {
     return new HttpClientProviderImpl();
   }

@@ -63,9 +63,6 @@ public class BackgroundService : CAndroidService
         StopSelfResult(_startId);
       });
 
-      //Observable
-      //  .Interval(TimeSpan.FromSeconds())
-
       return StartCommandResult.NotSticky;
     }
     else if (_intent?.Action == "STOP_SERVICE")

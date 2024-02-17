@@ -4,14 +4,13 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
-using System.Reactive.Subjects;
 using System.Text;
 
 namespace Roadnik.Modules.TilesCache;
 
-internal class TilesCacheImpl : ITilesCache, IAppModule<TilesCacheImpl>
+internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 {
-  public static TilesCacheImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime) => new TilesCacheImpl(_settingsController, _lifetime));
   }
@@ -22,12 +21,9 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<TilesCacheImpl>
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime)
   {
-    var cacheFlow = new Subject<FileCache>();
-    p_cacheProp = cacheFlow.ToProperty(_lifetime);
-
-    _settingsController.Settings
+    p_cacheProp = _settingsController.Settings
       .WhereNotNull()
-      .HotAlive(_lifetime, (_conf, _life) =>
+      .Alive(_lifetime, (_conf, _life) =>
       {
         var folder = Path.Combine(_conf.DataDirPath, "tiles-cache");
         var cache = new FileCache(
@@ -37,8 +33,9 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<TilesCacheImpl>
           _conf.ThunderforestCacheSize,
           TimeSpan.FromHours(6));
 
-        cacheFlow.OnNext(cache);
-      });
+        return cache;
+      })
+      .ToProperty(_lifetime, null);
   }
 
   public async Task StoreAsync(int _x, int _y, int _z, string _type, Stream _tileStream, CancellationToken _ct)

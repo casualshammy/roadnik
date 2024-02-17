@@ -3,9 +3,9 @@ using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.PageController;
 
-internal class PagesControllerImpl : IPagesController, IAppModule<PagesControllerImpl>
+internal class PagesControllerImpl : IPagesController, IAppModule<IPagesController>
 {
-  public static PagesControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IPagesController ExportInstance(IAppDependencyCtx _ctx)
   {
     return new PagesControllerImpl();
   }

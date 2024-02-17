@@ -1,4 +1,4 @@
-﻿using JustLogger.Interfaces;
+﻿using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Subjects;
 

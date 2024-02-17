@@ -9,9 +9,9 @@ using System.Reactive.Linq;
 
 namespace Roadnik.MAUI.Modules.TelephonyMgrProvider;
 
-internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<TelephonyMgrProviderImpl>
+internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<ITelephonyMgrProvider>
 {
-  public static TelephonyMgrProviderImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static ITelephonyMgrProvider ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((IReadOnlyLifetime _lifetime) => new TelephonyMgrProviderImpl(_lifetime));
   }

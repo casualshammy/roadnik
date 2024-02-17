@@ -13,13 +13,13 @@ using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using ILogger = JustLogger.Interfaces.ILogger;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik.Server.Modules.FCMProvider;
 
-internal class FCMPublisherImpl : IFCMPublisher, IAppModule<FCMPublisherImpl>
+internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
 {
-  public static FCMPublisherImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IFCMPublisher ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime, ILogger _log) => new FCMPublisherImpl(_settingsController, _lifetime, _log));
   }

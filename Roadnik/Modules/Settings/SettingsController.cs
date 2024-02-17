@@ -16,7 +16,7 @@ internal class SettingsController : ISettingsController
     if (lifetime == null)
       throw new InvalidDataException($"Lifetime is already finished!");
 
-    var storage = new JsonStorage<RawAppSettings>(_configPath, SettingsJsonCtx.Default.RawAppSettings, lifetime);
+    var storage = new JsonStorage<RawAppSettings>(_configPath, SettingsJsonCtx.Default, lifetime);
     Settings = storage
       .Select(_ =>
       {

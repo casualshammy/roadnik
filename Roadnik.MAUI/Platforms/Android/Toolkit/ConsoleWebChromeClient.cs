@@ -1,5 +1,5 @@
 ﻿using Android.Webkit;
-using JustLogger.Interfaces;
+using Ax.Fw.SharedTypes.Interfaces;
 
 namespace Roadnik.MAUI.Toolkit;
 

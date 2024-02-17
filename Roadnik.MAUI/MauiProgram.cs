@@ -1,9 +1,8 @@
 ﻿using Ax.Fw;
 using Ax.Fw.DependencyInjection;
+using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
-using JustLogger;
-using JustLogger.Interfaces;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using Roadnik.MAUI.Modules.HttpClientProvider;
@@ -14,8 +13,8 @@ using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
 using Roadnik.MAUI.Modules.TilesCache;
-using Roadnik.MAUI.Platforms.Android.Services;
 using System.Text.RegularExpressions;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik.MAUI;
 
@@ -33,7 +32,7 @@ public static partial class MauiProgram
     if (!Directory.Exists(logsFolder))
       Directory.CreateDirectory(logsFolder);
 
-    var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 1000);
+    var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1));
     var androidLogger = new Platforms.Android.Toolkit.AndroidLogger("roadnik");
     var logger = lifetime.ToDisposeOnEnded(new CompositeLogger(androidLogger, fileLogger));
 

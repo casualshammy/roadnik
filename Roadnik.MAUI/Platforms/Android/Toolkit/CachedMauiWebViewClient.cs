@@ -1,5 +1,5 @@
 ﻿using Android.Webkit;
-using JustLogger.Interfaces;
+using Ax.Fw.SharedTypes.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;

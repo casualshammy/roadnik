@@ -1,11 +1,9 @@
 ﻿using Android.App;
 using Android.Content;
-using Ax.Fw;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
@@ -18,9 +16,9 @@ using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
-internal class LocationReporterImpl : ILocationReporter, IAppModule<LocationReporterImpl>
+internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationReporter>
 {
-  public static LocationReporterImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static ILocationReporter ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance(
       (IReadOnlyLifetime _lifetime,

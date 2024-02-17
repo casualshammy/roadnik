@@ -1,7 +1,7 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
-import { HOST_MSG_NEW_POINT, HOST_MSG_REQUEST_DONE, HostMsgRequestDoneData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HOST_MSG_NEW_POINT, HOST_MSG_TRACKS_SYNCHRONIZED, HostMsgTracksSynchronizedData, JsToCSharpMsg, MapViewState, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
 import { Pool, groupBy, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
@@ -25,7 +25,7 @@ const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 const p_tracksUpdateRequired$ = new Subject<void>();
 
-let p_firstDataReceived = false;
+let p_firstTracksSyncCompleted = false;
 let p_lastOffset = 0;
 let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
@@ -112,7 +112,7 @@ async function updatePathsAsync() {
 
     const prevOffset = p_lastOffset;
     p_lastOffset = data.LastUpdateUnixMs;
-    console.log(`New last offset: ${p_lastOffset}`);
+    console.log(`New last offset: ${p_lastOffset}; points to process: ${data.Entries.length}`);
 
     const usersMap = groupBy(data.Entries, _ => _.Username);
     const users = Object.keys(usersMap);
@@ -126,9 +126,14 @@ async function updatePathsAsync() {
         const userData = usersMap[user];
         updateControlsForUser(user, userData, prevOffset === 0);
     }
-
-    if (!p_firstDataReceived) {
-        p_firstDataReceived = true;
+    
+    document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
+    if (data.MoreEntriesAvailable) {
+        p_tracksUpdateRequired$.next();
+        return;
+    }
+    
+    if (!p_firstTracksSyncCompleted) {
         if (!p_isRoadnikApp) {
             const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_USER);
             if (cookieSelectedUser === undefined || !setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
@@ -137,26 +142,19 @@ async function updatePathsAsync() {
             }
         }
         else {
-            const msgData: HostMsgRequestDoneData = {
-                dataReceived: true,
-                firstDataPart: true
+            const msgData: HostMsgTracksSynchronizedData = {
+                isFirstSync: true
             };
-            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
+            sendDataToHost({ msgType: HOST_MSG_TRACKS_SYNCHRONIZED, data: msgData });
         }
+        p_firstTracksSyncCompleted = true;
     }
     else {
-        if (p_isRoadnikApp) {
-            const msgData: HostMsgRequestDoneData = {
-                dataReceived: true,
-                firstDataPart: false
-            };
-            sendDataToHost({ msgType: HOST_MSG_REQUEST_DONE, data: msgData });
-        }
+        const msgData: HostMsgTracksSynchronizedData = {
+            isFirstSync: false
+        };
+        sendDataToHost({ msgType: HOST_MSG_TRACKS_SYNCHRONIZED, data: msgData });
     }
-
-    document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
-    if (data.MoreEntriesAvailable)
-        p_tracksUpdateRequired$.next();
 }
 
 function initControlsForUser(_user: string): void {

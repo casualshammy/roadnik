@@ -1,5 +1,4 @@
 ﻿using Ax.Fw.SharedTypes.Interfaces;
-using JustLogger.Interfaces;
 
 namespace Roadnik.MAUI.Toolkit;
 

@@ -6,18 +6,17 @@ using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
-using JustLogger.Interfaces;
 using QRCoder;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.JsonBridge;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Platforms.Android.Services;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -266,9 +265,9 @@ public partial class MainPage : CContentPage
 
       p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
     }
-    else if (msg.MsgType == HOST_MSG_REQUEST_DONE)
+    else if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
     {
-      await OnJsMsgHostMsgRequestDoneAsync(msg);
+      await OnHostMsgTracksSynchronizedAsync(msg);
     }
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
     {
@@ -412,18 +411,18 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async Task OnJsMsgHostMsgRequestDoneAsync(JsToCSharpMsg _msg)
+  private async Task OnHostMsgTracksSynchronizedAsync(JsToCSharpMsg _msg)
   {
     p_bindingCtx.IsSpinnerRequired = false;
 
-    var msgData = _msg.Data.Deserialize<HostMsgRequestDoneData>(GenericSerializationOptions.CaseInsensitive);
+    var msgData = _msg.Data.Deserialize(JsBridgeJsonCtx.Default.HostMsgTracksSynchronizedData);
     if (msgData == null)
     {
-      p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_REQUEST_DONE)}': '{_msg.Data}'");
+      p_log.Error($"Can't parse msg data of type '{nameof(HOST_MSG_TRACKS_SYNCHRONIZED)}': '{_msg.Data}'");
       return;
     }
 
-    if (msgData.FirstDataPart)
+    if (msgData.IsFirstSync)
     {
       var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
       if (webAppState == null)

@@ -1,13 +1,12 @@
 ﻿using Ax.Fw;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
+using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Interfaces;
 using AxToolsServerNet.Data.Serializers;
 using FluentArgs;
-using JustLogger;
-using JustLogger.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Interfaces;
 using Roadnik.Modules.Controllers;
@@ -20,14 +19,12 @@ using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.WebServer.Middlewares;
-using System;
 using System.Net;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using ILogger = JustLogger.Interfaces.ILogger;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik;
 
@@ -74,7 +71,7 @@ public partial class Program
       Directory.CreateDirectory(settings.LogDirPath);
 
     using var logger = new CompositeLogger(
-      new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), 5000),
+      new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5)),
       new ConsoleLogger());
 
     lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
@@ -93,7 +90,6 @@ public partial class Program
     var depMgr = AppDependencyManager
       .Create()
       .AddSingleton<ILogger>(logger)
-      .AddSingleton<ILoggerDisposable>(logger)
       .AddSingleton<IDocumentStorageAot>(docStorage)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
@@ -134,9 +130,6 @@ public partial class Program
     builder.Services.ConfigureHttpJsonOptions(_opt =>
     {
       _opt.SerializerOptions.TypeInfoResolverChain.Insert(0, ControllersJsonCtx.Default);
-      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, SettingsJsonCtx.Default);
-      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, UserAggregatorJsonCtx.Default);
-      //_opt.SerializerOptions.TypeInfoResolverChain.Insert(0, PackagesJsonCtx.Default);
     });
 
     builder.Services.AddResponseCompression(_options => _options.EnableForHttps = true);

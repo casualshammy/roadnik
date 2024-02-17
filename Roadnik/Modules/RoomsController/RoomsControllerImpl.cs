@@ -12,13 +12,13 @@ using Roadnik.Server.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ILogger = JustLogger.Interfaces.ILogger;
+using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
 namespace Roadnik.Modules.RoomsController;
 
-internal class RoomsControllerImpl : IRoomsController, IAppModule<RoomsControllerImpl>
+internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsController>
 {
-  public static RoomsControllerImpl ExportInstance(IAppDependencyCtx _ctx)
+  public static IRoomsController ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance(
       (IDocumentStorageAot _storage,

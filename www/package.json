@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "build": "npx webpack",
-    "watch": "npx webpack -w"
+    "watch": "npx webpack -w --mode development"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.3",

@@ -84,3 +84,22 @@ export function GeneratePulsatingCircleIcon(_radius: number, _color: string) : L
 
 	return icon;
 }
+
+export function GenerateCircleIcon(_radius: number, _color: string) : L.DivIcon {
+	const cssStyle = `
+		width: ${_radius}px;
+		height: ${_radius}px;
+		background: ${_color};
+		color: ${_color};
+		box-shadow: 0 0 0 ${_color};
+	`;
+
+	const icon = L.divIcon({
+		html: `<span style="${cssStyle}" class="circle-marker"/>`,
+		// empty class name to prevent the default leaflet-div-icon to apply
+		className: '',
+		iconAnchor: [_radius/2, _radius/2]
+	});
+
+	return icon;
+}

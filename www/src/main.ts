@@ -6,7 +6,7 @@ import { Pool, groupBy, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { COOKIE_MAP_LAYER, COOKIE_SELECTED_USER } from "./modules/consts";
-import { DEFAULT_MAP_LAYER, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
+import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, PathColors } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
 
@@ -483,12 +483,12 @@ function setViewToTrack(_pathName: string, _zoom: number): boolean {
 
 function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number) : boolean {
     if (p_appCtx.currentLocationMarker === undefined) {
-        const icon = GeneratePulsatingCircleIcon(10, "black");
-        p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { title: "It's you", icon: icon});
+        const icon = GenerateCircleIcon(10, "black");
+        p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { icon: icon, interactive: false });
         console.log("Created current location merker");
     }
     if (p_appCtx.currentLocationCircle === undefined) {
-        const circle = L.circle([_lat, _lng], 100, { color: "black", fillColor: '*', fillOpacity: 0.3 });
+        const circle = L.circle([_lat, _lng], 100, { color: "black", fillColor: '*', fillOpacity: 0.3, interactive: false });
         p_appCtx.currentLocationCircle = circle;
         console.log("Created current location circle");
     }

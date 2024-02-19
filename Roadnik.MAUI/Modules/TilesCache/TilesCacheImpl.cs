@@ -53,7 +53,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       {
         if (_url == null)
           return;
-        if (cache.IsKeyExists(_url, out _))
+        if (cache.IsKeyExists(_url, out _, out _))
           return;
 
         try

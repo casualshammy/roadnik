@@ -32,6 +32,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
+  private const string LOCATION_PROVIDER_KEY = "location-reporter";
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
@@ -136,7 +137,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
-          p_log.Info($"Sending location data, lat: *{location.Latitude % 10}, lng: *{location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
+          p_log.Info($"Sending location data, lat: {location.Latitude}, lng: {location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
 
           var reqData = new StorePathPointReq()
           {
@@ -198,7 +199,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           stats = LocationReporterSessionStats.Empty;
           p_statsFlow.OnNext(stats);
         });
-        _life.DoOnEnding(_locationProvider.StopLocationWatcher);
+        _life.DoOnEnding(() => _locationProvider.StopLocationWatcher(LOCATION_PROVIDER_KEY));
 
         _life.DoOnEnding(async () =>
         {
@@ -220,22 +221,11 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         });
 
         _ = Task.Run(async () => await ReportStartNewPathAsync(_life.Token));
-        _locationProvider.StartLocationWatcher(out var locProviderEnabled);
+        _locationProvider.StartLocationWatcher(LOCATION_PROVIDER_KEY, out var locProviderEnabled);
         reportFlow.Subscribe(_life);
       });
 
     p_enableFlow.OnNext(false);
-
-    prefsFlow
-      .ObserveOn(locationProviderStateScheduler)
-      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval, _.DistanceInterval))
-      .Subscribe(_ =>
-      {
-        if (_.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
-          _locationProvider.ChangeConstrains(_.TimeInterval, _.DistanceInterval);
-        else
-          _locationProvider.ChangeConstrains(_.TimeInterval, 0f);
-      });
 
     _locationProvider.ProviderDisabled
       .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))

@@ -4,6 +4,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace Roadnik.Modules.TilesCache;
@@ -54,6 +55,31 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 
     var key = GetKey(_x, _y, _z, _type);
     return p_cacheProp.Value.Get(key);
+  }
+
+  public bool TryGet(
+    int _x,
+    int _y,
+    int _z,
+    string _type,
+    [NotNullWhen(true)] out Stream? _stream,
+    [NotNullWhen(true)] out string? _hash)
+  {
+    _stream = null;
+    _hash = null;
+
+    var cache = p_cacheProp.Value;
+
+    if (cache == null)
+      return false;
+
+    var key = GetKey(_x, _y, _z, _type);
+    if (!cache.TryGet(key, out var stream, out _, out var hash))
+      return false;
+
+    _stream = stream;
+    _hash = hash;
+    return true;
   }
 
   private static string GetKey(int _x, int _y, int _z, string _type)

@@ -6,7 +6,7 @@ namespace Roadnik.Server.Modules.WebServer.Middlewares;
 class AdminAccessMiddleware
 {
   private readonly RequestDelegate p_next;
-  private readonly IReadOnlySet<string> p_reqAllowedWithoutAuth;
+  private readonly IReadOnlySet<string> p_requestsRequireAuth;
   private readonly ISettingsController p_settingsController;
 
   public AdminAccessMiddleware(
@@ -15,15 +15,18 @@ class AdminAccessMiddleware
     ISettingsController _settingsController)
   {
     p_next = _next;
-    p_reqAllowedWithoutAuth = _pathsRequiresAdminRignts;
+    p_requestsRequireAuth = _pathsRequiresAdminRignts
+      .Select(_ => _.Trim('/', ' '))
+      .ToHashSet();
+
     p_settingsController = _settingsController;
   }
 
   public async Task Invoke(HttpContext _context)
   {
     var request = _context.Request;
-    var path = request.Path.ToString().Trim().Trim('/').Trim();
-    if (!p_reqAllowedWithoutAuth.Contains(path))
+    var path = request.Path.ToString().Trim('/', ' ');
+    if (!p_requestsRequireAuth.Contains(path))
     {
       await p_next(_context);
       return;

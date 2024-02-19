@@ -187,35 +187,19 @@ public partial class MainPage : CContentPage
         });
       }, p_lifetime);
 
+    p_pageIsVisible
+      .Where(_ => !_)
+      .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
+
     p_webAppTracksSynchonizedSubj
-      .HotAlive(p_lifetime, (_active, _life) =>
+      .CombineLatest(p_pageIsVisible)
+      .HotAlive(p_lifetime, (_tuple, _life) =>
       {
-        if (!_active)
+        var (webAppTracksReady, pageIsVisible) = _tuple;
+        if (!webAppTracksReady || !pageIsVisible)
           return;
 
-        void Geolocation_LocationChanged(object? _s, GeolocationLocationChangedEventArgs _e)
-        {
-          Task.Run(async () =>
-          {
-            try
-            {
-              var lat = _e.Location.Latitude.ToString(CultureInfo.InvariantCulture);
-              var lng = _e.Location.Longitude.ToString(CultureInfo.InvariantCulture);
-              var acc = _e.Location.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
-
-              await MainThread.InvokeOnMainThreadAsync(async () =>
-              {
-                var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
-                if (result == null)
-                  p_log.Error($"Can't send current location to web app: js code returned false");
-              });
-            }
-            catch (Exception ex)
-            {
-              p_log.Error($"Can't send current location to web app: {ex}");
-            }
-          });
-        }
+        const string LOCATION_PROVIDER_CUR_LOC = "main-page-current-location";
 
         _ = Task.Run(async () =>
         {
@@ -224,12 +208,32 @@ public partial class MainPage : CContentPage
             if (!await IsLocationPermissionOkAsync())
               return;
 
-            Geolocation.LocationChanged += Geolocation_LocationChanged;
-            _life.DoOnEnding(() => Geolocation.LocationChanged -= Geolocation_LocationChanged);
+            var locationProvider = Container.Locate<ILocationProvider>();
+            locationProvider.StartLocationWatcher(LOCATION_PROVIDER_CUR_LOC, out _);
+            _life.DoOnEnding(() => locationProvider.StopLocationWatcher(LOCATION_PROVIDER_CUR_LOC));
 
-            var request = new GeolocationListeningRequest(GeolocationAccuracy.Best);
-            var success = await Geolocation.StartListeningForegroundAsync(request);
-            _life.DoOnEnding(() => Geolocation.StopListeningForeground());
+            locationProvider.Location
+              .SelectAsync(async (_loc, _ct) =>
+              {
+                try
+                {
+                  var lat = _loc.Latitude.ToString(CultureInfo.InvariantCulture);
+                  var lng = _loc.Longitude.ToString(CultureInfo.InvariantCulture);
+                  var acc = _loc.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
+
+                  await MainThread.InvokeOnMainThreadAsync(async () =>
+                  {
+                    var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
+                    if (result == null)
+                      p_log.Warn($"Can't send current location to web app: js code returned false");
+                  });
+                }
+                catch (Exception ex)
+                {
+                  p_log.Error($"Can't send current location to web app: {ex}");
+                }
+              })
+              .Subscribe(_life);
           }
           catch (Exception ex)
           {
@@ -251,7 +255,6 @@ public partial class MainPage : CContentPage
   {
     base.OnDisappearing();
     p_pageAppearedChangeFlow.OnNext(false);
-    p_webAppTracksSynchonizedSubj.OnNext(false);
   }
 
   private async Task<bool> IsLocationPermissionOkAsync()

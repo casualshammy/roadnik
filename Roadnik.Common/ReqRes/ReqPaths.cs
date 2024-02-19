@@ -11,4 +11,8 @@ public static class ReqPaths
   public const string GET_FREE_ROOM_ID = "/get-free-room-id";
   public const string IS_ROOM_ID_VALID = "/is-room-id-valid";
   public const string STORE_PATH_POINT = "/store-path-point";
+  public const string REGISTER_ROOM = "/register-room";
+  public const string UNREGISTER_ROOM = "/unregister-room";
+  public const string LIST_REGISTERED_ROOMS = "/list-registered-rooms";
+
 }

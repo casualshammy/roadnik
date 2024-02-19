@@ -50,11 +50,11 @@ export function GetMapLayers(): L.Control.LayersObject {
 
 export function GetMapOverlayLayers() {
 	// Waymarked
-	var waymarkedshadinghikeUrl = 'http://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+	var waymarkedshadinghikeUrl = 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
 		waymarkedshadinghikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadinghike = new L.TileLayer(waymarkedshadinghikeUrl, { maxZoom: 18, attribution: waymarkedshadinghikeAttribution });
 	// Waymarked
-	var waymarkedshadingbikeUrl = 'http://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
+	var waymarkedshadingbikeUrl = 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
 		waymarkedshadingbikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadingbike = new L.TileLayer(waymarkedshadingbikeUrl, { maxZoom: 18, attribution: waymarkedshadingbikeAttribution });
 

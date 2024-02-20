@@ -46,12 +46,52 @@
          box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
       }
     }
+
+    #selected-path-container {
+      position: fixed;
+      z-index: 10000;
+      bottom: 10px;
+      left: 10px;
+      border: 5px solid #73AD21;
+      color: black;
+      background-color: #bebebe;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    #selected-path-container:hover {
+      opacity: 0.25;
+    }
+
+    #selected-path-container p {
+      font-size: smaller;
+    }
+
+    #selected-path-container center {
+      font-size: small;
+    }
+
+    #selected-path-close {
+      background: #606061;
+      color: #FFFFFF;
+      line-height: 25px;
+      position: absolute;
+      right: -12px;
+      text-align: center;
+      top: -10px;
+      width: 24px;
+      text-decoration: none;
+      font-weight: bold;
+      -webkit-border-radius: 12px;
+      -moz-border-radius: 12px;
+      border-radius: 12px;
+    }
 	</style>
 </head>
 <body>
 
-<div id="map" style="width: 100%; height: 100%;">
-</div>
+<div id="map" style="width: 100%; height: 100%;"></div>
+<div id="selected-path-container" hidden></div>
 <script src="bundle.js" crossorigin="anonymous"></script>
 
 </body>

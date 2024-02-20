@@ -8,6 +8,7 @@ export interface IAppCtx {
     lastTracksOffset: number;
     currentLocationMarker: L.Marker | undefined;
     currentLocationCircle: L.Circle | undefined;
+    userColors: Map<string, string>;
 }
 
 export function CreateAppCtx(): IAppCtx {
@@ -24,6 +25,7 @@ export function CreateAppCtx(): IAppCtx {
         currentLayer: undefined,
         lastTracksOffset: 0,
         currentLocationMarker: undefined,
-        currentLocationCircle: undefined
+        currentLocationCircle: undefined,
+        userColors: new Map<string, string>()
     };
 }

@@ -6,7 +6,6 @@ export const WS_MSG_TYPE_DATA_UPDATED: string = "ws-msg-data-updated";
 export const WS_MSG_PATH_WIPED: string = "ws-msg-path-wiped";
 export const WS_MSG_ROOM_POINTS_UPDATED: string = "ws-msg-room-points-updated";
 
-export const JS_TO_CSHARP_MSG_TYPE_APP_LOADED = "js-msg-app-loaded";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED = "js-msg-map-location-changed";
 export const JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED = "js-msg-map-layer-changed";
 export const HOST_MSG_NEW_POINT = "host-msg-new-point";

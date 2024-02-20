@@ -33,6 +33,7 @@ let p_currentLayer: string | undefined = undefined;
 let p_userColorIndex = 0;
 let p_pointsDataReceived: boolean = false;
 let p_maxSavedPoints: number = 1000;
+let p_selectedTrack: string | null = null;
 
 const p_mapsData = GetMapLayers();
 const p_overlays = GetMapOverlayLayers();
@@ -66,9 +67,7 @@ if (p_isRoadnikApp)
 
 p_map.on('baselayerchange', function (_e) {
     p_currentLayer = _e.name;
-    if (!p_isRoadnikApp)
-        Cookies.set(COOKIE_MAP_LAYER, _e.name);
-
+    Cookies.set(COOKIE_MAP_LAYER, _e.name);
     sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED, data: p_currentLayer });
 });
 p_map.on('zoomend', function (_e) {
@@ -128,19 +127,26 @@ async function updatePathsAsync() {
         const userData = usersMap[user];
         updateControlsForUser(user, userData, prevOffset === 0);
     }
-    
+
     document.title = `Roadnik: ${p_roomId} (${p_paths.size})`;
     if (data.MoreEntriesAvailable) {
         p_tracksUpdateRequired$.next();
         return;
     }
-    
+
     if (!p_firstTracksSyncCompleted) {
         if (!p_isRoadnikApp) {
             const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_USER);
-            if (cookieSelectedUser === undefined || !setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
-                console.log("Not roadnik app, setting default view...");
+            if (cookieSelectedUser === undefined) {
+                console.log("Not the app, selected path is not set, setting default view...");
                 setViewToAllTracks();
+            }
+            else if (!setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
+                console.log("Not the app, selected path is set but not found, setting default view...");
+                setViewToAllTracks();
+            }
+            else {
+                updateSelectedPath(cookieSelectedUser);
             }
         }
         else {
@@ -160,7 +166,8 @@ async function updatePathsAsync() {
 }
 
 function initControlsForUser(_user: string): void {
-    const color = PathColors[p_userColorIndex % PathColors.length];
+    const color = PathColors[p_userColorIndex++ % PathColors.length];
+    p_appCtx.userColors.set(_user, color);
     const colorFile = `img/map_icon_${p_userColorIndex}.png`;
 
     if (p_markers.get(_user) === undefined) {
@@ -173,18 +180,8 @@ function initControlsForUser(_user: string): void {
         const icon = GeneratePulsatingCircleIcon(15, color);
         const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
             .addTo(p_map)
-            .bindPopup("<b>Unknown track!</b>")
-            .addEventListener('popupopen', () => {
-                if (!p_isRoadnikApp)
-                    Cookies.set(COOKIE_SELECTED_USER, _user);
-
-                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user });
-            })
-            .addEventListener('popupclose', () => {
-                if (!p_isRoadnikApp)
-                    Cookies.remove(COOKIE_SELECTED_USER);
-
-                sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user });
+            .addEventListener('click', () => {
+                updateSelectedPath(_user);
             });
 
         p_markers.set(_user, marker);
@@ -212,7 +209,7 @@ function initControlsForUser(_user: string): void {
                 }
 
                 if (nearestLatLng !== undefined && nearestEntry !== undefined) {
-                    const popupText = buildPathPointPopup(_user, nearestEntry);
+                    const popupText = buildPathPointPopup(_user, nearestEntry, false);
                     path.setPopupContent(popupText);
                     path.openPopup(nearestLatLng);
                 }
@@ -223,8 +220,6 @@ function initControlsForUser(_user: string): void {
 
     if (p_geoEntries[_user] === undefined)
         p_geoEntries[_user] = [];
-
-    p_userColorIndex++;
 }
 
 function updateControlsForUser(
@@ -235,7 +230,7 @@ function updateControlsForUser(
     if (lastEntry === undefined)
         return;
 
-    var geoEntries = p_geoEntries[_user];
+    const geoEntries = p_geoEntries[_user];
     if (geoEntries !== undefined) {
         geoEntries.push(..._entries);
         const geoEntriesExcessiveCount = geoEntries.length - p_maxSavedPoints;
@@ -254,15 +249,14 @@ function updateControlsForUser(
         circle.bringToFront();
     }
 
-    const popUpText = buildPathPointPopup(_user, lastEntry);
-
     const marker = p_markers.get(_user);
     if (marker !== undefined) {
         marker.setLatLng(lastLocation);
-        marker.setPopupContent(popUpText);
 
-        if (marker.isPopupOpen())
+        if (p_selectedTrack === _user) {
+            updateSelectedPath(_user);
             p_map.flyTo(lastLocation);
+        }
     }
 
     const path = p_paths.get(_user);
@@ -281,7 +275,7 @@ function updateControlsForUser(
     }
 }
 
-function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): string {
+function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry, _addCloseBtn: boolean): string {
     const kmh = (_entry.Speed ?? 0) * 3.6;
 
     const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - _entry.UnixTimeMs);
@@ -290,20 +284,55 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry): stri
         elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
 
     const popUpText =
-        `<center><b>${_user}</b> (${elapsedString})</center>
-        <p>
-        ${kmh.toFixed(2)} km/h @ ${Math.ceil(_entry.Altitude)} m @ ${Math.round(_entry.Bearing ?? -1)}°
-        </br>
-        Accuracy: ${Math.ceil(_entry.Accuracy ?? 100)} m
-        </p>
-        <p>
-        Battery: ${((_entry.Battery ?? 0) * 100).toFixed(0)}%
-        </br>
-        GSM power: ${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}%
+        `${_addCloseBtn ? '<a href="#" onclick="updateSelectedPath(null)" title="Close" id="selected-path-close">X</a>' : ''}
+        <center>
+            <b>${_user}</b> (${elapsedString})
+            </br>
+            🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}%
+        </center>
+        <p style="margin-bottom: 0px">
+        🚀${kmh.toFixed(1)} km/h ⛰${Math.ceil(_entry.Altitude)} m 📡${Math.ceil(_entry.Accuracy ?? 100)} m
         </p>`;
+    // @ ${Math.round(_entry.Bearing ?? -1)}°
 
     return popUpText;
 }
+
+function updateSelectedPath(_user: string | null) {
+    const div = document.getElementById("selected-path-container") as HTMLDivElement;
+
+    p_selectedTrack = _user;
+
+    if (_user === null) {
+        div.hidden = true;
+
+        Cookies.remove(COOKIE_SELECTED_USER);
+        if (p_isRoadnikApp)
+            sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED, data: _user });
+
+        return;
+    }
+
+    Cookies.set(COOKIE_SELECTED_USER, _user);
+    if (p_isRoadnikApp)
+        sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED, data: _user });
+
+    const geoEntries = p_geoEntries[_user];
+    if (geoEntries !== undefined) {
+        const lastEntry = geoEntries[geoEntries.length - 1];
+        if (lastEntry !== undefined) {
+            const text = buildPathPointPopup(_user, lastEntry, true);
+            div.innerHTML = text;
+            div.style.borderColor = p_appCtx.userColors.get(_user) ?? div.style.borderColor;
+            div.hidden = false;
+
+            const closeBtn = document.getElementById("selected-path-close");
+            if (closeBtn !== null)
+                closeBtn.style.background = p_appCtx.userColors.get(_user) ?? closeBtn.style.background
+        }
+    }
+}
+(window as any).updateSelectedPath = updateSelectedPath;
 
 async function updatePointsAsync() {
     if (p_roomId === null)
@@ -476,12 +505,12 @@ function setViewToTrack(_pathName: string, _zoom: number): boolean {
         return false;
 
     p_map.flyTo(marker.getLatLng(), _zoom, { duration: 0.5 });
-    marker.openPopup();
+    updateSelectedPath(_pathName);
     return true;
 }
 (window as any).setViewToTrack = setViewToTrack;
 
-function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number) : boolean {
+function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number): boolean {
     if (p_appCtx.currentLocationMarker === undefined) {
         const icon = GenerateCircleIcon(10, "black");
         p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { icon: icon, interactive: false });
@@ -505,5 +534,3 @@ function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number) : 
     return true;
 }
 (window as any).updateCurrentLocation = updateCurrentLocation;
-
-sendDataToHost({ msgType: Api.JS_TO_CSHARP_MSG_TYPE_APP_LOADED, data: {} });

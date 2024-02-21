@@ -79,7 +79,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
     SetValue(PREF_MIN_ACCURACY, 20);
     SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}");
-    SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
@@ -137,10 +136,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
       var reportingCondition = GetValueOrDefault<int>(PREF_TRACKPOINT_REPORTING_CONDITION);
       if (reportingCondition == default)
         SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
-
-      var mapOpenBehavior = GetValueOrDefault<int>(PREF_MAP_OPEN_BEHAVIOR);
-      if (mapOpenBehavior == default)
-        SetValue(PREF_MAP_OPEN_BEHAVIOR, MapOpeningBehavior.AllTracks);
     });
 
     return migrations;

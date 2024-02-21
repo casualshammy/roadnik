@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "build": "npx webpack",
-    "watch": "npx webpack -w"
+    "watch": "npx webpack -w --mode development"
   },
   "devDependencies": {
     "@types/js-cookie": "^3.0.3",
@@ -19,6 +19,7 @@
     "js-cookie": "^3.0.5",
     "leaflet": "^1.9.3",
     "rxjs": "^7.8.1",
+    "sweetalert2": "^11.10.5",
     "websocket-ts": "^1.1.1"
   }
 }

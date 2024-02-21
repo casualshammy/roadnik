@@ -102,9 +102,7 @@ public partial class MainPage : CContentPage
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
         var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-        var mapLayer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
-        var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, mapLayer, mapViewState?.Location.Lat, mapViewState?.Location.Lng, (int?)mapViewState?.Zoom);
+        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
         if (url == null)
         {
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
@@ -187,35 +185,19 @@ public partial class MainPage : CContentPage
         });
       }, p_lifetime);
 
+    p_pageIsVisible
+      .Where(_ => !_)
+      .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
+
     p_webAppTracksSynchonizedSubj
-      .HotAlive(p_lifetime, (_active, _life) =>
+      .CombineLatest(p_pageIsVisible)
+      .HotAlive(p_lifetime, (_tuple, _life) =>
       {
-        if (!_active)
+        var (webAppTracksReady, pageIsVisible) = _tuple;
+        if (!webAppTracksReady || !pageIsVisible)
           return;
 
-        void Geolocation_LocationChanged(object? _s, GeolocationLocationChangedEventArgs _e)
-        {
-          Task.Run(async () =>
-          {
-            try
-            {
-              var lat = _e.Location.Latitude.ToString(CultureInfo.InvariantCulture);
-              var lng = _e.Location.Longitude.ToString(CultureInfo.InvariantCulture);
-              var acc = _e.Location.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
-
-              await MainThread.InvokeOnMainThreadAsync(async () =>
-              {
-                var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
-                if (result == null)
-                  p_log.Error($"Can't send current location to web app: js code returned false");
-              });
-            }
-            catch (Exception ex)
-            {
-              p_log.Error($"Can't send current location to web app: {ex}");
-            }
-          });
-        }
+        const string LOCATION_PROVIDER_CUR_LOC = "main-page-current-location";
 
         _ = Task.Run(async () =>
         {
@@ -224,12 +206,32 @@ public partial class MainPage : CContentPage
             if (!await IsLocationPermissionOkAsync())
               return;
 
-            Geolocation.LocationChanged += Geolocation_LocationChanged;
-            _life.DoOnEnding(() => Geolocation.LocationChanged -= Geolocation_LocationChanged);
+            var locationProvider = Container.Locate<ILocationProvider>();
+            locationProvider.StartLocationWatcher(LOCATION_PROVIDER_CUR_LOC, out _);
+            _life.DoOnEnding(() => locationProvider.StopLocationWatcher(LOCATION_PROVIDER_CUR_LOC));
 
-            var request = new GeolocationListeningRequest(GeolocationAccuracy.Best);
-            var success = await Geolocation.StartListeningForegroundAsync(request);
-            _life.DoOnEnding(() => Geolocation.StopListeningForeground());
+            locationProvider.Location
+              .SelectAsync(async (_loc, _ct) =>
+              {
+                try
+                {
+                  var lat = _loc.Latitude.ToString(CultureInfo.InvariantCulture);
+                  var lng = _loc.Longitude.ToString(CultureInfo.InvariantCulture);
+                  var acc = _loc.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
+
+                  await MainThread.InvokeOnMainThreadAsync(async () =>
+                  {
+                    var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
+                    if (result == null)
+                      p_log.Warn($"Can't send current location to web app: js code returned false");
+                  });
+                }
+                catch (Exception ex)
+                {
+                  p_log.Error($"Can't send current location to web app: {ex}");
+                }
+              })
+              .Subscribe(_life);
           }
           catch (Exception ex)
           {
@@ -251,7 +253,6 @@ public partial class MainPage : CContentPage
   {
     base.OnDisappearing();
     p_pageAppearedChangeFlow.OnNext(false);
-    p_webAppTracksSynchonizedSubj.OnNext(false);
   }
 
   private async Task<bool> IsLocationPermissionOkAsync()
@@ -281,56 +282,10 @@ public partial class MainPage : CContentPage
     if (!isPageVisible)
       return;
 
-    if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
-    {
-      //var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-
-      //var command = "";
-      //if (mapViewState != null)
-      //  command += $"setLocation({mapViewState.Location.Lat}, {mapViewState.Location.Lng}, {mapViewState.Zoom});";
-
-      //if (command.IsNullOrWhiteSpace())
-      //  return;
-
-      //await MainThread.InvokeOnMainThreadAsync(async () =>
-      //{
-      //  var result = await p_webView.EvaluateJavaScriptAsync(command);
-      //  if (result == null)
-      //    p_log.Error($"Commands returned an error: '{command}'");
-      //});
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
-    {
-      var layer = msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive);
-      if (layer == null)
-        return;
-
-      p_storage.SetValue(PREF_MAP_LAYER, layer);
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
-    {
-      var mapViewState = msg.Data.Deserialize<MapViewState>(GenericSerializationOptions.CaseInsensitive);
-      if (mapViewState == null)
-        return;
-
-      p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
-    }
-    else if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
-    {
-      await OnHostMsgTracksSynchronizedAsync(msg);
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
-    {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive));
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
-    {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, (string?)null);
-    }
+    if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
+      OnHostMsgTracksSynchronized(msg);
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
-    {
       await OnJsMsgPointAddStartedAsync(msg);
-    }
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
@@ -461,7 +416,7 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async Task OnHostMsgTracksSynchronizedAsync(JsToCSharpMsg _msg)
+  private void OnHostMsgTracksSynchronized(JsToCSharpMsg _msg)
   {
     p_bindingCtx.IsSpinnerRequired = false;
 
@@ -473,33 +428,7 @@ public partial class MainPage : CContentPage
     }
 
     if (msgData.IsFirstSync)
-    {
-      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-      if (webAppState == null)
-      {
-        p_webAppTracksSynchonizedSubj.OnNext(true);
-        return;
-      }
-
-      var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-      var lastTrackedRoute = p_storage.GetValueOrDefault<string>(PREF_MAP_SELECTED_TRACK);
-      var command = mapOpenBehavior switch
-      {
-        MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
-        MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
-        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom}) || setViewToAllTracks();" : $"setViewToAllTracks();",
-        _ => $"setViewToAllTracks();"
-      };
-
-      await MainThread.InvokeOnMainThreadAsync(async () =>
-      {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Command returned an error: '{command}'");
-
-        p_webAppTracksSynchonizedSubj.OnNext(true);
-      });
-    }
+      p_webAppTracksSynchonizedSubj.OnNext(true);
   }
 
   private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)

@@ -142,11 +142,11 @@ public partial class Program
 
     var app = builder.Build();
 
-    var reqAllowedWithoutAuth = new HashSet<string>()
+    var requestsRequreAuth = new HashSet<string>()
     {
-      "register-room",
-      "unregister-room",
-      "list-registered-rooms"
+      ReqPaths.REGISTER_ROOM,
+      ReqPaths.UNREGISTER_ROOM,
+      ReqPaths.LIST_REGISTERED_ROOMS
     };
 
     app
@@ -154,7 +154,7 @@ public partial class Program
       //.UseRouting()
       .Use(ForwardProxyHeadersMiddlewareAsync)
       .UseResponseCompression()
-      .UseMiddleware<AdminAccessMiddleware>(reqAllowedWithoutAuth, _depContainer.Locate<ISettingsController>())
+      .UseMiddleware<AdminAccessMiddleware>(requestsRequreAuth, _depContainer.Locate<ISettingsController>())
       .UseWebSockets(new WebSocketOptions()
       {
         KeepAliveInterval = TimeSpan.FromSeconds(30)
@@ -187,9 +187,9 @@ public partial class Program
     app.MapPost(ReqPaths.UPLOAD_LOG, controller.UploadLogAsync);
     app.MapGet(ReqPaths.IS_ROOM_ID_VALID, controller.IsRoomIdValid);
     app.MapGet("/ws", controller.StartWebSocketAsync);
-    app.MapPost("/register-room", controller.RegisterRoomAsync);
-    app.MapPost("/unregister-room", controller.DeleteRoomRegistrationAsync);
-    app.MapGet("/list-registered-rooms", controller.ListUsersAsync);
+    app.MapPost(ReqPaths.REGISTER_ROOM, controller.RegisterRoomAsync);
+    app.MapPost(ReqPaths.UNREGISTER_ROOM, controller.DeleteRoomRegistrationAsync);
+    app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, controller.ListUsersAsync);
 
     return app;
   }

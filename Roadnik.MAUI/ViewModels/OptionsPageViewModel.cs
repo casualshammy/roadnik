@@ -24,7 +24,6 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
-  private MapOpeningBehavior p_mapOpeningBehavior;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
@@ -43,7 +42,6 @@ internal class OptionsPageViewModel : BaseViewModel
     MinimumDistanceCommand = new Command(OnMinimumDistance);
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
-    MapOpenBehaviorCommand = new Command(OnMapOpenBehavior);
     WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
@@ -61,7 +59,6 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL), nameof(MinimumDistance));
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
-        SetProperty(ref p_mapOpeningBehavior, p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR), nameof(MapOpenBehavior));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
@@ -149,26 +146,7 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy);
     }
   }
-  public string MapOpenBehavior
-  {
-    get
-    {
-      if (p_mapOpeningBehavior == MapOpeningBehavior.AllTracks)
-        return Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks;
-      else if (p_mapOpeningBehavior == MapOpeningBehavior.LastPosition)
-        return Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition;
-      else
-        return Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack;
-    }
-    set
-    {
-      if (!Enum.TryParse<MapOpeningBehavior>(value, out var behavior))
-        return;
-
-      SetProperty(ref p_mapOpeningBehavior, behavior);
-      p_storage.SetValue(PREF_MAP_OPEN_BEHAVIOR, p_mapOpeningBehavior);
-    }
-  }
+  
   public bool WipeOldTrackOnNewEnabled
   {
     get => p_wipeOldTrackOnNewEnabled;
@@ -204,7 +182,6 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinimumDistanceCommand { get; }
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
-  public ICommand MapOpenBehaviorCommand { get; }
   public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
@@ -375,31 +352,6 @@ internal class OptionsPageViewModel : BaseViewModel
       minAccuracy = 1000;
 
     MinAccuracy = minAccuracy;
-  }
-
-  private async void OnMapOpenBehavior(object _arg)
-  {
-    var currentPage = p_pagesController.CurrentPage;
-    if (currentPage == null)
-      return;
-
-    var result = await currentPage.DisplayActionSheet(
-      "What to show on map opening:",
-      null,
-      null,
-      Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks,
-      Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition,
-      Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack);
-
-    if (result == null)
-      return;
-
-    if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_allTracks)
-      MapOpenBehavior = MapOpeningBehavior.AllTracks.ToString();
-    else if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_lastPosition)
-      MapOpenBehavior = MapOpeningBehavior.LastPosition.ToString();
-    else if (result == Resources.Strings.AppResources.page_options_mapOpenBehavior_lastTrack)
-      MapOpenBehavior = MapOpeningBehavior.LastTrackedRoute.ToString();
   }
 
   private void OnWipeOldTrackOnNew(object? _arg)

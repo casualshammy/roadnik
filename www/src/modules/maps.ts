@@ -1,21 +1,12 @@
-import L from "leaflet";
+import L, { LatLng } from "leaflet";
 
 export const DEFAULT_MAP_LAYER: string = "OpenStreetMap";
 
-export const PathColors: string[] = [
-	"maroon",
-	"purple",
-	"green",
-	"olive",
-	"navy",
-	"teal",
-	"red",
-	"fuchsia",
-	"lime",
-	"yellow",
-	"blue",
-	"aqua",
-];
+export interface IMapState {
+	Lat: number;
+	Lng: number;
+	Zoom: number;
+}
 
 export function GetMapLayers(): L.Control.LayersObject {
 	// OpenStreetMap
@@ -50,11 +41,11 @@ export function GetMapLayers(): L.Control.LayersObject {
 
 export function GetMapOverlayLayers() {
 	// Waymarked
-	var waymarkedshadinghikeUrl = 'http://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+	var waymarkedshadinghikeUrl = 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
 		waymarkedshadinghikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadinghike = new L.TileLayer(waymarkedshadinghikeUrl, { maxZoom: 18, attribution: waymarkedshadinghikeAttribution });
 	// Waymarked
-	var waymarkedshadingbikeUrl = 'http://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
+	var waymarkedshadingbikeUrl = 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
 		waymarkedshadingbikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadingbike = new L.TileLayer(waymarkedshadingbikeUrl, { maxZoom: 18, attribution: waymarkedshadingbikeAttribution });
 
@@ -66,7 +57,7 @@ export function GetMapOverlayLayers() {
 	return overlayMaps;
 }
 
-export function GeneratePulsatingCircleIcon(_radius: number, _color: string) : L.DivIcon {
+export function GeneratePulsatingCircleIcon(_radius: number, _color: string): L.DivIcon {
 	const cssStyle = `
 		width: ${_radius}px;
 		height: ${_radius}px;
@@ -79,8 +70,55 @@ export function GeneratePulsatingCircleIcon(_radius: number, _color: string) : L
 		html: `<span style="${cssStyle}" class="circle-marker-pulse"/>`,
 		// empty class name to prevent the default leaflet-div-icon to apply
 		className: '',
-		iconAnchor: [_radius/2, _radius/2]
+		iconAnchor: [_radius / 2, _radius / 2]
 	});
 
 	return icon;
+}
+
+export function GenerateCircleIcon(_radius: number, _color: string): L.DivIcon {
+	const cssStyle = `
+		width: ${_radius}px;
+		height: ${_radius}px;
+		background: ${_color};
+		color: ${_color};
+		box-shadow: 0 0 0 ${_color};
+	`;
+
+	const icon = L.divIcon({
+		html: `<span style="${cssStyle}" class="circle-marker"/>`,
+		// empty class name to prevent the default leaflet-div-icon to apply
+		className: '',
+		iconAnchor: [_radius / 2, _radius / 2]
+	});
+
+	return icon;
+}
+
+export function GetMapStateFromCookie(_cookie: string | undefined): IMapState | null {
+	if (_cookie === undefined)
+		return null;
+
+	const regex = /^([\d\.]+)\:([\d\.]+)\:([\d\.]+)$/g;
+	const match = regex.exec(_cookie);
+	if (match !== null) {
+		const latString = match[1];
+		const lat = parseFloat(latString);
+
+		const lngString = match[2];
+		const lng = parseFloat(lngString);
+
+		const zoomString = match[3];
+		const zoom = parseFloat(zoomString);
+
+		const result: IMapState = {
+			Lat: lat,
+			Lng: lng,
+			Zoom: zoom
+		};
+
+		return result;
+	}
+
+	return null;
 }

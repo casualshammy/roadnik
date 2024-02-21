@@ -11,6 +11,7 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data.ReqRes;
+using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using System.Net;
@@ -126,7 +127,7 @@ public class ApiControllerV0
 
   //[HttpGet("/thunderforest")]
   public async Task<IResult> GetThunderforestImageAsync(
-    HttpRequest _httpRequest,
+    HttpContext _httpCtx,
     [FromQuery(Name = "x")] int? _x,
     [FromQuery(Name = "y")] int? _y,
     [FromQuery(Name = "z")] int? _z,
@@ -148,15 +149,15 @@ public class ApiControllerV0
     if (tfApiKey.IsNullOrWhiteSpace())
       return Results.Problem($"Thunderforest API key is not set!", statusCode: (int)HttpStatusCode.InternalServerError);
 
-    var log = GetLog(_httpRequest);
+    var log = GetLog(_httpCtx.Request);
 
     var tfCacheSize = p_settingsCtrl.Settings.Value?.ThunderforestCacheSize;
     if (tfCacheSize != null && tfCacheSize.Value > 0)
     {
-      var cachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
-      if (cachedStream != null)
+      if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _type, out var cachedStream, out var hash))
       {
         log.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
+        _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
         return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
       }
     }
@@ -328,7 +329,7 @@ public class ApiControllerV0
     GetPathResData result;
     if (documents.Count == 0)
     {
-      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, Array.Empty<TimedStorageEntry>());
+      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, []);
     }
     else if (documents.Count <= maxReturnEntries)
     {

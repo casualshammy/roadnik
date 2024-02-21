@@ -23,9 +23,8 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   private readonly Subject<string> p_providerDisabledSubj = new();
   private readonly Subject<string> p_providerEnabledSubj = new();
   private readonly ILogger p_logger;
-  private TimeSpan p_minTimePeriod = TimeSpan.FromSeconds(1);
-  private float p_minDistanceMeters = 0;
-  private long p_enabled = 0;
+  private readonly HashSet<string> p_clients = [];
+  private readonly object p_startStopLock = new();
 
   private AndroidLocationProviderImpl(ILogger _logger)
   {
@@ -43,56 +42,50 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(out bool _providerEnabled)
+  public void StartLocationWatcher(string _clientId, out bool _providerEnabled)
   {
     _providerEnabled = 
       p_locationService.IsLocationEnabled && 
       p_locationService.IsProviderEnabled(LocationManager.GpsProvider);
 
-    var oldEnabled = Interlocked.Exchange(ref p_enabled, 1);
-
-    if (oldEnabled == 1)
-      return;
-
-    p_logger.Info($"Starting updates, providers: <{LocationManager.GpsProvider}>");
-
-    MainThread.BeginInvokeOnMainThread(() =>
+    lock (p_startStopLock)
     {
-      p_locationService.RequestLocationUpdates(LocationManager.GpsProvider, (long)p_minTimePeriod.TotalMilliseconds, p_minDistanceMeters, this);
-      p_logger.Info($"Subscribed to '{LocationManager.GpsProvider}' provider");
-    });
-  }
+      p_clients.Add(_clientId);
+      p_logger.Info($"Added new client: '{_clientId}'");
 
-  public void StopLocationWatcher()
-  {
-    var oldEnabled = Interlocked.Exchange(ref p_enabled, 0);
+      if (p_clients.Count > 1)
+        return;
 
-    if (oldEnabled == 0)
-      return;
+      p_logger.Info($"Starting updates, providers: '{LocationManager.GpsProvider}'");
 
-    p_logger.Info($"Stopping updates...");
-
-    try
-    {
-      MainThread.BeginInvokeOnMainThread(() => p_locationService.RemoveUpdates(this));
-    }
-    catch (Exception ex)
-    {
-      p_logger.Error($"Can't remove updates!", ex);
+      MainThread.BeginInvokeOnMainThread(() =>
+      {
+        p_locationService.RequestLocationUpdates(LocationManager.GpsProvider, 1000L, 0f, this);
+        p_logger.Info($"Subscribed to '{LocationManager.GpsProvider}' provider");
+      });
     }
   }
 
-  public void ChangeConstrains(TimeSpan _minTime, float _minDistanceMeters)
+  public void StopLocationWatcher(string _clientId)
   {
-    p_minTimePeriod = _minTime;
-    p_minDistanceMeters = _minDistanceMeters;
-
-    p_logger.Info($"Constrains were changed; min time: '{_minTime}', min distance: '{_minDistanceMeters}'");
-
-    if (Interlocked.Read(ref p_enabled) == 1)
+    lock (p_startStopLock)
     {
-      StopLocationWatcher();
-      StartLocationWatcher(out _);
+      p_clients.Remove(_clientId);
+      p_logger.Info($"Removed client: '{_clientId}'");
+
+      if (p_clients.Count > 0)
+        return;
+
+      p_logger.Info($"Stopping updates...");
+
+      try
+      {
+        MainThread.BeginInvokeOnMainThread(() => p_locationService.RemoveUpdates(this));
+      }
+      catch (Exception ex)
+      {
+        p_logger.Error($"Can't remove updates!", ex);
+      }
     }
   }
 

@@ -6,8 +6,7 @@ public interface ILocationProvider
   IObservable<string> ProviderDisabled { get; }
   IObservable<string> ProviderEnabled { get; }
 
-  void ChangeConstrains(TimeSpan _minTime, float _minDistanceMeters);
-  void StopLocationWatcher();
-  void StartLocationWatcher(out bool _providerEnabled);
+  void StopLocationWatcher(string _clientId);
+  void StartLocationWatcher(string _clientId, out bool _providerEnabled);
   Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
 }

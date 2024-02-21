@@ -1,3 +1,5 @@
+import { CLASS_IS_DRAGGING } from "./consts";
+
 const p_rgbPerColorName: Map<string, Uint8ClampedArray | null> = new Map<string, Uint8ClampedArray | null>();
 
 export const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
@@ -37,12 +39,14 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
 
       element.style.left = left + 'px';
       element.style.bottom = bottom + 'px';
+      element.classList.add(CLASS_IS_DRAGGING);
       _callback(left, bottom);
     }
 
     function reset() {
       window.removeEventListener('mousemove', mouseMoveHandler);
       window.removeEventListener('mouseup', reset);
+      element.classList.remove(CLASS_IS_DRAGGING);
     }
 
     window.addEventListener('mousemove', mouseMoveHandler);
@@ -64,6 +68,7 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
 
       element.style.left = left + 'px';
       element.style.bottom = bottom + 'px';
+      element.classList.add(CLASS_IS_DRAGGING);
       _callback(left, bottom);
     }
 
@@ -71,6 +76,7 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
       window.removeEventListener('touchmove', mouseMoveHandler);
       window.removeEventListener('touchend', reset);
       window.removeEventListener('touchcancel', reset);
+      element.classList.remove(CLASS_IS_DRAGGING);
     }
 
     window.addEventListener('touchmove', mouseMoveHandler);

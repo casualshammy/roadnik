@@ -5,7 +5,7 @@ import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgP
 import { Pool, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
-import { COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_USER, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO } from "./modules/consts";
+import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_USER, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
@@ -316,6 +316,9 @@ function updateSelectedPath(_user: string | null) {
 
   Cookies.set(COOKIE_SELECTED_USER, _user);
 
+  if (div.classList.contains(CLASS_IS_DRAGGING))
+    return;
+
   const geoEntries = p_geoEntries[_user];
   if (geoEntries !== undefined) {
     const lastEntry = geoEntries[geoEntries.length - 1];
@@ -405,11 +408,11 @@ function onStart() {
     });
 
     const left = Cookies.get(COOKIE_SELECTED_PATH_LEFT);
-    if (left !== undefined)
+    if (left !== undefined && parseFloat(left) > 0 && parseFloat(left) < (window.innerWidth - 10))
       selectedPathContainer.style.left = left + "px";
 
     const bottom = Cookies.get(COOKIE_SELECTED_PATH_BOTTOM);
-    if (bottom !== undefined)
+    if (bottom !== undefined && parseFloat(bottom) > 0 && parseFloat(bottom) < (window.innerHeight - 10))
       selectedPathContainer.style.bottom = bottom + "px";
   }
 

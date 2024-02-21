@@ -201,9 +201,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         });
         _life.DoOnEnding(() => _locationProvider.StopLocationWatcher(LOCATION_PROVIDER_KEY));
 
-        _life.DoOnEnding(async () =>
+        _life.DoOnEnding(() =>
         {
-          await MainThread.InvokeOnMainThreadAsync(() =>
+          MainThread.BeginInvokeOnMainThread(() =>
           {
             var context = Android.App.Application.Context;
             var intent = new Intent(context, typeof(BackgroundService));

@@ -1,31 +1,30 @@
 export interface IAppCtx {
-    isRoadnikApp: boolean;
-    roomId: string | null;
-    tracksDataReceived: boolean;
-    pointsDataReceived: boolean;
-    userColorIndex: number;
-    currentLayer: string | undefined;
+    readonly isRoadnikApp: boolean;
+    readonly roomId: string | null;
     lastTracksOffset: number;
     currentLocationMarker: L.Marker | undefined;
     currentLocationCircle: L.Circle | undefined;
-    userColors: Map<string, string>;
+    userColorIndex: number;
+    readonly userColors: Map<string, string>;
+    selectedTrack: string | null;
+    firstTracksSyncCompleted: boolean;
+    maxTrackPoints: number;
 }
 
 export function CreateAppCtx(): IAppCtx {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
-    const roomId = urlParams.get('id');
 
     return {
         isRoadnikApp: navigator.userAgent.includes("RoadnikApp"),
-        roomId: roomId,
-        tracksDataReceived: false,
-        pointsDataReceived: false,
-        userColorIndex: 0,
-        currentLayer: undefined,
+        roomId: urlParams.get('id'),
         lastTracksOffset: 0,
         currentLocationMarker: undefined,
         currentLocationCircle: undefined,
-        userColors: new Map<string, string>()
+        userColorIndex: 0,
+        userColors: new Map<string, string>(),
+        selectedTrack: null,
+        firstTracksSyncCompleted: false,
+        maxTrackPoints: 1000,
     };
 }

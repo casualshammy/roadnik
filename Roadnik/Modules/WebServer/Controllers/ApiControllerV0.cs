@@ -329,7 +329,7 @@ public class ApiControllerV0
     GetPathResData result;
     if (documents.Count == 0)
     {
-      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, Array.Empty<TimedStorageEntry>());
+      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, []);
     }
     else if (documents.Count <= maxReturnEntries)
     {

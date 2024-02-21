@@ -28,7 +28,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                     Text="Connection settings"
-                    FontAttributes="Italic"
+                    FontAttributes="Bold"
                     FontSize="Medium"
                     VerticalOptions="Center"
                     TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
@@ -71,7 +71,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                 Text="Tracking settings"
-                    FontAttributes="Italic"
+                    FontAttributes="Bold"
                     FontSize="Medium"
                 VerticalOptions="Center"
                 TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
@@ -114,39 +114,6 @@
                 SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
                 ShowBottomLine="False"/>
 
-            <!-- MAP APPEARANCE -->
-            <Grid Margin="20, 0"
-                  HeightRequest="40">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="2" />
-                </Grid.RowDefinitions>
-                <Label 
-                    Text="Map appearance"
-                    FontAttributes="Italic"
-                    FontSize="Medium"
-                    VerticalOptions="Center"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
-                <Rectangle 
-                Grid.Column="0"
-                Grid.Row="1"
-                Grid.ColumnSpan="2"
-                VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                Margin="-20, 0"
-                HeightRequest="2"/>
-            </Grid>
-            <controls:OptionsItem
-                Grid.Row="11"
-                Title="What to show on map opening"
-                DetailsText="{Binding MapOpenBehavior}"
-                TapCommand="{Binding MapOpenBehaviorCommand}"
-                ShowBottomLine="False"/>
-
             <!-- NOTIFICATIONS -->
             <Grid Margin="20, 0"
                   HeightRequest="40">
@@ -159,7 +126,7 @@
                 </Grid.RowDefinitions>
                 <Label 
                     Text="Notifications"
-                    FontAttributes="Italic"
+                    FontAttributes="Bold"
                     FontSize="Medium"
                     VerticalOptions="Center"
                     TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>

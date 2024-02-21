@@ -102,9 +102,7 @@ public partial class MainPage : CContentPage
         var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
         var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-        var mapLayer = p_storage.GetValueOrDefault<string>(PREF_MAP_LAYER);
-        var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, mapLayer, mapViewState?.Location.Lat, mapViewState?.Location.Lng, (int?)mapViewState?.Zoom);
+        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
         if (url == null)
         {
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
@@ -284,56 +282,10 @@ public partial class MainPage : CContentPage
     if (!isPageVisible)
       return;
 
-    if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_APP_LOADED)
-    {
-      //var mapViewState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-
-      //var command = "";
-      //if (mapViewState != null)
-      //  command += $"setLocation({mapViewState.Location.Lat}, {mapViewState.Location.Lng}, {mapViewState.Zoom});";
-
-      //if (command.IsNullOrWhiteSpace())
-      //  return;
-
-      //await MainThread.InvokeOnMainThreadAsync(async () =>
-      //{
-      //  var result = await p_webView.EvaluateJavaScriptAsync(command);
-      //  if (result == null)
-      //    p_log.Error($"Commands returned an error: '{command}'");
-      //});
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LAYER_CHANGED)
-    {
-      var layer = msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive);
-      if (layer == null)
-        return;
-
-      p_storage.SetValue(PREF_MAP_LAYER, layer);
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_MAP_LOCATION_CHANGED)
-    {
-      var mapViewState = msg.Data.Deserialize<MapViewState>(GenericSerializationOptions.CaseInsensitive);
-      if (mapViewState == null)
-        return;
-
-      p_storage.SetValue(PREF_MAP_VIEW_STATE, mapViewState);
-    }
-    else if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
-    {
-      await OnHostMsgTracksSynchronizedAsync(msg);
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_OPENED)
-    {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, msg.Data.Deserialize<string>(GenericSerializationOptions.CaseInsensitive));
-    }
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_POPUP_CLOSED)
-    {
-      p_storage.SetValue(PREF_MAP_SELECTED_TRACK, (string?)null);
-    }
+    if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
+      OnHostMsgTracksSynchronized(msg);
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
-    {
       await OnJsMsgPointAddStartedAsync(msg);
-    }
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
@@ -464,7 +416,7 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private async Task OnHostMsgTracksSynchronizedAsync(JsToCSharpMsg _msg)
+  private void OnHostMsgTracksSynchronized(JsToCSharpMsg _msg)
   {
     p_bindingCtx.IsSpinnerRequired = false;
 
@@ -476,33 +428,7 @@ public partial class MainPage : CContentPage
     }
 
     if (msgData.IsFirstSync)
-    {
-      var webAppState = p_storage.GetValueOrDefault<MapViewState>(PREF_MAP_VIEW_STATE);
-      if (webAppState == null)
-      {
-        p_webAppTracksSynchonizedSubj.OnNext(true);
-        return;
-      }
-
-      var mapOpenBehavior = p_storage.GetValueOrDefault<MapOpeningBehavior>(PREF_MAP_OPEN_BEHAVIOR);
-      var lastTrackedRoute = p_storage.GetValueOrDefault<string>(PREF_MAP_SELECTED_TRACK);
-      var command = mapOpenBehavior switch
-      {
-        MapOpeningBehavior.LastPosition => $"setLocation({webAppState.Location.Lat}, {webAppState.Location.Lng}, {webAppState.Zoom});",
-        MapOpeningBehavior.AllTracks => $"setViewToAllTracks();",
-        MapOpeningBehavior.LastTrackedRoute => lastTrackedRoute != null ? $"setViewToTrack(\"{lastTrackedRoute}\", {webAppState.Zoom}) || setViewToAllTracks();" : $"setViewToAllTracks();",
-        _ => $"setViewToAllTracks();"
-      };
-
-      await MainThread.InvokeOnMainThreadAsync(async () =>
-      {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Command returned an error: '{command}'");
-
-        p_webAppTracksSynchonizedSubj.OnNext(true);
-      });
-    }
+      p_webAppTracksSynchonizedSubj.OnNext(true);
   }
 
   private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)

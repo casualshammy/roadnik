@@ -79,6 +79,51 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Delete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_bookmarks_delete {
+            get {
+                return ResourceManager.GetString("page.bookmarks.delete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Pull left to delete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_bookmarks_delete_hint {
+            get {
+                return ResourceManager.GetString("page.bookmarks.delete_hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Room に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_bookmarks_room {
+            get {
+                return ResourceManager.GetString("page.bookmarks.room", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Bookmarks に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_bookmarks_title {
+            get {
+                return ResourceManager.GetString("page.bookmarks.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Username に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_bookmarks_username {
+            get {
+                return ResourceManager.GetString("page.bookmarks.username", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Connection settings に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_connectionSettings {

@@ -19,7 +19,7 @@ public partial class BookmarksPage : CContentPage
     InitializeComponent();
     BindingContext = this;
 
-    Title = "Bookmarks";
+    Title = MAUI.Resources.Strings.AppResources.page_bookmarks_title;
 
     p_preferences = Container.Locate<IPreferencesStorage>();
     var bookmarks = p_preferences.GetValueOrDefault<List<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? new List<BookmarkEntry>();
@@ -45,11 +45,20 @@ public partial class BookmarksPage : CContentPage
       }
     });
 
-    var animation = new Animation(_d => p_pullRightLabel.Opacity = _d, 1.0d, 0.0d, Easing.BounceIn, () => p_pullRightLabel.IsVisible = false);
-    animation.Commit(p_pullRightLabel, "pullRightOpacity", 16, 5000);
   }
 
   public ICommand OnDeleteCommand { get; }
+
+  protected override void OnAppearing()
+  {
+    base.OnAppearing();
+
+    p_pullRightLabel.Opacity = 1d;
+    p_pullRightLabel.IsVisible = true;
+
+    var animation = new Animation(_d => p_pullRightLabel.Opacity = _d, 1.0d, 0.0d, Easing.BounceIn, () => p_pullRightLabel.IsVisible = false);
+    animation.Commit(p_pullRightLabel, "pullRightOpacity", 16, 5000);
+  }
 
   private async void ListView_ItemTapped(object _sender, ItemTappedEventArgs _e)
   {

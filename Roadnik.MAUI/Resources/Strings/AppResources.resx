@@ -123,6 +123,21 @@
   <data name="page.about.updating" xml:space="preserve">
     <value>Updating</value>
   </data>
+  <data name="page.bookmarks.delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="page.bookmarks.delete_hint" xml:space="preserve">
+    <value>Pull left to delete</value>
+  </data>
+  <data name="page.bookmarks.room" xml:space="preserve">
+    <value>Room</value>
+  </data>
+  <data name="page.bookmarks.title" xml:space="preserve">
+    <value>Bookmarks</value>
+  </data>
+  <data name="page.bookmarks.username" xml:space="preserve">
+    <value>Username</value>
+  </data>
   <data name="page.options.connectionSettings" xml:space="preserve">
     <value>Connection settings</value>
   </data>

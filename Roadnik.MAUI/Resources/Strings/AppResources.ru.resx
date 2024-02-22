@@ -123,6 +123,21 @@
   <data name="page.about.updating" xml:space="preserve">
     <value>Обновление</value>
   </data>
+  <data name="page.bookmarks.delete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="page.bookmarks.delete_hint" xml:space="preserve">
+    <value>Потяните влево чтобы удалить</value>
+  </data>
+  <data name="page.bookmarks.room" xml:space="preserve">
+    <value>Комната</value>
+  </data>
+  <data name="page.bookmarks.title" xml:space="preserve">
+    <value>Закладки</value>
+  </data>
+  <data name="page.bookmarks.username" xml:space="preserve">
+    <value>Пользователь</value>
+  </data>
   <data name="page.options.connectionSettings" xml:space="preserve">
     <value>Настройки подключения</value>
   </data>

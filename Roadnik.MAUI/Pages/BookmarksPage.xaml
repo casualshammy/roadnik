@@ -7,7 +7,14 @@
     xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
     xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
     xmlns:data="clr-namespace:Roadnik.MAUI.Data"
+    xmlns:strings="clr-namespace:Roadnik.MAUI.Resources.Strings"
+    xmlns:conv="clr-namespace:Roadnik.MAUI.Pages.Parts"
     x:Class="Roadnik.MAUI.Pages.BookmarksPage">
+
+    <ContentPage.Resources>
+        <conv:BookmarksRoomConverter x:Key="bmToRoomId" />
+        <conv:BookmarksUsernameConverter x:Key="bmToUsername" />
+    </ContentPage.Resources>
 
     <AbsoluteLayout>
         <VerticalStackLayout
@@ -29,7 +36,7 @@
                                     <SwipeItems 
                                         Mode="Execute">
                                         <SwipeItem
-                                            Text="Delete"
+                                            Text="{x:Static strings:AppResources.page_bookmarks_delete}"
                                             BackgroundColor="OrangeRed"
                                             IconImageSource="trash_bin.svg"
                                             Command="{Binding Source={x:Reference p_listView}, Path=BindingContext.OnDeleteCommand}"
@@ -47,10 +54,10 @@
                                         Margin="10, 0"
                                         VerticalOptions="Center">
                                         <Label 
-                                            Text="{Binding RoomId, StringFormat='Room: {0}'}"
+                                            Text="{Binding RoomId, Converter={StaticResource bmToRoomId}}"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label 
-                                            Text="{Binding Username, StringFormat='Username: {0}'}"
+                                            Text="{Binding Username, Converter={StaticResource bmToUsername}}"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label
                                             TextColor="{AppThemeBinding Light=Gray, Dark=IndianRed}"
@@ -73,16 +80,16 @@
                     HeightRequest="14"/>
                 <Label 
                     Margin="10, 0"
-                    Text="Pull left to delete"/>
+                    Text="{x:Static strings:AppResources.page_bookmarks_delete_hint}"/>
                 <Image
                     BackgroundColor="{AppThemeBinding Dark=White}"
                     Source="left_arrow.svg"
                     HeightRequest="14"/>
             </HorizontalStackLayout>
-            
+
         </VerticalStackLayout>
-        
-        
+
+
         <Grid 
             Grid.Row="1"
             Grid.Column="1"

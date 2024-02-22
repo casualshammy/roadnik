@@ -62,7 +62,8 @@ function initMap(): L.Map {
       Number.isNaN(lat) ? 51.4768 : lat,
       Number.isNaN(lng) ? 0.0006 : lng),
     zoom: Number.isNaN(zoom) ? 14 : zoom,
-    layers: [mapsData[layer]]
+    layers: [mapsData[layer]],
+    zoomControl: false
   });
 
   map.attributionControl.setPrefix(false);
@@ -101,6 +102,10 @@ function initMap(): L.Map {
 
   const layersControl = new L.Control.Layers(mapsData, overlays);
   map.addControl(layersControl);
+
+  L.control.zoom({
+    position: 'topright'
+  }).addTo(map);
 
   return map;
 }

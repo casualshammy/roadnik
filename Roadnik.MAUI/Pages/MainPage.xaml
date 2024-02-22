@@ -5,7 +5,8 @@
     xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
     xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
     x:Class="Roadnik.MAUI.Pages.MainPage"
-    Title="{Binding Title}">
+    Title="{Binding Title}"
+    Shell.NavBarIsVisible="False">
 
     <ContentPage.BindingContext>
         <views:MainPageViewModel />
@@ -232,6 +233,25 @@
             </VerticalStackLayout>
 
         </Grid>
+
+        <!-- Shell Button -->
+        <Button
+            AbsoluteLayout.LayoutFlags="None"
+            AbsoluteLayout.LayoutBounds="-5, 30, 50, 50"
+            WidthRequest="100"
+            HeightRequest="50"
+            CornerRadius="25"
+            Background="{StaticResource Black}"
+            Opacity="0.7"
+            Clicked="ShellOpen_Clicked"
+            SemanticProperties.Description="{Binding OpenFlyoutButtonDescription}" />
+        <ImageButton 
+            AbsoluteLayout.LayoutFlags="None"
+            AbsoluteLayout.LayoutBounds="10, 30, 50, 50"
+            WidthRequest="36"
+            HeightRequest="36"
+            Source="hamburger_button.svg"
+            InputTransparent="True"/>
 
     </AbsoluteLayout>
 

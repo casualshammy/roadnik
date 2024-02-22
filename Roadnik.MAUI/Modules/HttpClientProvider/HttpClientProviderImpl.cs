@@ -6,10 +6,7 @@ namespace Roadnik.MAUI.Modules.HttpClientProvider;
 
 internal class HttpClientProviderImpl : IHttpClientProvider, IAppModule<IHttpClientProvider>
 {
-  public static IHttpClientProvider ExportInstance(IAppDependencyCtx _ctx)
-  {
-    return new HttpClientProviderImpl();
-  }
+  public static IHttpClientProvider ExportInstance(IAppDependencyCtx _ctx) => new HttpClientProviderImpl();
 
   private HttpClientProviderImpl()
   {

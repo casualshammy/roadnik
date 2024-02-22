@@ -14,6 +14,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
+using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Globalization;
@@ -189,6 +190,7 @@ public partial class MainPage : CContentPage
       .Where(_ => !_)
       .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
 
+    var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj
       .CombineLatest(p_pageIsVisible)
       .HotAlive(p_lifetime, (_tuple, _life) =>
@@ -197,8 +199,6 @@ public partial class MainPage : CContentPage
         if (!webAppTracksReady || !pageIsVisible)
           return;
 
-        const string LOCATION_PROVIDER_CUR_LOC = "main-page-current-location";
-
         _ = Task.Run(async () =>
         {
           try
@@ -206,18 +206,28 @@ public partial class MainPage : CContentPage
             if (!await IsLocationPermissionOkAsync())
               return;
 
-            var locationProvider = Container.Locate<ILocationProvider>();
-            locationProvider.StartLocationWatcher(LOCATION_PROVIDER_CUR_LOC, out _);
-            _life.DoOnEnding(() => locationProvider.StopLocationWatcher(LOCATION_PROVIDER_CUR_LOC));
+            var providers = new string[] { Android.Locations.LocationManager.GpsProvider, Android.Locations.LocationManager.NetworkProvider };
+            webAppLocationProvider.StartLocationWatcher(providers, out _);
+            _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
-            locationProvider.Location
-              .SelectAsync(async (_loc, _ct) =>
+            webAppLocationProvider.Location
+              .Buffer(TimeSpan.FromSeconds(1))
+              .SelectAsync(async (_locs, _ct) =>
               {
+                if (_ct.IsCancellationRequested)
+                  return;
+                if (_locs.Count == 0)
+                  return;
+
+                var loc = _locs
+                  .OrderBy(_ => _.Accuracy ?? 100d)
+                  .First();
+
                 try
                 {
-                  var lat = _loc.Latitude.ToString(CultureInfo.InvariantCulture);
-                  var lng = _loc.Longitude.ToString(CultureInfo.InvariantCulture);
-                  var acc = _loc.Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "100";
+                  var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
+                  var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
+                  var acc = (loc.Accuracy ?? 100d).ToString(CultureInfo.InvariantCulture);
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {
@@ -343,8 +353,7 @@ public partial class MainPage : CContentPage
     {
       animation.Commit(p_goToMyLocationImage, "my-loc-anim", 16, 2000, null, null, () => true);
 
-      var locationProvider = Container.Locate<ILocationProvider>();
-      var location = await locationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), default);
+      var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), default);
       if (location != null)
       {
         var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
@@ -508,4 +517,8 @@ public partial class MainPage : CContentPage
     }
   }
 
+  private void ShellOpen_Clicked(object sender, EventArgs e)
+  {
+    Shell.Current.FlyoutIsPresented = true;
+  }
 }

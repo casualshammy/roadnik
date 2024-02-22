@@ -32,7 +32,7 @@ public partial class NavigationAppShell : Shell
       var now = DateTimeOffset.UtcNow;
       if (now - p_lastTimeBackClicked < TimeSpan.FromSeconds(3))
       {
-        p_lifetime.End();
+        Task.Run(() => p_lifetime.End()); // if not in Task.Run then all clean-up routines that calls `MainThread...` methods will stuck
         return false;
       }
 

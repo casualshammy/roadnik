@@ -32,9 +32,9 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
       const style = window.getComputedStyle(element);
       const left = e.clientX - offsetX;
       const bottom = window.innerHeight - e.clientY - offsetY;
-      if (left < 0 || left > window.innerWidth - parseInt(style.width))
+      if (left < 5 || left > window.innerWidth - parseInt(style.width) - 5)
         return;
-      if (bottom < 0 || bottom > window.innerHeight - parseInt(style.height))
+      if (bottom < 5 || bottom > window.innerHeight - parseInt(style.height) - 5)
         return;
 
       element.style.left = left + 'px';

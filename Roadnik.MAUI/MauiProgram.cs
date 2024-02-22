@@ -62,7 +62,6 @@ public static partial class MauiProgram
       .AddSingleton<ILogger>(logger)
       .AddModule<DeepLinksControllerImpl, IDeepLinksController>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
-      .AddModule<AndroidLocationProviderImpl, ILocationProvider>()
       .AddModule<LocationReporterImpl, ILocationReporter>()
       .AddModule<PagesControllerImpl, IPagesController>()
       .AddModule<PreferencesStorageImpl, IPreferencesStorage>()

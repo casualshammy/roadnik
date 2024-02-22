@@ -2,39 +2,45 @@
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
-using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
+using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, ILocationProvider, IAppModule<ILocationProvider>
+internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {
-  public static ILocationProvider ExportInstance(IAppDependencyCtx _ctx)
-  {
-    return _ctx.CreateInstance((ILogger _logger) => new AndroidLocationProviderImpl(_logger));
-  }
-
-  private readonly LocationManager p_locationService;
-  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow = new(1);
-  private readonly Subject<string> p_providerDisabledSubj = new();
-  private readonly Subject<string> p_providerEnabledSubj = new();
+  private static readonly LocationManager p_locationService;
+  private static readonly Pool<ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>> p_locationSubjPool;
+  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow;
+  private readonly Subject<string> p_providerDisabledSubj;
+  private readonly Subject<string> p_providerEnabledSubj;
   private readonly ILogger p_logger;
-  private readonly HashSet<string> p_clients = [];
   private readonly object p_startStopLock = new();
 
-  private AndroidLocationProviderImpl(ILogger _logger)
+  static AndroidLocationProvider()
+  {
+    p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
+    p_locationSubjPool = new Pool<ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>>(() => new ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>(1), null);
+  }
+
+  public AndroidLocationProvider(ILogger _logger, IReadOnlyLifetime _lifetime)
   {
     p_logger = _logger["location-provider"];
-    p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
+
+    _lifetime.ToDisposeOnEnded(p_locationSubjPool.Get(out p_locationFlow));
 
     Location = p_locationFlow
       .DistinctUntilChanged(_ => HashCode.Combine(_.Latitude, _.Longitude, _.Timestamp));
 
+    _lifetime.ToDisposeOnEnded(SharedPool<Subject<string>>.Get(out p_providerDisabledSubj));
     ProviderDisabled = p_providerDisabledSubj;
+
+    _lifetime.ToDisposeOnEnded(SharedPool<Subject<string>>.Get(out p_providerEnabledSubj));
     ProviderEnabled = p_providerEnabledSubj;
   }
 
@@ -42,50 +48,65 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(string _clientId, out bool _providerEnabled)
+  public void StartLocationWatcher(IReadOnlyList<string> _providers, out IReadOnlySet<string> _providersEnabled)
   {
-    _providerEnabled = 
-      p_locationService.IsLocationEnabled && 
-      p_locationService.IsProviderEnabled(LocationManager.GpsProvider);
+    var result = new HashSet<string>();
+    _providersEnabled = result;
+
+    if (!p_locationService.IsLocationEnabled)
+      return;
 
     lock (p_startStopLock)
     {
-      p_clients.Add(_clientId);
-      p_logger.Info($"Added new client: '{_clientId}'");
-
-      if (p_clients.Count > 1)
-        return;
-
-      p_logger.Info($"Starting updates, providers: '{LocationManager.GpsProvider}'");
-
-      MainThread.BeginInvokeOnMainThread(() =>
+      p_logger.Info($"Starting updates, desired providers: '{string.Join(", ", _providers)}'");
+      foreach (var provider in _providers.Distinct())
       {
-        p_locationService.RequestLocationUpdates(LocationManager.GpsProvider, 1000L, 0f, this);
-        p_logger.Info($"Subscribed to '{LocationManager.GpsProvider}' provider");
-      });
+        if (!p_locationService.IsProviderEnabled(provider))
+          continue;
+
+        result.Add(provider);
+
+        var success = MainThreadExt.Invoke(() =>
+        {
+          try
+          {
+            p_locationService.RequestLocationUpdates(provider, 1000L, 0f, this);
+            p_logger.Info($"Subscribed to '{provider}' provider");
+          }
+          catch (Exception ex)
+          {
+            p_logger.Error($"Can't subscribe to provider '{provider}'", ex);
+          }
+        });
+
+        if (!success)
+          p_logger.Error($"Subscription routine is timed out");
+      }
+      p_logger.Info($"Updates are requested, providers: '{string.Join(", ", result)}'");
     }
   }
 
-  public void StopLocationWatcher(string _clientId)
+  public void StopLocationWatcher()
   {
     lock (p_startStopLock)
     {
-      p_clients.Remove(_clientId);
-      p_logger.Info($"Removed client: '{_clientId}'");
-
-      if (p_clients.Count > 0)
-        return;
-
       p_logger.Info($"Stopping updates...");
 
-      try
+      var success = MainThreadExt.Invoke(() =>
       {
-        MainThread.BeginInvokeOnMainThread(() => p_locationService.RemoveUpdates(this));
-      }
-      catch (Exception ex)
-      {
-        p_logger.Error($"Can't remove updates!", ex);
-      }
+        try
+        {
+          p_locationService.RemoveUpdates(this);
+          p_logger.Info($"Updates are stopped");
+        }
+        catch (Exception ex)
+        {
+          p_logger.Error($"Can't remove updates!", ex);
+        }
+      });
+
+      if (!success)
+        p_logger.Error($"Un-subscription routine is timed out");
     }
   }
 
@@ -138,7 +159,7 @@ public class AndroidLocationProviderImpl : Java.Lang.Object, ILocationListener, 
     p_logger.Info($"Provider '{_provider}' was enabled");
   }
 
-  public async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  public static async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
   {
     try
     {

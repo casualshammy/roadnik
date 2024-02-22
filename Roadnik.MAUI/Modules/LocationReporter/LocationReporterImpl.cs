@@ -7,7 +7,9 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Platforms.Android.Services;
+using Roadnik.MAUI.Toolkit;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -25,14 +27,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       ILogger _log,
       IPreferencesStorage _storage,
       IHttpClientProvider _httpClientProvider,
-      ILocationProvider _locationProvider,
       ITelephonyMgrProvider _telephonyMgrProvider)
-      => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _locationProvider, _telephonyMgrProvider));
+      => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _telephonyMgrProvider));
   }
 
   record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
 
-  private const string LOCATION_PROVIDER_KEY = "location-reporter";
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILogger p_log;
@@ -44,7 +44,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     ILogger _log,
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
-    ILocationProvider _locationProvider,
     ITelephonyMgrProvider _telephonyMgrProvider)
   {
     p_log = _log["location-reporter"];
@@ -52,6 +51,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     p_httpClientProvider = _httpClientProvider;
 
     _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
+
+    var locationProvider = new AndroidLocationProvider(p_log, _lifetime);
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
@@ -82,12 +83,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Switch()
       .ToUnit();
 
-    var locationFlow = _locationProvider.Location
+    var locationFlow = locationProvider.Location
       .WithLatestFrom(prefsFlow)
       .Where(_ =>
       {
         var (location, prefs) = _;
-        return location.Accuracy != null && location.Accuracy.Value < prefs.MinAccuracy;
+        return location.Accuracy != null && location.Accuracy.Value <= prefs.MinAccuracy;
       })
       .Select(_ => _.First);
 
@@ -199,11 +200,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           stats = LocationReporterSessionStats.Empty;
           p_statsFlow.OnNext(stats);
         });
-        _life.DoOnEnding(() => _locationProvider.StopLocationWatcher(LOCATION_PROVIDER_KEY));
 
-        _life.DoOnEnding(() =>
+        _life.DoOnEnding(() => locationProvider.StopLocationWatcher());
+
+        _life.DoOnEnding(async () =>
         {
-          MainThread.BeginInvokeOnMainThread(() =>
+          await MainThreadExt.InvokeAsync(_c =>
           {
             var context = Android.App.Application.Context;
             var intent = new Intent(context, typeof(BackgroundService));
@@ -212,7 +214,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           });
         });
 
-        MainThread.InvokeOnMainThreadAsync(() =>
+        MainThread.BeginInvokeOnMainThread(() =>
         {
           var context = Android.App.Application.Context;
           var intent = new Intent(context, typeof(BackgroundService));
@@ -221,13 +223,13 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         });
 
         _ = Task.Run(async () => await ReportStartNewPathAsync(_life.Token));
-        _locationProvider.StartLocationWatcher(LOCATION_PROVIDER_KEY, out var locProviderEnabled);
+        locationProvider.StartLocationWatcher([Android.Locations.LocationManager.GpsProvider], out var locProvidersEnabled);
         reportFlow.Subscribe(_life);
       });
 
     p_enableFlow.OnNext(false);
 
-    _locationProvider.ProviderDisabled
+    locationProvider.ProviderDisabled
       .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))
       .Where(_ => _.Enabled && _.ProviderDisabled == Android.Locations.LocationManager.GpsProvider)
       .ToUnit()
@@ -264,7 +266,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         }
       }, _lifetime);
 
-    _locationProvider.ProviderEnabled
+    locationProvider.ProviderEnabled
       .Where(_ => _ == Android.Locations.LocationManager.GpsProvider)
       .ToUnit()
       .Subscribe(_unit =>

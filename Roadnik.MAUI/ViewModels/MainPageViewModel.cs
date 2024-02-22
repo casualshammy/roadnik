@@ -82,5 +82,6 @@ internal class MainPageViewModel : BaseViewModel
   public string ShareButtonDescription { get; } = "Click to share the link to this room";
   public string GoToMyLocationButtonDescription { get; } = "Click to go to my location";
   public string StartPublishButtonDescription { get; } = "Click to start or stop publishing location";
+  public string OpenFlyoutButtonDescription { get; } = "Click to open flyout menu";
 
 }

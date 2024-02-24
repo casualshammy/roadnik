@@ -12,8 +12,7 @@
     x:Class="Roadnik.MAUI.Pages.BookmarksPage">
 
     <ContentPage.Resources>
-        <conv:BookmarksRoomConverter x:Key="bmToRoomId" />
-        <conv:BookmarksUsernameConverter x:Key="bmToUsername" />
+        <conv:BookmarksConverter x:Key="bmConv" />
     </ContentPage.Resources>
 
     <AbsoluteLayout>
@@ -54,10 +53,10 @@
                                         Margin="10, 0"
                                         VerticalOptions="Center">
                                         <Label 
-                                            Text="{Binding RoomId, Converter={StaticResource bmToRoomId}}"
+                                            Text="{Binding Converter={StaticResource bmConv}, ConverterParameter='RoomId'}"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label 
-                                            Text="{Binding Username, Converter={StaticResource bmToUsername}}"
+                                            Text="{Binding Converter={StaticResource bmConv}, ConverterParameter='Username'}"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label
                                             TextColor="{AppThemeBinding Light=Gray, Dark=IndianRed}"

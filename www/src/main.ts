@@ -5,7 +5,7 @@ import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgP
 import { Pool, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
-import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_USER, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO } from "./modules/consts";
+import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
@@ -151,7 +151,7 @@ async function updatePathsAsync() {
   }
 
   if (!p_appCtx.firstTracksSyncCompleted) {
-    const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_USER);
+    const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_PATH);
     if (cookieSelectedUser === undefined) {
       console.log("Selected path is not set, setting default view...");
       setViewToAllTracks();
@@ -315,11 +315,11 @@ function updateSelectedPath(_user: string | null) {
 
   if (_user === null) {
     div.hidden = true;
-    Cookies.remove(COOKIE_SELECTED_USER);
+    Cookies.remove(COOKIE_SELECTED_PATH);
     return;
   }
 
-  Cookies.set(COOKIE_SELECTED_USER, _user);
+  Cookies.set(COOKIE_SELECTED_PATH, _user);
 
   if (div.classList.contains(CLASS_IS_DRAGGING))
     return;
@@ -419,6 +419,12 @@ function onStart() {
     const bottom = Cookies.get(COOKIE_SELECTED_PATH_BOTTOM);
     if (bottom !== undefined && parseFloat(bottom) > 0 && parseFloat(bottom) < (window.innerHeight - 10))
       selectedPathContainer.style.bottom = bottom + "px";
+
+    selectedPathContainer.addEventListener('dblclick', (_ev: MouseEvent) => {
+      const path = Cookies.get(COOKIE_SELECTED_PATH);
+      if (path !== undefined)
+        setViewToTrack(path, p_map.getZoom());
+    });
   }
 
   p_tracksUpdateRequired$

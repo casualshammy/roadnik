@@ -1,7 +1,7 @@
-export const COOKIE_SELECTED_USER: string = "selected-user";
-export const COOKIE_MAP_LAYER: string = "map-layer";
+export const COOKIE_SELECTED_PATH: string = "selected-path";
 export const COOKIE_SELECTED_PATH_LEFT: string = "selected-path-left";
 export const COOKIE_SELECTED_PATH_BOTTOM: string = "selected-path-bottom";
+export const COOKIE_MAP_LAYER: string = "map-layer";
 export const COOKIE_MAP_STATE: string = "map-state";
 
 export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";

@@ -8,6 +8,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 
@@ -45,7 +46,7 @@ public class BackgroundService : CAndroidService
       if (p_lifetime == null)
         return StartCommandResult.NotSticky;
 
-      var notification = GetRecordingNotification("Your location is being recorded...", "");
+      var notification = GetRecordingNotification(L.notification_location_sharing_title, string.Empty);
       if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
 #pragma warning disable CA1416 // Validate platform compatibility
         StartForeground(Consts.NOTIFICATION_ID_RECORDING, notification, global::Android.Content.PM.ForegroundService.TypeLocation);
@@ -55,7 +56,25 @@ public class BackgroundService : CAndroidService
 
       p_locationReporter.Stats
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_ => GetRecordingNotification("Your location is being recorded...", $"Success: {_.Successful}; total: {_.Total}", true), p_lifetime);
+        .Subscribe(_ =>
+        {
+          var lastLocationFixTime = _.LastLocationFixTime != null ?
+            _.LastLocationFixTime.Value.ToString("yyyy/MM/dd HH:mm:ss") :
+            L.notification_location_sharing_body_never;
+
+          var lastSuccessfulReportTime = _.LastSuccessfulReportTime != null ?
+            _.LastSuccessfulReportTime.Value.ToString("yyyy/MM/dd HH:mm:ss") :
+            L.notification_location_sharing_body_never;
+
+          var text = L.notification_location_sharing_body
+            .Replace("%last-location-fix-accuracy", _.LastLocationFixAccuracy.ToString())
+            .Replace("%last-successful-report", lastSuccessfulReportTime)
+            .Replace("%last-location-fix", lastLocationFixTime)
+            .Replace("%success", _.Successful.ToString())
+            .Replace("%total", _.Total.ToString());
+
+          GetRecordingNotification(L.notification_location_sharing_title, text, true);
+        }, p_lifetime);
 
       p_lifetime.DoOnEnding(() =>
       {
@@ -83,7 +102,8 @@ public class BackgroundService : CAndroidService
     p_notificationMgr.CreateNotificationChannel(channel);
     var builder = new Notification.Builder(this, channelId)
      .SetContentTitle(_title)
-     .SetContentText(_text)
+     .SetStyle(new Notification.BigTextStyle().BigText(_text))
+     //.SetContentText(_text)
      .SetContentIntent(activity)
      .SetSmallIcon(Resource.Drawable.letter_r)
      .SetOnlyAlertOnce(true)

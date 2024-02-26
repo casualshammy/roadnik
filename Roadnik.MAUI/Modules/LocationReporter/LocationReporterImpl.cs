@@ -14,6 +14,7 @@ using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using static Android.Provider.CallLog;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
@@ -31,7 +32,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _telephonyMgrProvider));
   }
 
-  record ReportingCtx(Location? Location, DateTimeOffset? LastTimeReported);
+  record ReportingCtx(
+    Location? Location,
+    DateTimeOffset? LastReportAttemptTime)
+  {
+    public static ReportingCtx Empty { get; } = new ReportingCtx(null, null);
+  }
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
@@ -50,9 +56,10 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     p_storage = _storage;
     p_httpClientProvider = _httpClientProvider;
 
-    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
-
     var locationProvider = new AndroidLocationProvider(p_log, _lifetime);
+    _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
+    var reportQueueCounter = 0L;
+    var stats = LocationReporterSessionStats.Empty;
 
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
@@ -63,74 +70,80 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
-        Username = _storage.GetValueOrDefault<string>(PREF_USERNAME)
+        Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
+        LowPowerMode = _storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE)
       })
       .Replay(1)
       .RefCount();
 
-    var timerFlow = prefsFlow
-      .DistinctUntilChanged(_ => HashCode.Combine(_.ReportingCondition, _.TimeInterval))
-      .Select(_prefs =>
-      {
-        if (_prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
-          return Observable
-            .Interval(_prefs.TimeInterval)
-            .StartWithDefault();
-
-        return Observable
-          .Return(0L);
-      })
-      .Switch()
-      .ToUnit();
-
     var locationFlow = locationProvider.Location
-      .WithLatestFrom(prefsFlow)
-      .Where(_ =>
+      .DistinctUntilChanged(_ => _.Timestamp)
+      .Buffer(TimeSpan.FromSeconds(1))
+      .Select(_locations =>
       {
-        var (location, prefs) = _;
+        if (_locations.Count == 0)
+          return null;
+
+        var location = _locations
+          .OrderBy(_ => _.Accuracy ?? 1000)
+          .First();
+
+        return location;
+      })
+      .WhereNotNull()
+      .WithLatestFrom(prefsFlow)
+      .Where(_tuple =>
+      {
+        var (location, prefs) = _tuple;
+
+        stats = stats with
+        {
+          LastLocationFixTime = location.Timestamp,
+          LastLocationFixAccuracy = (int)(location.Accuracy ?? 1000d)
+        };
+        p_statsFlow.OnNext(stats);
+
         return location.Accuracy != null && location.Accuracy.Value <= prefs.MinAccuracy;
       })
       .Select(_ => _.First);
 
-    var counter = 0L;
-    var stats = LocationReporterSessionStats.Empty;
-
-    var reportFlow = timerFlow
-      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow, locationFlow)
+    var reportFlow = locationFlow
+      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
-      .Do(_ => Interlocked.Increment(ref counter))
       .Where(_ =>
       {
-        var queue = Interlocked.Read(ref counter);
-        if (queue <= 1)
+        var queue = Interlocked.Increment(ref reportQueueCounter);
+        if (queue <= 10)
           return true;
 
-        Interlocked.Decrement(ref counter);
+        Interlocked.Decrement(ref reportQueueCounter);
         return false;
       })
       .ObserveOn(reportScheduler)
-      .ScanAsync(new ReportingCtx(null, null), async (_acc, _entry) =>
+      .ScanAsync(ReportingCtx.Empty, async (_acc, _entry) =>
       {
-        var (_, signalStrength, prefs, location) = _entry;
+        var (location, signalStrength, prefs) = _entry;
         var now = DateTimeOffset.UtcNow;
+        var acc = _acc;
+
         try
         {
           if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.RoomId))
-            return _acc;
+            return acc;
 
-          var distance = _acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
+          var distance = acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
 
           if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
           {
             if (distance != null && distance < prefs.DistanceInterval)
-              return _acc;
-            if (_acc.LastTimeReported != null && now - _acc.LastTimeReported < prefs.TimeInterval)
-              return _acc;
+              return acc;
+            if (acc.LastReportAttemptTime != null && now - acc.LastReportAttemptTime < prefs.TimeInterval)
+              return acc;
           }
           else if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
           {
-            if (distance != null && _acc.LastTimeReported != null && distance < prefs.DistanceInterval && now - _acc.LastTimeReported < prefs.TimeInterval)
-              return _acc;
+            if (distance != null && acc.LastReportAttemptTime != null && distance < prefs.DistanceInterval && now - acc.LastReportAttemptTime < prefs.TimeInterval)
+              return acc;
           }
 
           var batteryCharge = Battery.Default.ChargeLevel;
@@ -157,10 +170,10 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           using var res = await _httpClientProvider.Value.PostAsJsonAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", reqData, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
-          stats = stats with { Successful = stats.Successful + 1 };
+          stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };
           p_statsFlow.OnNext(stats);
 
-          return new ReportingCtx(location, now);
+          return acc with { Location = location, LastReportAttemptTime = now };
         }
         catch (FeatureNotSupportedException fnsEx)
         {
@@ -182,17 +195,19 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         {
           p_log.Error($"Geo location generic error", ex);
         }
-        return _acc with { LastTimeReported = now };
+        return acc with { LastReportAttemptTime = now };
       })
-      .Do(_ => Interlocked.Decrement(ref counter));
+      .Do(_ => Interlocked.Decrement(ref reportQueueCounter));
 
     _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
 
     p_enableFlow
+      .WithLatestFrom(prefsFlow)
       .ObserveOn(locationProviderStateScheduler)
-      .HotAlive(_lifetime, (_enable, _life) =>
+      .HotAlive(_lifetime, (_tuple, _life) =>
       {
-        if (!_enable)
+        var (enabled, conf) = _tuple;
+        if (!enabled)
           return;
 
         _life.DoOnEnding(() =>
@@ -223,7 +238,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         });
 
         _ = Task.Run(async () => await ReportStartNewPathAsync(_life.Token));
-        locationProvider.StartLocationWatcher([Android.Locations.LocationManager.GpsProvider], out var locProvidersEnabled);
+
+        var providers = (string[])(conf.LowPowerMode ?
+          [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider] :
+          [Android.Locations.LocationManager.GpsProvider]);
+
+        locationProvider.StartLocationWatcher(providers, out var locProvidersEnabled);
         reportFlow.Subscribe(_life);
       });
 

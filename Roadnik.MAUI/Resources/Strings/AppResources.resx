@@ -117,6 +117,18 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="notification.location_sharing.body" xml:space="preserve">
+    <value>Success rate: %success/%total
+Last location fix: %last-location-fix
+Last location fix accuracy: %last-location-fix-accuracym
+Last successful report:%last-successful-report</value>
+  </data>
+  <data name="notification.location_sharing.body_never" xml:space="preserve">
+    <value>never</value>
+  </data>
+  <data name="notification.location_sharing.title" xml:space="preserve">
+    <value>Your location is being shared</value>
+  </data>
   <data name="page.about.updateAvailable" xml:space="preserve">
     <value>Update available</value>
   </data>
@@ -140,6 +152,21 @@
   </data>
   <data name="page.options.connectionSettings" xml:space="preserve">
     <value>Connection settings</value>
+  </data>
+  <data name="page.options.delete_old_route" xml:space="preserve">
+    <value>The track from the previous recording session will not be preserved when you begin a new session</value>
+  </data>
+  <data name="page.options.low_power_mode" xml:space="preserve">
+    <value>Low power mode</value>
+  </data>
+  <data name="page.options.low_power_mode.accuracy_warning" xml:space="preserve">
+    <value>Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the 'Required location accuracy' option, the location will not be recorded</value>
+  </data>
+  <data name="page.options.low_power_mode.accuracy_warning_title" xml:space="preserve">
+    <value>Accuracy warning</value>
+  </data>
+  <data name="page.options.low_power_mode_hint" xml:space="preserve">
+    <value>Use only Wi-Fi, Bluetooth, and cellular network location providers</value>
   </data>
   <data name="page.options.roomId" xml:space="preserve">
     <value>Room ID</value>

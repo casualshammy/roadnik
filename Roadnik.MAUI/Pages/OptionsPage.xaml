@@ -105,10 +105,17 @@
                 DetailsText="{Binding MinAccuracy}"
                 TapCommand="{Binding MinAccuracyCommand }"/>
             <controls:OptionsItem
-                x:Name="p_deleteOldRouteOnNew"
+                x:Name="p_lowPowerMode"
                 Grid.Row="9"
+                Title="{x:Static l:AppResources.page_options_low_power_mode}"
+                DetailsText="{x:Static l:AppResources.page_options_low_power_mode_hint}"
+                ShowSwitch="True"
+                SwitchTapped="{Binding LowPowerModeCommand}"/>
+            <controls:OptionsItem
+                x:Name="p_deleteOldRouteOnNew"
+                Grid.Row="10"
                 Title="Purge old track"
-                DetailsText="Your track from previous recording session will not be preserved when you'll begin a new session"
+                DetailsText="{x:Static l:AppResources.page_options_delete_old_route}"
                 ShowSwitch="True"
                 SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
                 ShowBottomLine="False"/>

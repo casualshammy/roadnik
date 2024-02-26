@@ -7,6 +7,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Linq;
 using System.Windows.Input;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.ViewModels;
@@ -24,6 +25,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
+  private bool p_lowPowerModeEnabled;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
@@ -42,6 +44,7 @@ internal class OptionsPageViewModel : BaseViewModel
     MinimumDistanceCommand = new Command(OnMinimumDistance);
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
+    LowPowerModeCommand = new Command(OnLowPowerMode);
     WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
@@ -59,6 +62,7 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL), nameof(MinimumDistance));
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
+        SetProperty(ref p_lowPowerModeEnabled, p_storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE), nameof(LowPowerModeEnabled));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
@@ -146,7 +150,17 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy);
     }
   }
-  
+
+  public bool LowPowerModeEnabled
+  {
+    get => p_lowPowerModeEnabled;
+    set
+    {
+      SetProperty(ref p_lowPowerModeEnabled, value);
+      p_storage.SetValue(PREF_LOW_POWER_MODE, p_lowPowerModeEnabled);
+    }
+  }
+
   public bool WipeOldTrackOnNewEnabled
   {
     get => p_wipeOldTrackOnNewEnabled;
@@ -156,6 +170,7 @@ internal class OptionsPageViewModel : BaseViewModel
       p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled);
     }
   }
+
   public bool NotificationOnNewTrack
   {
     get => p_notificationOnNewTrack;
@@ -182,6 +197,7 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinimumDistanceCommand { get; }
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
+  public ICommand LowPowerModeCommand { get; }
   public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
@@ -352,6 +368,23 @@ internal class OptionsPageViewModel : BaseViewModel
       minAccuracy = 1000;
 
     MinAccuracy = minAccuracy;
+  }
+
+  private async void OnLowPowerMode(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    LowPowerModeEnabled = toggled;
+
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage != null && toggled)
+    {
+      await currentPage.DisplayAlert(
+      L.page_options_low_power_mode_accuracy_warning_title,
+      L.page_options_low_power_mode_accuracy_warning,
+      "OK");
+    }
   }
 
   private void OnWipeOldTrackOnNew(object? _arg)

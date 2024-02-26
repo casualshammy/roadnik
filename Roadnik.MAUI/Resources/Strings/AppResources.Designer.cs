@@ -61,6 +61,36 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Success rate: %success/%total
+        ///Last location fix: %last-location-fix
+        ///Last location fix accuracy: %last-location-fix-accuracym
+        ///Last successful report:%last-successful-report に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_location_sharing_body {
+            get {
+                return ResourceManager.GetString("notification.location_sharing.body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   never に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_location_sharing_body_never {
+            get {
+                return ResourceManager.GetString("notification.location_sharing.body_never", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Your location is being shared に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_location_sharing_title {
+            get {
+                return ResourceManager.GetString("notification.location_sharing.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Update available に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_about_updateAvailable {
@@ -129,6 +159,51 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_connectionSettings {
             get {
                 return ResourceManager.GetString("page.options.connectionSettings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   The track from the previous recording session will not be preserved when you begin a new session に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_delete_old_route {
+            get {
+                return ResourceManager.GetString("page.options.delete_old_route", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Low power mode に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_low_power_mode {
+            get {
+                return ResourceManager.GetString("page.options.low_power_mode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the &apos;Required location accuracy&apos; option, the location will not be recorded に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_low_power_mode_accuracy_warning {
+            get {
+                return ResourceManager.GetString("page.options.low_power_mode.accuracy_warning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Accuracy warning に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_low_power_mode_accuracy_warning_title {
+            get {
+                return ResourceManager.GetString("page.options.low_power_mode.accuracy_warning_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Use only Wi-Fi, Bluetooth, and cellular network location providers に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_low_power_mode_hint {
+            get {
+                return ResourceManager.GetString("page.options.low_power_mode_hint", resourceCulture);
             }
         }
         

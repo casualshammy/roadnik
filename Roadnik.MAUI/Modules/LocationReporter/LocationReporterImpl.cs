@@ -29,7 +29,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       IPreferencesStorage _storage,
       IHttpClientProvider _httpClientProvider,
       ITelephonyMgrProvider _telephonyMgrProvider)
-      => new LocationReporterImpl(_lifetime, _log, _storage, _httpClientProvider, _telephonyMgrProvider));
+      => new LocationReporterImpl(_lifetime, _log["location-reporter"], _storage, _httpClientProvider, _telephonyMgrProvider));
   }
 
   record ReportingCtx(
@@ -52,7 +52,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     IHttpClientProvider _httpClientProvider,
     ITelephonyMgrProvider _telephonyMgrProvider)
   {
-    p_log = _log["location-reporter"];
+    p_log = _log;
     p_storage = _storage;
     p_httpClientProvider = _httpClientProvider;
 
@@ -85,8 +85,15 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           return null;
 
         var location = _locations
-          .OrderBy(_ => _.Accuracy ?? 1000)
+          .OrderBy(_ => _.Accuracy ?? 10000)
           .First();
+
+        stats = stats with
+        {
+          LastLocationFixTime = location.Timestamp,
+          LastLocationFixAccuracy = (int)(location.Accuracy ?? 10000d)
+        };
+        p_statsFlow.OnNext(stats);
 
         return location;
       })
@@ -95,14 +102,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Where(_tuple =>
       {
         var (location, prefs) = _tuple;
-
-        stats = stats with
-        {
-          LastLocationFixTime = location.Timestamp,
-          LastLocationFixAccuracy = (int)(location.Accuracy ?? 1000d)
-        };
-        p_statsFlow.OnNext(stats);
-
         return location.Accuracy != null && location.Accuracy.Value <= prefs.MinAccuracy;
       })
       .Select(_ => _.First);

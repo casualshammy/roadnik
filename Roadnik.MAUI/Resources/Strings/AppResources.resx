@@ -121,7 +121,7 @@
     <value>Success rate: %success/%total
 Last location fix: %last-location-fix
 Last location fix accuracy: %last-location-fix-accuracym
-Last successful report:%last-successful-report</value>
+Last successful report: %last-successful-report</value>
   </data>
   <data name="notification.location_sharing.body_never" xml:space="preserve">
     <value>never</value>

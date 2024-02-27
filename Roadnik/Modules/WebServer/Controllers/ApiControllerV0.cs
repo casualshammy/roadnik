@@ -210,22 +210,19 @@ public class ApiControllerV0
 
     log.Info($"Requested to store geo data, room: '{_roomId}'");
 
-    var user = await p_usersController.GetRoomAsync(_roomId, _ct);
-    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && user == null)
+    var room = await p_usersController.GetRoomAsync(_roomId, _ct);
+    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var registeredMinIntervalMs = p_settingsCtrl.Settings.Value?.RegisteredMinIntervalMs;
-    var anonymousMinIntervalMs = p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
-    if (registeredMinIntervalMs == null || anonymousMinIntervalMs == null)
-      return InternalServerError($"Store minimum intervals are misconfigured");
+    var minInterval = room?.MinPointIntervalMs ?? p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
+    if (minInterval == null)
+      return InternalServerError($"'AnonymousMinIntervalMs' config value is misconfigured");
 
-    var timeLimit = user != null ? registeredMinIntervalMs : anonymousMinIntervalMs;
     var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username ?? ""}";
-
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)timeLimit))
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)minInterval))
     {
-      log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{timeLimit} ms'");
+      log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{minInterval} ms'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -264,22 +261,19 @@ public class ApiControllerV0
 
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
-    var user = await p_usersController.GetRoomAsync(_req.RoomId, _ct);
-    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && user == null)
+    var room = await p_usersController.GetRoomAsync(_req.RoomId, _ct);
+    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
-    var registeredMinIntervalMs = p_settingsCtrl.Settings.Value?.RegisteredMinIntervalMs;
-    var anonymousMinIntervalMs = p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
-    if (registeredMinIntervalMs == null || anonymousMinIntervalMs == null)
-      return InternalServerError($"Store minimum intervals are misconfigured");
+    var minInterval = room?.MinPointIntervalMs ?? p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
+    if (minInterval == null)
+      return InternalServerError($"'AnonymousMinIntervalMs' config value is misconfigured");
 
-    var timeLimit = user != null ? registeredMinIntervalMs : anonymousMinIntervalMs;
     var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_req.RoomId}/{_req.Username}";
-
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)timeLimit))
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)minInterval))
     {
-      log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_req.RoomId}', username: '{_req.Username}', time limit: '{timeLimit} ms'");
+      log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_req.RoomId}', username: '{_req.Username}', time limit: '{minInterval} ms'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
@@ -588,13 +582,13 @@ public class ApiControllerV0
   //[ApiKeyRequired]
   //[HttpPost("register-room")]
   public async Task<IResult> RegisterRoomAsync(
-    [FromBody] User? _req,
+    [FromBody] RoomInfo? _req,
     CancellationToken _ct)
   {
     if (_req == null)
-      return BadRequest("User is null");
+      return BadRequest("Room data is null");
 
-    await p_usersController.RegisterRoomAsync(_req.RoomId, _req.Email, _ct);
+    await p_usersController.RegisterRoomAsync(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil, _ct);
     return Results.Ok();
   }
 
@@ -616,7 +610,7 @@ public class ApiControllerV0
   public async Task<IResult> ListUsersAsync(CancellationToken _ct)
   {
     var users = await p_usersController.ListRegisteredRoomsAsync(_ct);
-    return Results.Json(users, ControllersJsonCtx.Default.IReadOnlyListUser);
+    return Results.Json(users, ControllersJsonCtx.Default.IReadOnlyListRoomInfo);
   }
 
   private ILogger GetLog(HttpRequest _httpRequest)

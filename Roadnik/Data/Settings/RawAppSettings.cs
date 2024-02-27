@@ -13,8 +13,7 @@ public class RawAppSettings
   public bool? AllowAnonymousPublish { get; init; }
   public int? AnonymousMaxPoints { get; init; }
   public double? AnonymousMinIntervalMs { get; init; }
-  public int? RegisteredMaxPoints { get; init; }
-  public double? RegisteredMinIntervalMs { get; init; }
   public string? FCMServiceAccountJsonPath { get; init; }
   public string? FCMProjectId { get; init; }
+
 }

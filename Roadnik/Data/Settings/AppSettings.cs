@@ -15,8 +15,6 @@ public class AppSettings
   public required bool AllowAnonymousPublish { get; init; }
   public required int AnonymousMaxPoints { get; init; }
   public required double AnonymousMinIntervalMs { get; init; }
-  public required int RegisteredMaxPoints { get; init; }
-  public required double RegisteredMinIntervalMs { get; init; }
   public string? FCMServiceAccountJsonPath { get; init; }
   public string? FCMProjectId { get; init; }
 
@@ -35,13 +33,9 @@ public class AppSettings
       AllowAnonymousPublish = _rawSettings.AllowAnonymousPublish ?? true,
       AnonymousMaxPoints = _rawSettings.AnonymousMaxPoints ?? 100,
       AnonymousMinIntervalMs = _rawSettings.AnonymousMinIntervalMs ?? 9.9d * 1000,
-      RegisteredMaxPoints = _rawSettings.RegisteredMaxPoints ?? 1000,
-      RegisteredMinIntervalMs = _rawSettings.RegisteredMinIntervalMs ?? 0.9d * 1000,
       FCMServiceAccountJsonPath = _rawSettings.FCMServiceAccountJsonPath,
       FCMProjectId = _rawSettings.FCMProjectId
     };
   }
-
-  public int GetWebMaxPoints() => Math.Max(AnonymousMaxPoints, RegisteredMaxPoints);
 
 }

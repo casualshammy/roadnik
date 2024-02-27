@@ -7,22 +7,22 @@ using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
-namespace Roadnik.MAUI.Modules.TilesCache;
+namespace Roadnik.MAUI.Modules.MapDataCache;
 
-internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
+internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
 {
-  public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
+  public static IMapDataCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider,
-      ILogger _logger) => new TilesCacheImpl(_lifetime, _httpClientProvider, _logger));
+      ILogger _logger) => new MapDataCacheImpl(_lifetime, _httpClientProvider, _logger));
   }
 
   private readonly Subject<string> p_workFlow = new();
   private readonly ILogger p_log;
 
-  private TilesCacheImpl(
+  private MapDataCacheImpl(
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
     ILogger _logger)
@@ -30,13 +30,16 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     p_log = _logger["tiles-cache"];
 
     var cacheDir = Path.Combine(FileSystem.Current.CacheDirectory, "tiles-cache");
-    var cache = new FileCache(_lifetime, cacheDir, TimeSpan.FromDays(1), 50 * 1024 * 1024, null);
+    var cache = new FileCache(_lifetime, cacheDir, TimeSpan.FromDays(1), 50 * 1024 * 1024, TimeSpan.FromDays(1));
+
+#if DEBUG
     _ = Task.Run(async () =>
     {
       await Task.Delay(TimeSpan.FromSeconds(10), _lifetime.Token);
       if (!_lifetime.Token.IsCancellationRequested)
         cache.CleanFiles();
     });
+#endif
 
     var scheduler = new EventLoopScheduler();
     var workCounter = 0;
@@ -65,7 +68,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
         }
         catch (Exception ex)
         {
-          p_log.Error($"Can't download tile '{_url}'", ex);
+          p_log.Error($"Can't download '{_url}'", ex);
         }
       }, scheduler)
       .Do(_ => Interlocked.Decrement(ref workCounter))
@@ -81,4 +84,5 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     p_log.Info($"New url for downloading: '{_url}'");
     p_workFlow.OnNext(_url);
   }
+
 }

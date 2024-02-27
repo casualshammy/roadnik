@@ -2,7 +2,7 @@
 
 namespace Roadnik.MAUI.Interfaces;
 
-public interface ITilesCache
+public interface IMapDataCache
 {
   FileCache Cache { get; }
 

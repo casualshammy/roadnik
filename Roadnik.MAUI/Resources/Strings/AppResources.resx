@@ -129,6 +129,18 @@ Last successful report: %last-successful-report</value>
   <data name="notification.location_sharing.title" xml:space="preserve">
     <value>Your location is being shared</value>
   </data>
+  <data name="notification.push.new_point.body" xml:space="preserve">
+    <value>%body</value>
+  </data>
+  <data name="notification.push.new_point.title" xml:space="preserve">
+    <value>User '%username' has added new point to map</value>
+  </data>
+  <data name="notification.push.new_track.body" xml:space="preserve">
+    <value>Click to open map</value>
+  </data>
+  <data name="notification.push.new_track.title" xml:space="preserve">
+    <value>User '%username' has started a new track</value>
+  </data>
   <data name="page.about.updateAvailable" xml:space="preserve">
     <value>Update available</value>
   </data>
@@ -144,29 +156,45 @@ Last successful report: %last-successful-report</value>
   <data name="page.bookmarks.room" xml:space="preserve">
     <value>Room</value>
   </data>
-  <data name="page.bookmarks.title" xml:space="preserve">
-    <value>Bookmarks</value>
-  </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Username</value>
   </data>
-  <data name="page.options.connectionSettings" xml:space="preserve">
+  <data name="page.options.connection_settings" xml:space="preserve">
     <value>Connection settings</value>
   </data>
-  <data name="page.options.delete_old_route" xml:space="preserve">
+  <data name="page.options.delete_old_route.desc" xml:space="preserve">
     <value>The track from the previous recording session will not be preserved when you begin a new session</value>
+  </data>
+  <data name="page.options.delete_old_route.title" xml:space="preserve">
+    <value>Purge old tracks</value>
   </data>
   <data name="page.options.low_power_mode" xml:space="preserve">
     <value>Low power mode</value>
   </data>
   <data name="page.options.low_power_mode.accuracy_warning" xml:space="preserve">
-    <value>Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the 'Required location accuracy' option, the location will not be recorded</value>
+    <value>Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the '%min-location-accuracy' option, the location will not be recorded</value>
   </data>
   <data name="page.options.low_power_mode.accuracy_warning_title" xml:space="preserve">
     <value>Accuracy warning</value>
   </data>
   <data name="page.options.low_power_mode_hint" xml:space="preserve">
-    <value>Use only Wi-Fi, Bluetooth, and cellular network location providers</value>
+    <value>Use only Wi-Fi, Bluetooth, and cellular network location providers
+This option also affects the accuracy of the current location displayed on the map</value>
+  </data>
+  <data name="page.options.notifications" xml:space="preserve">
+    <value>Notifications</value>
+  </data>
+  <data name="page.options.notifications.new_point.desc" xml:space="preserve">
+    <value>Someone has created a new point</value>
+  </data>
+  <data name="page.options.notifications.new_point.title" xml:space="preserve">
+    <value>A new point was placed on the map</value>
+  </data>
+  <data name="page.options.notifications.new_track.desc" xml:space="preserve">
+    <value>Someone has started a new track</value>
+  </data>
+  <data name="page.options.notifications.new_track.title" xml:space="preserve">
+    <value>A new track was started</value>
   </data>
   <data name="page.options.roomId" xml:space="preserve">
     <value>Room ID</value>
@@ -174,7 +202,25 @@ Last successful report: %last-successful-report</value>
   <data name="page.options.serverAddress" xml:space="preserve">
     <value>Server address</value>
   </data>
+  <data name="page.options.tracking" xml:space="preserve">
+    <value>Tracking settings</value>
+  </data>
+  <data name="page.options.tracking.required_accuracy" xml:space="preserve">
+    <value>Required location accuracy</value>
+  </data>
   <data name="page.options.username" xml:space="preserve">
     <value>Username</value>
+  </data>
+  <data name="shell.about" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="shell.bookmarks" xml:space="preserve">
+    <value>Bookmarks</value>
+  </data>
+  <data name="shell.map" xml:space="preserve">
+    <value>Map</value>
+  </data>
+  <data name="shell.settings" xml:space="preserve">
+    <value>Settings</value>
   </data>
 </root>

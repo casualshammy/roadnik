@@ -8,7 +8,11 @@ public interface IWebSocketCtrl
   IObservable<object> IncomingMessages { get; }
   IObservable<WebSocketSession> ClientConnected { get; }
 
-  Task<bool> AcceptSocketAsync(string _roomId, WebSocket _webSocket);
+  Task<bool> AcceptSocketAsync(
+    WebSocket _webSocket,
+    string _roomId,
+    int _maxPointsInRoom);
+
   Task<int> BroadcastMsgAsync<T>(T _msg, CancellationToken _ct) where T : notnull;
   Task SendMsgAsync<T>(WebSocketSession _session, T _msg, CancellationToken _ct) where T : notnull;
   Task SendMsgByRoomIdAsync<T>(string _roomId, T _msg, CancellationToken _ct) where T : notnull;

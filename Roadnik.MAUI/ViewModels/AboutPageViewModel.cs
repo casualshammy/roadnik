@@ -17,7 +17,6 @@ internal class AboutPageViewModel : BaseViewModel
     });
   }
 
-  public string Title { get; } = "About";
   public string SupportText { get; } =
     "Please leave questions, bug reports, or comments on the issue tracker. " +
     "Alternatively, you can reach me via e-mail.";

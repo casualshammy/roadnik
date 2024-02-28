@@ -11,7 +11,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 {
   private static readonly Regex[] p_cacheRegexes = [
     CacheRegexThunderforest(),
-    CacheRegexMapIcon(),
     CacheRegexFavicon(),
     CacheRegexRoomHtml(),
     CacheRegexJs(),

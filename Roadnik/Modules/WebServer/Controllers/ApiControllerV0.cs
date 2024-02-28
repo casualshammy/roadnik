@@ -30,7 +30,7 @@ public class ApiControllerV0
   private readonly ISettingsController p_settingsCtrl;
   private readonly IDocumentStorageAot p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
-  private readonly IRoomsController p_usersController;
+  private readonly IRoomsController p_roomsController;
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fcmPublisher;
@@ -50,7 +50,7 @@ public class ApiControllerV0
     p_documentStorage = _documentStorage;
     p_log = _logger;
     p_webSocketCtrl = _webSocketCtrl;
-    p_usersController = _usersController;
+    p_roomsController = _usersController;
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
@@ -210,7 +210,7 @@ public class ApiControllerV0
 
     log.Info($"Requested to store geo data, room: '{_roomId}'");
 
-    var room = await p_usersController.GetRoomAsync(_roomId, _ct);
+    var room = await p_roomsController.GetRoomAsync(_roomId, _ct);
     if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
@@ -261,7 +261,7 @@ public class ApiControllerV0
 
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
-    var room = await p_usersController.GetRoomAsync(_req.RoomId, _ct);
+    var room = await p_roomsController.GetRoomAsync(_req.RoomId, _ct);
     if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
@@ -362,7 +362,7 @@ public class ApiControllerV0
 
     log.Info($"Requested to start new path, room '{_req.RoomId}', username '{_req.Username}', wipe: '{_req.WipeData}'");
     if (_req.WipeData)
-      p_usersController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
+      p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
 
     var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgNewTrackStarted(_req.Username), AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
     var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
@@ -557,7 +557,8 @@ public class ApiControllerV0
   //[HttpGet("/ws")]
   public async Task<IResult> StartWebSocketAsync(
     HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string? _roomId)
+    [FromQuery(Name = "roomId")] string? _roomId,
+    CancellationToken _ct)
   {
     if (string.IsNullOrWhiteSpace(_roomId))
       return BadRequest("Room Id is null!");
@@ -572,8 +573,11 @@ public class ApiControllerV0
     var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
     log.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
 
+    var roomInfo = await p_roomsController.GetRoomAsync(_roomId, _ct);
+    var maxPointsInRoom = roomInfo?.MaxPoints ?? p_settingsCtrl.Settings.Value?.AnonymousMaxPoints ?? int.MaxValue;
+
     using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
-    _ = await p_webSocketCtrl.AcceptSocketAsync(_roomId, websocket);
+    _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);
     log.Info($"WS connection '{sessionIndex}' for room '{_roomId}' is closed");
 
     return Results.Empty;
@@ -588,7 +592,7 @@ public class ApiControllerV0
     if (_req == null)
       return BadRequest("Room data is null");
 
-    await p_usersController.RegisterRoomAsync(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil, _ct);
+    await p_roomsController.RegisterRoomAsync(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil, _ct);
     return Results.Ok();
   }
 
@@ -601,7 +605,7 @@ public class ApiControllerV0
     if (_req == null || _req.RoomId == null)
       return BadRequest("Room Id is null");
 
-    await p_usersController.UnregisterRoomAsync(_req.RoomId, _ct);
+    await p_roomsController.UnregisterRoomAsync(_req.RoomId, _ct);
     return Results.Ok();
   }
 
@@ -609,7 +613,7 @@ public class ApiControllerV0
   //[HttpGet("list-registered-rooms")]
   public async Task<IResult> ListUsersAsync(CancellationToken _ct)
   {
-    var users = await p_usersController.ListRegisteredRoomsAsync(_ct);
+    var users = await p_roomsController.ListRegisteredRoomsAsync(_ct);
     return Results.Json(users, ControllersJsonCtx.Default.IReadOnlyListRoomInfo);
   }
 

@@ -6,7 +6,7 @@
     xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
     xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
     x:Class="Roadnik.MAUI.Pages.AboutPage"
-    Title="{Binding Title}">
+    Title="{x:Static l:AppResources.shell_about}">
 
     <ContentPage.BindingContext>
         <views:AboutPageViewModel />

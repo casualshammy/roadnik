@@ -20,7 +20,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 {
   public static IWebSocketCtrl ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance((ILogger _log, ISettingsController _settingsController, IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
+    return _ctx.CreateInstance((
+      ILogger _log,
+      ISettingsController _settingsController,
+      IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
   }
 
   private readonly ILogger p_log;
@@ -50,7 +53,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   public IObservable<object> IncomingMessages => p_incomingMsgs;
   public IObservable<WebSocketSession> ClientConnected => p_clientConnectedFlow;
 
-  public async Task<bool> AcceptSocketAsync(string _roomId, WebSocket _webSocket)
+  public async Task<bool> AcceptSocketAsync(
+    WebSocket _webSocket,
+    string _roomId, 
+    int _maxPointsInRoom)
   {
     if (_webSocket.State != WebSocketState.Open)
       return false;
@@ -59,7 +65,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
     using var semaphore = new SemaphoreSlim(0, 1);
     using var scheduler = new EventLoopScheduler();
 
-    scheduler.ScheduleAsync(async (_s, _ct) => await CreateNewLoopAsync(session, semaphore));
+    scheduler.ScheduleAsync(async (_s, _ct) => await CreateNewLoopAsync(session, semaphore, _maxPointsInRoom));
     await semaphore.WaitAsync(p_lifetime.Token);
 
     return true;
@@ -114,7 +120,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
     }
   }
 
-  private async Task CreateNewLoopAsync(WebSocketSession _session, SemaphoreSlim _completeSignal)
+  private async Task CreateNewLoopAsync(
+    WebSocketSession _session, 
+    SemaphoreSlim _completeSignal,
+    int _maxPointsInRoom)
   {
     var session = _session;
     var sessionIndex = Interlocked.Increment(ref p_sessionsCount);
@@ -128,8 +137,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 
     try
     {
-      var maxPoints = p_settingsCtrl.Settings.Value?.GetWebMaxPoints() ?? int.MaxValue;
-      var helloMsgData = new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), maxPoints);
+      var helloMsgData = new WsMsgHello(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), _maxPointsInRoom);
       var helloMsg = WsHelper.CreateWsMessage(helloMsgData);
 
       await session.Socket.SendAsync(helloMsg, WebSocketMessageType.Text, true, cts.Token);

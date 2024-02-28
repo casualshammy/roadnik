@@ -5,10 +5,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:pages="clr-namespace:Roadnik.MAUI.Pages"
     xmlns:root="clr-namespace:Roadnik.MAUI"
+    xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
     Shell.FlyoutBehavior="Flyout">
 
     <!--https://learn.microsoft.com/en-us/dotnet/maui/fundamentals/shell/flyout?view=net-maui-7.0-->
-    
+
     <Shell.FlyoutHeaderTemplate>
         <DataTemplate>
             <Grid BackgroundColor="Black"
@@ -28,21 +29,21 @@
     <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
         <ShellContent 
             x:Name="p_mainPageFlyoutItem"
-            Title="Map" 
+            Title="{x:Static l:AppResources.shell_map}" 
             Icon="map.svg"
             ContentTemplate="{DataTemplate pages:MainPage}" />
         <ShellContent 
-            Title="Bookmarks" 
+            Title="{x:Static l:AppResources.shell_bookmarks}" 
             Icon="bookmarks.svg"
             ContentTemplate="{DataTemplate pages:BookmarksPage}" />
         <ShellContent 
-            Title="Settings" 
+            Title="{x:Static l:AppResources.shell_settings}" 
             Icon="cog_box.svg"
             ContentTemplate="{DataTemplate pages:OptionsPage}" />
     </FlyoutItem>
 
     <ShellContent 
-        Title="About"
+        Title="{x:Static l:AppResources.shell_about}"
         Icon="info.png"
         ContentTemplate="{DataTemplate pages:AboutPage}" />
 

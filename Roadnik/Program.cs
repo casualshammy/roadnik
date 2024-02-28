@@ -18,6 +18,7 @@ using Roadnik.Modules.WebSocketController;
 using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.FCMProvider;
+using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebServer.Middlewares;
 using System.Net;
 using System.Reactive.Concurrency;
@@ -99,9 +100,9 @@ public partial class Program
       .AddModule<RoomsControllerImpl, IRoomsController>()
       .AddModule<TilesCacheImpl, ITilesCache>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
+      .AddModule<WebServerImpl, IWebServer>()
+      .ActivateOnStart<IWebServer>()
       .Build();
-
-    var webApp = CreateWebHost(depMgr, settings);
 
     var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
     logger.Info($"-------------------------------------------");
@@ -114,113 +115,15 @@ public partial class Program
 
     lifetime.InstallConsoleCtrlCHook();
 
-    webApp.Run();
+    try
+    {
+      await Task.Delay(-1, lifetime.Token);
+    }
+    catch (OperationCanceledException) { }
 
     logger.Info($"-------------------------------------------");
     logger.Info($"Server stopped");
     logger.Info($"-------------------------------------------");
-  }
-
-  private static IHost CreateWebHost(IReadOnlyDependencyContainer _depContainer, AppSettings _appSettings)
-  {
-    var builder = WebApplication.CreateSlimBuilder();
-
-    builder.Logging.ClearProviders();
-
-    builder.Services.ConfigureHttpJsonOptions(_opt =>
-    {
-      _opt.SerializerOptions.TypeInfoResolverChain.Insert(0, ControllersJsonCtx.Default);
-    });
-
-    builder.Services.AddResponseCompression(_options => _options.EnableForHttps = true);
-    builder.WebHost.ConfigureKestrel(_opt =>
-    {
-      _opt.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
-      _opt.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
-      _opt.Listen(IPAddress.Parse(_appSettings.IpBind), _appSettings.PortBind);
-    });
-
-    var app = builder.Build();
-
-    var requestsRequreAuth = new HashSet<string>()
-    {
-      ReqPaths.REGISTER_ROOM,
-      ReqPaths.UNREGISTER_ROOM,
-      ReqPaths.LIST_REGISTERED_ROOMS
-    };
-
-    app
-      //.UseHttpsRedirection()
-      //.UseRouting()
-      .Use(ForwardProxyHeadersMiddlewareAsync)
-      .UseResponseCompression()
-      .UseMiddleware<AdminAccessMiddleware>(requestsRequreAuth, _depContainer.Locate<ISettingsController>())
-      .UseWebSockets(new WebSocketOptions()
-      {
-        KeepAliveInterval = TimeSpan.FromSeconds(30)
-      });
-
-    var controller = new ApiControllerV0(
-      _depContainer.Locate<ISettingsController>(),
-      _depContainer.Locate<IDocumentStorageAot>(),
-      _depContainer.Locate<ILogger>(),
-      _depContainer.Locate<IWebSocketCtrl>(),
-      _depContainer.Locate<IRoomsController>(),
-      _depContainer.Locate<ITilesCache>(),
-      _depContainer.Locate<IReqRateLimiter>(),
-      _depContainer.Locate<IFCMPublisher>());
-
-    app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
-    app.MapGet("/", controller.GetIndexFile);
-    app.MapGet("{**path}", controller.GetStaticFile);
-    app.MapGet("/ping", () => Results.Ok());
-    app.MapGet("/r/{**path}", controller.GetRoom);
-    app.MapGet("/thunderforest", controller.GetThunderforestImageAsync);
-    app.MapGet(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointGetAsync);
-    app.MapPost(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointPostAsync);
-    app.MapGet(ReqPaths.GET_ROOM_PATHS, controller.GetRoomPathsAsync);
-    app.MapPost(ReqPaths.START_NEW_PATH, controller.StartNewPathAsync);
-    app.MapPost(ReqPaths.CREATE_NEW_POINT, controller.CreateNewPointAsync);
-    app.MapGet(ReqPaths.LIST_ROOM_POINTS, controller.GetRoomPointsAsync);
-    app.MapPost(ReqPaths.DELETE_ROOM_POINT, controller.DeleteRoomPointAsync);
-    app.MapGet(ReqPaths.GET_FREE_ROOM_ID, controller.GetFreeRoomIdAsync);
-    app.MapPost(ReqPaths.UPLOAD_LOG, controller.UploadLogAsync);
-    app.MapGet(ReqPaths.IS_ROOM_ID_VALID, controller.IsRoomIdValid);
-    app.MapGet("/ws", controller.StartWebSocketAsync);
-    app.MapPost(ReqPaths.REGISTER_ROOM, controller.RegisterRoomAsync);
-    app.MapPost(ReqPaths.UNREGISTER_ROOM, controller.DeleteRoomRegistrationAsync);
-    app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, controller.ListUsersAsync);
-
-    return app;
-  }
-
-  private static Task ForwardProxyHeadersMiddlewareAsync(HttpContext _ctx, RequestDelegate _next)
-  {
-    if (_ctx.Request.Headers.TryGetValue("CF-Connecting-IP", out var cfConnectingIp))
-    {
-      var headerValue = cfConnectingIp.ToString();
-      if (!headerValue.IsNullOrWhiteSpace() && IPAddress.TryParse(headerValue, out var ip))
-      {
-        _ctx.Connection.RemoteIpAddress = ip;
-        return _next(_ctx);
-      }
-    }
-
-    if (_ctx.Request.Headers.TryGetValue("X-Forwarded-For", out var xForwardedFor))
-    {
-      var headerValue = xForwardedFor.ToString();
-      if (!headerValue.IsNullOrWhiteSpace())
-      {
-        var split = headerValue.Split(',', StringSplitOptions.TrimEntries);
-        if (split.Length > 0 && IPAddress.TryParse(split[0], out var ip))
-        {
-          _ctx.Connection.RemoteIpAddress = ip;
-          return _next(_ctx);
-        }
-      }
-    }
-
-    return _next(_ctx);
   }
 
   [GeneratedRegex(@".+\.log")]

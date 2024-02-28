@@ -11,19 +11,18 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 {
   private static readonly Regex[] p_cacheRegexes = [
     CacheRegexThunderforest(),
-    CacheRegexMapIcon(),
     CacheRegexFavicon(),
     CacheRegexRoomHtml(),
     CacheRegexJs(),
     CacheRegexOsm(),
   ];
-  private readonly ITilesCache? p_tilesCache;
+  private readonly IMapDataCache? p_tilesCache;
   private readonly IPreferencesStorage? p_storage;
   private readonly ILogger? p_log;
 
   public CachedMauiWebViewClient(
     WebViewHandler _handler,
-    ITilesCache? _tilesCache,
+    IMapDataCache? _tilesCache,
     ILogger? _log,
     IPreferencesStorage? _storage) : base(_handler)
   {
@@ -63,8 +62,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 
   [GeneratedRegex(@"thunderforest\?type=\w+?&x=\d+&y=\d+&z=\d+$")]
   private static partial Regex CacheRegexThunderforest();
-  [GeneratedRegex(@"img/map_icon_\d+\.png$")]
-  private static partial Regex CacheRegexMapIcon();
   [GeneratedRegex(@"favicon\.ico$")]
   private static partial Regex CacheRegexFavicon();
   [GeneratedRegex(@"/r/\?id=[\w\-_]+$")]

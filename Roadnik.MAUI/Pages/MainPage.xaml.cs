@@ -30,7 +30,7 @@ namespace Roadnik.MAUI.Pages;
 public partial class MainPage : CContentPage
 {
   private const string p_loadingPageUrl = "loading.html";
-  private readonly IPreferencesStorage p_storage;
+  private readonly IPreferencesStorage p_prefs;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILogger p_log;
@@ -49,7 +49,7 @@ public partial class MainPage : CContentPage
     var pageController = Container.Locate<IPagesController>();
     pageController.OnMainPage(this);
 
-    p_storage = Container.Locate<IPreferencesStorage>();
+    p_prefs = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
     var pushMsgCtrl = Container.Locate<IPushMessagesController>();
@@ -77,11 +77,11 @@ public partial class MainPage : CContentPage
 
     p_lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var scheduler));
 
-    p_storage.PreferencesChanged
+    p_prefs.PreferencesChanged
       .Select(_ =>
       {
-        var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-        var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+        var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
 
         return (serverAddress, roomId);
       })
@@ -100,9 +100,9 @@ public partial class MainPage : CContentPage
           return;
         }
 
-        var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-        var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
-        var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+        var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
+        var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
         var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
         if (url == null)
         {
@@ -111,7 +111,7 @@ public partial class MainPage : CContentPage
           return;
         }
 
-        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Short).Show(_ct));
+        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Long).Show(_ct));
 
         try
         {
@@ -206,7 +206,12 @@ public partial class MainPage : CContentPage
             if (!await IsLocationPermissionOkAsync())
               return;
 
-            var providers = new string[] { Android.Locations.LocationManager.GpsProvider, Android.Locations.LocationManager.NetworkProvider };
+            string[] providers;
+            if (p_prefs.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE))
+              providers = [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider];
+            else
+              providers = [Android.Locations.LocationManager.GpsProvider, Android.Locations.LocationManager.NetworkProvider];
+
             webAppLocationProvider.StartLocationWatcher(providers, out _);
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
@@ -301,18 +306,18 @@ public partial class MainPage : CContentPage
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
     // privacy policy
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     if (serverAddress != null && serverAddress.StartsWith(ROADNIK_APP_ADDRESS))
     {
       const int currentVersion = 3;
-      var version = p_storage.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
+      var version = p_prefs.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
       if (version < currentVersion)
       {
         var result = await this.ShowPopupAsync(new AgreementsPopup());
         if (result is not bool agreed || !agreed)
           return;
 
-        p_storage.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
+        p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
       }
     }
 
@@ -388,8 +393,8 @@ public partial class MainPage : CContentPage
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
     var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
     if (url == null)
     {
@@ -442,15 +447,15 @@ public partial class MainPage : CContentPage
 
   private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)
   {
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     if (serverAddress.IsNullOrWhiteSpace())
       return;
 
-    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
+    var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
     if (roomId.IsNullOrWhiteSpace())
       return;
 
-    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
+    var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
     if (username.IsNullOrWhiteSpace())
       return;
 

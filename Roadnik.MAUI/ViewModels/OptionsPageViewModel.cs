@@ -69,7 +69,6 @@ internal class OptionsPageViewModel : BaseViewModel
       }, lifetime);
   }
 
-  public string Title { get; } = "Settings";
   public string? ServerName
   {
     get => p_serverName;
@@ -380,9 +379,12 @@ internal class OptionsPageViewModel : BaseViewModel
     var currentPage = p_pagesController.CurrentPage;
     if (currentPage != null && toggled)
     {
+      var body = L.page_options_low_power_mode_accuracy_warning
+        .Replace("%min-location-accuracy", L.page_options_tracking_required_accuracy);
+
       await currentPage.DisplayAlert(
       L.page_options_low_power_mode_accuracy_warning_title,
-      L.page_options_low_power_mode_accuracy_warning,
+      body,
       "OK");
     }
   }

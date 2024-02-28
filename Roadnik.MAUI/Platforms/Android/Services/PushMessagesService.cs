@@ -12,6 +12,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Frozen;
 using System.Text.Json;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
@@ -58,16 +59,26 @@ public class PushMessagesService : FirebaseMessagingService
         var prefStorage = app.Container.Locate<IPreferencesStorage>();
         var log = app.Container.Locate<ILogger>()["fcm-service"];
 
-        var msg = JsonSerializer.Deserialize(jsonData, AndroidPushJsonCtx.Default.PushMsg);
-        if (msg == null || msg.Type == PushMsgType.None)
+        PushMsg? pushMsg = null;
+        try
+        {
+          pushMsg = JsonSerializer.Deserialize(jsonData, AndroidPushJsonCtx.Default.PushMsg);
+        }
+        catch (Exception ex)
+        {
+          log.Error($"Error occured while trying to deserialize push msg data", ex);
+          return;
+        }
+
+        if (pushMsg == null || pushMsg.Type == PushMsgType.None)
         {
           log.Error($"Can't parse push msg: it is null or its type is {nameof(PushMsgType.None)}!");
           return;
         }
 
-        if (msg.Type == PushMsgType.RoomPointAdded)
+        if (pushMsg.Type == PushMsgType.RoomPointAdded)
         {
-          var msgData = msg.Data.Deserialize(typeof(PushMsgRoomPointAdded), AndroidPushJsonCtx.Default) as PushMsgRoomPointAdded;
+          var msgData = pushMsg.Data.Deserialize(typeof(PushMsgRoomPointAdded), AndroidPushJsonCtx.Default) as PushMsgRoomPointAdded;
           if (msgData == null)
             return;
 
@@ -82,19 +93,24 @@ public class PushMessagesService : FirebaseMessagingService
             log.Info($"RoomPointAdded: '{username}' / '{msgData.Description}' / {msgData.Lat};{msgData.Lng}");
 
             var pushMsgData = new PushNotificationEvent(
-              PUSH_MSG_NEW_POINT, 
+              PUSH_MSG_NEW_POINT,
               JsonSerializer.SerializeToElement(new LatLng(msgData.Lat, msgData.Lng)));
+
+            var title = L.notification_push_new_point_title
+              .Replace("%username", username);
+            var body = L.notification_push_new_point_body
+              .Replace("%body", msgData.Description);
 
             ShowNotificationGoToLocation(
               NOTIFICATION_CHANNEL_MAP_EVENTS,
-              $"User '{username}' has added new point to map",
-              $"\"{msgData.Description}\"",
+              title,
+              $"\"{body}\"",
               pushMsgData);
           }
         }
-        else if (msg.Type == PushMsgType.NewTrackStarted)
+        else if (pushMsg.Type == PushMsgType.NewTrackStarted)
         {
-          var msgData = msg.Data.Deserialize(typeof(PushMsgNewTrackStarted), AndroidPushJsonCtx.Default) as PushMsgNewTrackStarted;
+          var msgData = pushMsg.Data.Deserialize(typeof(PushMsgNewTrackStarted), AndroidPushJsonCtx.Default) as PushMsgNewTrackStarted;
           if (msgData == null)
             return;
 
@@ -108,10 +124,14 @@ public class PushMessagesService : FirebaseMessagingService
               PUSH_MSG_NEW_TRACK,
               JsonSerializer.SerializeToElement(msgData.Username));
 
+            var title = L.notification_push_new_track_title
+              .Replace("%username", msgData.Username);
+            var body = L.notification_push_new_track_body;
+
             ShowNotificationGoToLocation(
               NOTIFICATION_CHANNEL_MAP_EVENTS,
-              $"User '{msgData.Username}' has started a new track",
-              "Click to open map",
+              title,
+              body,
               pushMsgData);
           }
         }

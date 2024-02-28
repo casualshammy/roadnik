@@ -11,9 +11,9 @@ namespace AxToolsServerNet.Data.Serializers;
 [JsonSerializable(typeof(CreateNewPointReq))]
 [JsonSerializable(typeof(IReadOnlyList<ListRoomPointsResData>))]
 [JsonSerializable(typeof(DeleteRoomPointReq))]
-[JsonSerializable(typeof(User))]
+[JsonSerializable(typeof(RoomInfo))]
 [JsonSerializable(typeof(DeleteRoomReq))]
-[JsonSerializable(typeof(IReadOnlyList<User>))]
+[JsonSerializable(typeof(IReadOnlyList<RoomInfo>))]
 internal partial class ControllersJsonCtx : JsonSerializerContext
 {
 

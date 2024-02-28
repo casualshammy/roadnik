@@ -121,13 +121,25 @@
     <value>Успешно: %success из %total
 Последнее местоположение: %last-location-fix
 Точность последнего местоположения: %last-location-fix-accuracyм
-Последняя успешная передача местоположения:%last-successful-report</value>
+Последняя успешная передача местоположения: %last-successful-report</value>
   </data>
   <data name="notification.location_sharing.body_never" xml:space="preserve">
     <value>никогда</value>
   </data>
   <data name="notification.location_sharing.title" xml:space="preserve">
     <value>Ваше местоположение транслируется</value>
+  </data>
+  <data name="notification.push.new_point.body" xml:space="preserve">
+    <value>%body</value>
+  </data>
+  <data name="notification.push.new_point.title" xml:space="preserve">
+    <value>Пользователь '%username' добавил новую точку на карту</value>
+  </data>
+  <data name="notification.push.new_track.body" xml:space="preserve">
+    <value>Нажмите, чтобы открыть карту</value>
+  </data>
+  <data name="notification.push.new_track.title" xml:space="preserve">
+    <value>Пользователь '%username' начал транслировать своё местоположение</value>
   </data>
   <data name="page.about.updateAvailable" xml:space="preserve">
     <value>Доступно обновление</value>
@@ -144,29 +156,45 @@
   <data name="page.bookmarks.room" xml:space="preserve">
     <value>Комната</value>
   </data>
-  <data name="page.bookmarks.title" xml:space="preserve">
-    <value>Закладки</value>
-  </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Пользователь</value>
   </data>
-  <data name="page.options.connectionSettings" xml:space="preserve">
+  <data name="page.options.connection_settings" xml:space="preserve">
     <value>Настройки подключения</value>
   </data>
-  <data name="page.options.delete_old_route" xml:space="preserve">
+  <data name="page.options.delete_old_route.desc" xml:space="preserve">
     <value>Предыдущая запись трека будет удалена при начале новой записи</value>
+  </data>
+  <data name="page.options.delete_old_route.title" xml:space="preserve">
+    <value>Удалять старые треки</value>
   </data>
   <data name="page.options.low_power_mode" xml:space="preserve">
     <value>Режим низкого энергопотребления</value>
   </data>
   <data name="page.options.low_power_mode.accuracy_warning" xml:space="preserve">
-    <value>Пожалуйста, обратите внимание: источники местоположения с низким потреблением энергии имеют низкую точность (10м - 1000м). Если точность измерения местоположения ниже, чем значение опции 'Required location accuracy', то местоположение не будет записано.</value>
+    <value>Пожалуйста, обратите внимание: источники местоположения с низким потреблением энергии имеют низкую точность (10м - 1000м). Если точность измерения местоположения ниже, чем значение опции '%min-location-accuracy', то местоположение не будет записано.</value>
   </data>
   <data name="page.options.low_power_mode.accuracy_warning_title" xml:space="preserve">
     <value>Предупреждение о точности</value>
   </data>
   <data name="page.options.low_power_mode_hint" xml:space="preserve">
-    <value>Использовать только источники местоположения от Wi-Fi, Bluetooth, и сотовой сети</value>
+    <value>Использовать только источники местоположения от Wi-Fi, Bluetooth, и сотовой сети
+Эта опция также влияет на точность отображаемого на карте текущего местоположения</value>
+  </data>
+  <data name="page.options.notifications" xml:space="preserve">
+    <value>Уведомления</value>
+  </data>
+  <data name="page.options.notifications.new_point.desc" xml:space="preserve">
+    <value>Кто-то создал новую точку на карте</value>
+  </data>
+  <data name="page.options.notifications.new_point.title" xml:space="preserve">
+    <value>На карту была добавлена новая точка</value>
+  </data>
+  <data name="page.options.notifications.new_track.desc" xml:space="preserve">
+    <value>Кто-то начал трансляцию трека</value>
+  </data>
+  <data name="page.options.notifications.new_track.title" xml:space="preserve">
+    <value>Был начат новый трек</value>
   </data>
   <data name="page.options.roomId" xml:space="preserve">
     <value>ID комнаты</value>
@@ -174,7 +202,25 @@
   <data name="page.options.serverAddress" xml:space="preserve">
     <value>Адрес сервера</value>
   </data>
+  <data name="page.options.tracking" xml:space="preserve">
+    <value>Настройки трекинга</value>
+  </data>
+  <data name="page.options.tracking.required_accuracy" xml:space="preserve">
+    <value>Минимальная точность геолокации</value>
+  </data>
   <data name="page.options.username" xml:space="preserve">
     <value>Имя пользователя</value>
+  </data>
+  <data name="shell.about" xml:space="preserve">
+    <value>О приложении</value>
+  </data>
+  <data name="shell.bookmarks" xml:space="preserve">
+    <value>Закладки</value>
+  </data>
+  <data name="shell.map" xml:space="preserve">
+    <value>Карта</value>
+  </data>
+  <data name="shell.settings" xml:space="preserve">
+    <value>Настройки</value>
   </data>
 </root>

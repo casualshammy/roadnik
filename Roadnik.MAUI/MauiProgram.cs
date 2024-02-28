@@ -8,11 +8,11 @@ using Roadnik.MAUI.Modules.DeepLinksController;
 using Roadnik.MAUI.Modules.HttpClientProvider;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Modules.LocationReporter;
+using Roadnik.MAUI.Modules.MapDataCache;
 using Roadnik.MAUI.Modules.PageController;
 using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
-using Roadnik.MAUI.Modules.TilesCache;
 using System.Text.RegularExpressions;
 using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
 
@@ -67,7 +67,7 @@ public static partial class MauiProgram
       .AddModule<PreferencesStorageImpl, IPreferencesStorage>()
       .AddModule<PushMessagesControllerImpl, IPushMessagesController>()
       .AddModule<TelephonyMgrProviderImpl, ITelephonyMgrProvider>()
-      .AddModule<TilesCacheImpl, ITilesCache>()
+      .AddModule<MapDataCacheImpl, IMapDataCache>()
       .ActivateOnStart<IPushMessagesController>();
 
     Container = appDeps;

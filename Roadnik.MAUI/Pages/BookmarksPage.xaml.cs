@@ -19,7 +19,7 @@ public partial class BookmarksPage : CContentPage
     InitializeComponent();
     BindingContext = this;
 
-    Title = MAUI.Resources.Strings.AppResources.page_bookmarks_title;
+    Title = MAUI.Resources.Strings.AppResources.shell_bookmarks;
 
     p_preferences = Container.Locate<IPreferencesStorage>();
     var bookmarks = p_preferences.GetValueOrDefault<List<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? new List<BookmarkEntry>();

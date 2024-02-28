@@ -64,7 +64,7 @@ namespace Roadnik.MAUI.Resources.Strings {
         ///   Success rate: %success/%total
         ///Last location fix: %last-location-fix
         ///Last location fix accuracy: %last-location-fix-accuracym
-        ///Last successful report:%last-successful-report に類似しているローカライズされた文字列を検索します。
+        ///Last successful report: %last-successful-report に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string notification_location_sharing_body {
             get {
@@ -87,6 +87,42 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string notification_location_sharing_title {
             get {
                 return ResourceManager.GetString("notification.location_sharing.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   %body に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_push_new_point_body {
+            get {
+                return ResourceManager.GetString("notification.push.new_point.body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   User &apos;%username&apos; has added new point to map に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_push_new_point_title {
+            get {
+                return ResourceManager.GetString("notification.push.new_point.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Click to open map に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_push_new_track_body {
+            get {
+                return ResourceManager.GetString("notification.push.new_track.body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   User &apos;%username&apos; has started a new track に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string notification_push_new_track_title {
+            get {
+                return ResourceManager.GetString("notification.push.new_track.title", resourceCulture);
             }
         }
         
@@ -136,15 +172,6 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Bookmarks に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_bookmarks_title {
-            get {
-                return ResourceManager.GetString("page.bookmarks.title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Username に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_bookmarks_username {
@@ -156,18 +183,27 @@ namespace Roadnik.MAUI.Resources.Strings {
         /// <summary>
         ///   Connection settings に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string page_options_connectionSettings {
+        internal static string page_options_connection_settings {
             get {
-                return ResourceManager.GetString("page.options.connectionSettings", resourceCulture);
+                return ResourceManager.GetString("page.options.connection_settings", resourceCulture);
             }
         }
         
         /// <summary>
         ///   The track from the previous recording session will not be preserved when you begin a new session に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string page_options_delete_old_route {
+        internal static string page_options_delete_old_route_desc {
             get {
-                return ResourceManager.GetString("page.options.delete_old_route", resourceCulture);
+                return ResourceManager.GetString("page.options.delete_old_route.desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Purge old tracks に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_delete_old_route_title {
+            get {
+                return ResourceManager.GetString("page.options.delete_old_route.title", resourceCulture);
             }
         }
         
@@ -181,7 +217,7 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the &apos;Required location accuracy&apos; option, the location will not be recorded に類似しているローカライズされた文字列を検索します。
+        ///   Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the &apos;%min-location-accuracy&apos; option, the location will not be recorded に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_low_power_mode_accuracy_warning {
             get {
@@ -199,11 +235,57 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Use only Wi-Fi, Bluetooth, and cellular network location providers に類似しているローカライズされた文字列を検索します。
+        ///   Use only Wi-Fi, Bluetooth, and cellular network location providers
+        ///This option also affects the accuracy of the current location displayed on the map に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_low_power_mode_hint {
             get {
                 return ResourceManager.GetString("page.options.low_power_mode_hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Notifications に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_notifications {
+            get {
+                return ResourceManager.GetString("page.options.notifications", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Someone has created a new point に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_notifications_new_point_desc {
+            get {
+                return ResourceManager.GetString("page.options.notifications.new_point.desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   A new point was placed on the map に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_notifications_new_point_title {
+            get {
+                return ResourceManager.GetString("page.options.notifications.new_point.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Someone has started a new track に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_notifications_new_track_desc {
+            get {
+                return ResourceManager.GetString("page.options.notifications.new_track.desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   A new track was started に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_notifications_new_track_title {
+            get {
+                return ResourceManager.GetString("page.options.notifications.new_track.title", resourceCulture);
             }
         }
         
@@ -226,11 +308,65 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Tracking settings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_tracking {
+            get {
+                return ResourceManager.GetString("page.options.tracking", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Required location accuracy に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_tracking_required_accuracy {
+            get {
+                return ResourceManager.GetString("page.options.tracking.required_accuracy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Username に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_username {
             get {
                 return ResourceManager.GetString("page.options.username", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   About に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string shell_about {
+            get {
+                return ResourceManager.GetString("shell.about", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Bookmarks に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string shell_bookmarks {
+            get {
+                return ResourceManager.GetString("shell.bookmarks", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Map に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string shell_map {
+            get {
+                return ResourceManager.GetString("shell.map", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Settings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string shell_settings {
+            get {
+                return ResourceManager.GetString("shell.settings", resourceCulture);
             }
         }
     }

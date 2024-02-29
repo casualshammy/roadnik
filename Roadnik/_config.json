@@ -3,13 +3,11 @@
 	"LogDirPath": "logs",
 	"DataDirPath": "data",
 	"ThunderforestApikey": null,
-	"ThunderforestCacheSize": 0,
+	"MapTilesCacheSize": 10485760,
 	"PortBind": 5544,
 	"IpBind": "0.0.0.0",
 	"AdminApiKey": null,
 	"AllowAnonymousPublish": true,
 	"AnonymousMaxPoints": 1000,
-	"RegisteredMaxPoints": 10000,
-	"AnonymousMinIntervalMs": 9900,
-	"RegisteredMinIntervalMs": 900
+	"AnonymousMinIntervalMs": 9900
 }

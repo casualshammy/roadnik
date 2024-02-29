@@ -8,7 +8,7 @@ public class AppSettings
   public required string LogDirPath { get; init; }
   public required string DataDirPath { get; init; }
   public string? ThunderforestApikey { get; init; }
-  public long ThunderforestCacheSize { get; init; }
+  public long MapTilesCacheSize { get; init; }
   public required int PortBind { get; init; }
   public required string IpBind { get; init; }
   public string? AdminApiKey { get; init; }
@@ -26,12 +26,12 @@ public class AppSettings
       LogDirPath = _rawSettings.LogDirPath ?? "logs",
       DataDirPath = _rawSettings.DataDirPath ?? "data",
       ThunderforestApikey = _rawSettings.ThunderforestApikey,
-      ThunderforestCacheSize = _rawSettings.ThunderforestCacheSize ?? 0,
+      MapTilesCacheSize = _rawSettings.MapTilesCacheSize ?? 0,
       PortBind = _rawSettings.PortBind ?? 5544,
       IpBind = _rawSettings.IpBind ?? "127.0.0.1",
       AdminApiKey = _rawSettings.AdminApiKey,
       AllowAnonymousPublish = _rawSettings.AllowAnonymousPublish ?? true,
-      AnonymousMaxPoints = _rawSettings.AnonymousMaxPoints ?? 100,
+      AnonymousMaxPoints = _rawSettings.AnonymousMaxPoints ?? 1000,
       AnonymousMinIntervalMs = _rawSettings.AnonymousMinIntervalMs ?? 9.9d * 1000,
       FCMServiceAccountJsonPath = _rawSettings.FCMServiceAccountJsonPath,
       FCMProjectId = _rawSettings.FCMProjectId

@@ -23,6 +23,16 @@ namespace Roadnik.Modules.Controllers;
 
 public class ApiControllerV0
 {
+  enum MapTileType
+  {
+    None = 0,
+    StravaHeatmapRide,
+    StravaHeatmapRun,
+    OpenCycleMap,
+    TfLandscape,
+    TfOutdoors
+  }
+
   private static readonly HttpClient p_httpClient = new();
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
@@ -126,6 +136,7 @@ public class ApiControllerV0
   }
 
   //[HttpGet("/thunderforest")]
+  [Obsolete]
   public async Task<IResult> GetThunderforestImageAsync(
     HttpContext _httpCtx,
     [FromQuery(Name = "x")] int? _x,
@@ -151,7 +162,7 @@ public class ApiControllerV0
 
     var log = GetLog(_httpCtx.Request);
 
-    var tfCacheSize = p_settingsCtrl.Settings.Value?.ThunderforestCacheSize;
+    var tfCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
     if (tfCacheSize != null && tfCacheSize.Value > 0)
     {
       if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _type, out var cachedStream, out var hash))
@@ -176,6 +187,101 @@ public class ApiControllerV0
       return Results.Stream(newCachedStream, MimeMapping.KnownMimeTypes.Png);
 
     var errMsg = $"Can't find cached thunderforest tile: x:{_x.Value};y:{_y.Value};z:{_z.Value};t:{_type}";
+    log.Error(errMsg);
+    return InternalServerError(errMsg);
+  }
+
+  //[HttpGet("/map-tile")]
+  public async Task<IResult> GetMapTileAsync(
+    HttpContext _httpCtx,
+    [FromQuery(Name = "x")] int? _x,
+    [FromQuery(Name = "y")] int? _y,
+    [FromQuery(Name = "z")] int? _z,
+    [FromQuery(Name = "type")] string? _mapType,
+    CancellationToken _ct)
+  {
+    if (_x is null)
+      return Results.BadRequest("X is null!");
+    if (_y is null)
+      return Results.BadRequest("Y is null!");
+    if (_z is null)
+      return Results.BadRequest("Z is null!");
+    if (!Enum.TryParse<MapTileType>(_mapType, ignoreCase: true, out var mapType))
+      return BadRequest($"Unknown map type: '{_mapType}'");
+
+    var log = GetLog(_httpCtx.Request);
+
+    if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _mapType, out var cachedStream, out var hash))
+    {
+      log.Info($"Sending **cached** map tile; type:{_mapType}; x:{_x}; y:{_y}; z:{_z}");
+      _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
+      return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
+    }
+
+    log.Info($"Sending map tile; type:{_mapType}; x:{_x}; y:{_y}; z:{_z}...");
+
+    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
+    var tfApiKeyParam = tfApiKey.IsNullOrEmpty() ? string.Empty : $"?apikey={tfApiKey}";
+
+    var url = mapType switch
+    {
+      MapTileType.OpenCycleMap => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      MapTileType.TfLandscape => $"https://tile.thunderforest.com/landscape/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      MapTileType.TfOutdoors => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      MapTileType.StravaHeatmapRide => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
+      MapTileType.StravaHeatmapRun => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
+      _ => null
+    };
+
+    if (url == null)
+      return BadRequest($"Map type is not available: '{_mapType}'");
+
+    try
+    {
+      using var req = new HttpRequestMessage(HttpMethod.Get, url);
+      req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+      using var res = await p_httpClient.SendAsync(req, _ct);
+      res.EnsureSuccessStatusCode();
+
+      var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
+      if (mapCacheSize != null && mapCacheSize.Value > 0)
+      {
+        using var stream = await res.Content.ReadAsStreamAsync(_ct);
+        await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _mapType, stream, _ct);
+      }
+      else
+      {
+        var ms = new MemoryStream();
+        await res.Content.CopyToAsync(ms, _ct);
+        ms.Position = 0;
+        return Results.Stream(ms, MimeMapping.KnownMimeTypes.Png);
+      }
+    }
+    catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
+    {
+      log.Warn($"Tile not found: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}");
+      return Results.NotFound();
+    }
+    catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.Unauthorized)
+    {
+      log.Warn($"Can't download map tile - Unauthorized: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}");
+      return Results.Unauthorized();
+    }
+    catch (OperationCanceledException)
+    {
+      return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Can't download map tile x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}", ex);
+      return InternalServerError();
+    }
+
+    var newCachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _mapType);
+    if (newCachedStream != null)
+      return Results.Stream(newCachedStream, MimeMapping.KnownMimeTypes.Png);
+
+    var errMsg = $"Can't find cached map tile: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}";
     log.Error(errMsg);
     return InternalServerError(errMsg);
   }

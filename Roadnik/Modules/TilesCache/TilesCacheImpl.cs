@@ -31,7 +31,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
           _lifetime,
           folder,
           TimeSpan.FromDays(30),
-          _conf.ThunderforestCacheSize,
+          _conf.MapTilesCacheSize,
           TimeSpan.FromHours(6));
 
         return cache;

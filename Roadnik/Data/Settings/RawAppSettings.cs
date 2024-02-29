@@ -6,7 +6,7 @@ public class RawAppSettings
   public string? LogDirPath { get; init; }
   public string? DataDirPath { get; init; }
   public string? ThunderforestApikey { get; init; }
-  public long? ThunderforestCacheSize { get; init; }
+  public long? MapTilesCacheSize { get; init; }
   public int? PortBind { get; init; }
   public string? IpBind { get; init; }
   public string? AdminApiKey { get; init; }

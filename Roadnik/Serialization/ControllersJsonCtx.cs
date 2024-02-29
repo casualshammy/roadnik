@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 
 namespace AxToolsServerNet.Data.Serializers;
 
+[JsonSourceGenerationOptions(
+  PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(StorePathPointReq))]
 [JsonSerializable(typeof(GetPathResData))]
 [JsonSerializable(typeof(StartNewPathReq))]

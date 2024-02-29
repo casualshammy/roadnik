@@ -14,18 +14,18 @@ export function GetMapLayers(): L.Control.LayersObject {
 		osmAttribution = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)',
 		osm = new L.TileLayer(osmUrl, { maxZoom: 18, attribution: osmAttribution });
 	// OpenCycleMap
-	var cyclemapUrl = '../thunderforest?type=cycle&x={x}&y={y}&z={z}',
+	var cyclemapUrl = '../map-tile?type=opencyclemap&x={x}&y={y}&z={z}',
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Landscape Map
-	var landscapeMapUrl = '../thunderforest?type=landscape&x={x}&y={y}&z={z}',
+	var landscapeMapUrl = '../map-tile?type=tflandscape&x={x}&y={y}&z={z}',
 		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
-	var outdoorsMapUrl = '../thunderforest?type=outdoors&x={x}&y={y}&z={z}',
+	var outdoorsMapUrl = '../map-tile?type=tfoutdoors&x={x}&y={y}&z={z}',
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-		googleAttribution = "© 2023 Google",
+		googleAttribution = "© 2024 Google",
 		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
 
 	const result = {
@@ -41,17 +41,29 @@ export function GetMapLayers(): L.Control.LayersObject {
 
 export function GetMapOverlayLayers() {
 	// Waymarked
-	var waymarkedshadinghikeUrl = 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+	const waymarkedshadinghikeUrl = 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
 		waymarkedshadinghikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadinghike = new L.TileLayer(waymarkedshadinghikeUrl, { maxZoom: 18, attribution: waymarkedshadinghikeAttribution });
 	// Waymarked
-	var waymarkedshadingbikeUrl = 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
+	const waymarkedshadingbikeUrl = 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
 		waymarkedshadingbikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
 		waymarkedshadingbike = new L.TileLayer(waymarkedshadingbikeUrl, { maxZoom: 18, attribution: waymarkedshadingbikeAttribution });
 
-	var overlayMaps = {
+	// Strava Heatmap Ride
+	const stravaRideUrl = '../map-tile?type=stravaheatmapride&x={x}&y={y}&z={z}',
+		stravaRideAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
+		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: 16, attribution: stravaRideAttribution });
+
+	// Strava Heatmap Run
+	const stravaRunUrl = '../map-tile?type=stravaheatmaprun&x={x}&y={y}&z={z}',
+		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
+		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 16, attribution: stravaRunAttribution });
+
+	const overlayMaps = {
 		"Trails": waymarkedshadinghike,
 		"Radrouten": waymarkedshadingbike,
+		"Strava Heatmap (Ride)": stravaRideLayer,
+		"Strava Heatmap (Run)": stravaRunLayer,
 	};
 
 	return overlayMaps;

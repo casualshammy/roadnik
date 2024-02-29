@@ -107,6 +107,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       _opt.Listen(IPAddress.Parse(_host), _port);
     });
 
+    builder.Services.AddSingleton<ILogger>(p_logger);
+
     var app = builder.Build();
 
     var requestsRequreAuth = new HashSet<string>()
@@ -117,6 +119,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     };
 
     app
+      .UseMiddleware<LogMiddleware>()
       .UseMiddleware<ForwardProxyMiddleware>()
       .UseResponseCompression()
       .UseMiddleware<AdminAccessMiddleware>(requestsRequreAuth, p_settingsController)
@@ -141,6 +144,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     app.MapGet("/ping", () => Results.Ok());
     app.MapGet("/r/{**path}", controller.GetRoom);
     app.MapGet("/thunderforest", controller.GetThunderforestImageAsync);
+    app.MapGet("/map-tile", controller.GetMapTileAsync);
     app.MapGet(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointGetAsync);
     app.MapPost(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointPostAsync);
     app.MapGet(ReqPaths.GET_ROOM_PATHS, controller.GetRoomPathsAsync);

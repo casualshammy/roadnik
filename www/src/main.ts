@@ -5,7 +5,7 @@ import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgP
 import { Pool, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
-import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO } from "./modules/consts";
+import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
@@ -55,7 +55,7 @@ function initMap(): L.Map {
   }
 
   const mapsData = GetMapLayers();
-  const overlays = GetMapOverlayLayers();
+  const mapOverlays = GetMapOverlayLayers();
 
   const map = new L.Map('map', {
     center: new L.LatLng(
@@ -66,12 +66,36 @@ function initMap(): L.Map {
     zoomControl: false
   });
 
+  const cookieOverlay = Cookies.get(COOKIE_MAP_OVERLAY);
+  if (cookieOverlay !== undefined) {
+    const overlays = JSON.parse(cookieOverlay) as string[];
+    for (const overlay of overlays) {
+      const overlayLayer = Object.entries(mapOverlays).find((_v, _i, _o) => _v[0] === overlay);
+      if (overlayLayer !== undefined)
+        map.addLayer(overlayLayer[1]);
+    }
+  }
+
   map.attributionControl.setPrefix(false);
   if (p_appCtx.isRoadnikApp)
     map.attributionControl.remove();
 
   map.on('baselayerchange', function (_e) {
     Cookies.set(COOKIE_MAP_LAYER, _e.name);
+  });
+  map.on('overlayadd', function (_e) {
+    const cookie = Cookies.get(COOKIE_MAP_OVERLAY);
+    const overlays = cookie !== undefined ? JSON.parse(cookie) as string[] : [];
+    if (!overlays.includes(_e.name))
+      overlays.push(_e.name);
+
+    Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(overlays));
+  });
+  map.on('overlayremove', function (_e) {
+    const cookie = Cookies.get(COOKIE_MAP_OVERLAY);
+    const overlays = cookie !== undefined ? JSON.parse(cookie) as string[] : [];
+    const newOverlays = overlays.filter((_v, _i, _) => _v !== _e.name);
+    Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(newOverlays));
   });
   map.on('zoomend', function (_e) {
     const location = map.getCenter();
@@ -100,7 +124,7 @@ function initMap(): L.Map {
     }
   });
 
-  const layersControl = new L.Control.Layers(mapsData, overlays);
+  const layersControl = new L.Control.Layers(mapsData, mapOverlays);
   map.addControl(layersControl);
 
   L.control.zoom({

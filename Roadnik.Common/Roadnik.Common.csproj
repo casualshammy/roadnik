@@ -8,7 +8,7 @@
 		</PropertyGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw" Version="14.0.204" />
+				<PackageReference Include="Ax.Fw" Version="14.1.205" />
 		</ItemGroup>
 
 </Project>

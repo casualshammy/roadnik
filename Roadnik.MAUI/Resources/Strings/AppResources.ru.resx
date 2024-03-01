@@ -117,6 +117,18 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="generic.ago" xml:space="preserve">
+    <value>назад</value>
+  </data>
+  <data name="generic.hours" xml:space="preserve">
+    <value>ч.</value>
+  </data>
+  <data name="generic.minutes" xml:space="preserve">
+    <value>мин.</value>
+  </data>
+  <data name="generic.seconds" xml:space="preserve">
+    <value>сек.</value>
+  </data>
   <data name="notification.location_sharing.body" xml:space="preserve">
     <value>Успешно: %success из %total
 Последнее местоположение: %last-location-fix

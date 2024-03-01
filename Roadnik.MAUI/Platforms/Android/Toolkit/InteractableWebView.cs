@@ -19,11 +19,15 @@ public partial class InteractableWebView
       var client = mauiWebView.WebViewClient as MauiWebViewClient;
       if (client != null)
       {
-        var handler = typeof(MauiWebViewClient)
+        var handlerRef = typeof(MauiWebViewClient)
           .GetField("_handler", BindingFlags.NonPublic | BindingFlags.Instance)?
-          .GetValue(client) as WebViewHandler;
+          .GetValue(client) as WeakReference<WebViewHandler?>;
 
-        if (handler != null)
+        if (handlerRef == null)
+          p_log?.Error($"Can't get the instance of {typeof(WebViewHandler)}: ref is null");
+        else if (!handlerRef.TryGetTarget(out var handler))
+          p_log?.Error($"Can't get the instance of {typeof(WebViewHandler)}: ref target is null");
+        else
           nativeWebView.SetWebViewClient(new CachedMauiWebViewClient(handler, p_tilesCache, p_log, p_storage));
       }
     }

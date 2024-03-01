@@ -45,7 +45,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       return;
 
     var key = GetKey(_x, _y, _z, _type);
-    await p_cacheProp.Value.StoreAsync(key, _tileStream, _ct);
+    await p_cacheProp.Value.StoreAsync(key, _tileStream, false, _ct);
   }
 
   public Stream? GetOrDefault(int _x, int _y, int _z, string _type)

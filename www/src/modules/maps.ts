@@ -52,12 +52,12 @@ export function GetMapOverlayLayers() {
 	// Strava Heatmap Ride
 	const stravaRideUrl = '../map-tile?type=stravaheatmapride&x={x}&y={y}&z={z}',
 		stravaRideAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
-		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: 16, attribution: stravaRideAttribution });
+		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRideAttribution });
 
 	// Strava Heatmap Run
 	const stravaRunUrl = '../map-tile?type=stravaheatmaprun&x={x}&y={y}&z={z}',
 		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
-		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 16, attribution: stravaRunAttribution });
+		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRunAttribution,  });
 
 	const overlayMaps = {
 		"Trails": waymarkedshadinghike,

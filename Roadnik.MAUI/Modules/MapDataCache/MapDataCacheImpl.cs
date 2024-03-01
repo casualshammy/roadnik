@@ -35,9 +35,9 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
 #if DEBUG
     _ = Task.Run(async () =>
     {
-      await Task.Delay(TimeSpan.FromSeconds(10), _lifetime.Token);
+      await Task.Delay(TimeSpan.FromSeconds(1), _lifetime.Token);
       if (!_lifetime.Token.IsCancellationRequested)
-        cache.CleanFiles();
+        cache.RequestCleanFiles();
     });
 #endif
 
@@ -62,7 +62,7 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
         try
         {
           using (var networkStream = await _httpClientProvider.Value.GetStreamAsync(_url, _ct))
-            await cache.StoreAsync(_url, networkStream, _ct);
+            await cache.StoreAsync(_url, networkStream, true, _ct);
 
           p_log.Info($"Url is downloaded: '{_url}'");
         }

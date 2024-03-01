@@ -14,6 +14,7 @@ using Roadnik.Server.Data.ReqRes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
+using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -240,21 +241,28 @@ public class ApiControllerV0
     {
       using var req = new HttpRequestMessage(HttpMethod.Get, url);
       req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
-      using var res = await p_httpClient.SendAsync(req, _ct);
+      using var res = await p_httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
       res.EnsureSuccessStatusCode();
 
-      var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
-      if (mapCacheSize != null && mapCacheSize.Value > 0)
+      var ms = new MemoryStream();
+      try
       {
-        using var stream = await res.Content.ReadAsStreamAsync(_ct);
-        await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _mapType, stream, _ct);
-      }
-      else
-      {
-        var ms = new MemoryStream();
         await res.Content.CopyToAsync(ms, _ct);
+
+        var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
+        if (mapCacheSize != null && mapCacheSize.Value > 0)
+        {
+          ms.Position = 0;
+          await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _mapType, ms, _ct);
+        }
+
         ms.Position = 0;
         return Results.Stream(ms, MimeMapping.KnownMimeTypes.Png);
+      }
+      catch (Exception)
+      {
+        await ms.DisposeAsync();
+        throw;
       }
     }
     catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
@@ -276,14 +284,6 @@ public class ApiControllerV0
       log.Error($"Can't download map tile x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}", ex);
       return InternalServerError();
     }
-
-    var newCachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _mapType);
-    if (newCachedStream != null)
-      return Results.Stream(newCachedStream, MimeMapping.KnownMimeTypes.Png);
-
-    var errMsg = $"Can't find cached map tile: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}";
-    log.Error(errMsg);
-    return InternalServerError(errMsg);
   }
 
   //[HttpGet(ReqPaths.STORE_PATH_POINT)]

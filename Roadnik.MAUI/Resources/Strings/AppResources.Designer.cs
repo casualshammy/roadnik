@@ -61,6 +61,42 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   ago に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_ago {
+            get {
+                return ResourceManager.GetString("generic.ago", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   hours に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_hours {
+            get {
+                return ResourceManager.GetString("generic.hours", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   min に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_minutes {
+            get {
+                return ResourceManager.GetString("generic.minutes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   sec に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_seconds {
+            get {
+                return ResourceManager.GetString("generic.seconds", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Success rate: %success/%total
         ///Last location fix: %last-location-fix
         ///Last location fix accuracy: %last-location-fix-accuracym

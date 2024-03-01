@@ -54,16 +54,21 @@ public class BackgroundService : CAndroidService
       else
         StartForeground(Consts.NOTIFICATION_ID_RECORDING, notification);
 
+      var dateTimeFormatOptions = new DateTimeOffsetToHumanFriendlyStringOptions(
+        HoursWord: L.generic_hours,
+        MinutesWord: L.generic_minutes,
+        SecondsWord: L.generic_seconds);
+
       p_locationReporter.Stats
         .Sample(TimeSpan.FromSeconds(1))
         .Subscribe(_ =>
         {
           var lastLocationFixTime = _.LastLocationFixTime != null ?
-            _.LastLocationFixTime.Value.ToString("yyyy/MM/dd HH:mm:ss") :
+            $"{_.LastLocationFixTime.Value:yyyy/MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var lastSuccessfulReportTime = _.LastSuccessfulReportTime != null ?
-            _.LastSuccessfulReportTime.Value.ToString("yyyy/MM/dd HH:mm:ss") :
+            $"{_.LastSuccessfulReportTime.Value:yyyy/MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var text = L.notification_location_sharing_body

@@ -501,14 +501,6 @@ function onStart() {
           text: "Make sure root id is specified and valid",
           footer: `Current room id: ${p_appCtx.roomId}`
         });
-
-        // const newRoomId = prompt("Room id is missed or invalid\nPlease enter correct room id:");
-        // if (newRoomId !== null) {
-        //     const host = window.document.location.host.replace(/\/+$/, "");
-        //     const path = window.document.location.pathname.replace(/\/+$/, "");
-        //     const protocol = window.document.location.protocol;
-        //     window.location.replace(`${protocol}//${host}${path}/?id=${newRoomId}`);
-        // }
       }
     }, 1000);
   }

@@ -16,15 +16,6 @@ namespace Roadnik.Server.Modules.WebServer;
 
 public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 {
-  private readonly ISettingsController p_settingsController;
-  private readonly IDocumentStorageAot p_documentStorage;
-  private readonly ILogger p_logger;
-  private readonly IWebSocketCtrl p_webSocketCtrl;
-  private readonly IRoomsController p_roomsController;
-  private readonly ITilesCache p_tilesCache;
-  private readonly IReqRateLimiter p_reqRateLimiter;
-  private readonly IFCMPublisher p_fCMPublisher;
-
   public static IWebServer ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
@@ -36,8 +27,17 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       ITilesCache _tilesCache,
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
-      IReadOnlyLifetime _lifetime) => new WebServerImpl(_settingsController, _documentStorage, _logger, _webSocketCtrl, _roomsController, _tilesCache, _reqRateLimiter, _fCMPublisher, _lifetime));
+      IReadOnlyLifetime _lifetime) => new WebServerImpl(_settingsController, _documentStorage, _logger["kestrel"], _webSocketCtrl, _roomsController, _tilesCache, _reqRateLimiter, _fCMPublisher, _lifetime));
   }
+
+  private readonly ISettingsController p_settingsController;
+  private readonly IDocumentStorageAot p_documentStorage;
+  private readonly ILogger p_logger;
+  private readonly IWebSocketCtrl p_webSocketCtrl;
+  private readonly IRoomsController p_roomsController;
+  private readonly ITilesCache p_tilesCache;
+  private readonly IReqRateLimiter p_reqRateLimiter;
+  private readonly IFCMPublisher p_fCMPublisher;
 
   private WebServerImpl(
     ISettingsController _settingsController,
@@ -70,16 +70,16 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         {
           try
           {
-            _logger.Info($"Starting kestrel on {_conf.IpBind}:{_conf.PortBind}...");
+            _logger.Info($"Starting server on {_conf.IpBind}:{_conf.PortBind}...");
 
             using (var host = CreateWebHost(_conf.IpBind, _conf.PortBind))
               await host.RunAsync(_life.Token);
 
-            _logger.Info($"Kestrel on {_conf.IpBind}:{_conf.PortBind} is stopped");
+            _logger.Info($"Server on {_conf.IpBind}:{_conf.PortBind} is stopped");
           }
           catch (Exception ex)
           {
-            _logger.Error($"Error in kestrel thread: {ex}");
+            _logger.Error($"Error in thread: {ex}");
           }
         });
 

@@ -55,7 +55,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 
   public async Task<bool> AcceptSocketAsync(
     WebSocket _webSocket,
-    string _roomId, 
+    string _roomId,
     int _maxPointsInRoom)
   {
     if (_webSocket.State != WebSocketState.Open)
@@ -66,7 +66,16 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
     using var scheduler = new EventLoopScheduler();
 
     scheduler.ScheduleAsync(async (_s, _ct) => await CreateNewLoopAsync(session, semaphore, _maxPointsInRoom));
-    await semaphore.WaitAsync(p_lifetime.Token);
+
+    try
+    {
+      await semaphore.WaitAsync(p_lifetime.Token);
+    }
+    catch (OperationCanceledException) { }
+    catch (Exception ex)
+    {
+      p_log.Error($"Waiting for loop is failed", ex);
+    }
 
     return true;
   }
@@ -121,7 +130,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   }
 
   private async Task CreateNewLoopAsync(
-    WebSocketSession _session, 
+    WebSocketSession _session,
     SemaphoreSlim _completeSignal,
     int _maxPointsInRoom)
   {

@@ -64,11 +64,11 @@ public class BackgroundService : CAndroidService
         .Subscribe(_ =>
         {
           var lastLocationFixTime = _.LastLocationFixTime != null ?
-            $"{_.LastLocationFixTime.Value:yyyy/MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+            $"{_.LastLocationFixTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var lastSuccessfulReportTime = _.LastSuccessfulReportTime != null ?
-            $"{_.LastSuccessfulReportTime.Value:yyyy/MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+            $"{_.LastSuccessfulReportTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var text = L.notification_location_sharing_body

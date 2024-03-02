@@ -32,7 +32,8 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
           folder,
           TimeSpan.FromDays(30),
           _conf.MapTilesCacheSize,
-          TimeSpan.FromHours(6));
+          TimeSpan.FromHours(6),
+          true);
 
         return cache;
       })

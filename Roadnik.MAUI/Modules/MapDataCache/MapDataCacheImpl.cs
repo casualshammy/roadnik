@@ -30,7 +30,13 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
     p_log = _logger["tiles-cache"];
 
     var cacheDir = Path.Combine(FileSystem.Current.CacheDirectory, "tiles-cache");
-    var cache = new FileCache(_lifetime, cacheDir, TimeSpan.FromDays(1), 50 * 1024 * 1024, TimeSpan.FromDays(1));
+    var cache = new FileCache(
+      _lifetime, 
+      cacheDir, 
+      TimeSpan.FromDays(1),
+      50 * 1024 * 1024, 
+      TimeSpan.FromDays(1),
+      true);
 
 #if DEBUG
     _ = Task.Run(async () =>

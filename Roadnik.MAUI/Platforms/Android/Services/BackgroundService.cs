@@ -60,23 +60,25 @@ public class BackgroundService : CAndroidService
         SecondsWord: L.generic_seconds);
 
       p_locationReporter.Stats
+        .CombineLatest(Observable.Interval(TimeSpan.FromSeconds(10)))
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_ =>
+        .Subscribe(_tuple =>
         {
-          var lastLocationFixTime = _.LastLocationFixTime != null ?
-            $"{_.LastLocationFixTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+          var (info, _) = _tuple;
+          var lastLocationFixTime = info.LastLocationFixTime != null ?
+            $"{info.LastLocationFixTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
-          var lastSuccessfulReportTime = _.LastSuccessfulReportTime != null ?
-            $"{_.LastSuccessfulReportTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+          var lastSuccessfulReportTime = info.LastSuccessfulReportTime != null ?
+            $"{info.LastSuccessfulReportTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var text = L.notification_location_sharing_body
-            .Replace("%last-location-fix-accuracy", _.LastLocationFixAccuracy.ToString())
+            .Replace("%last-location-fix-accuracy", info.LastLocationFixAccuracy.ToString())
             .Replace("%last-successful-report", lastSuccessfulReportTime)
             .Replace("%last-location-fix", lastLocationFixTime)
-            .Replace("%success", _.Successful.ToString())
-            .Replace("%total", _.Total.ToString());
+            .Replace("%success", info.Successful.ToString())
+            .Replace("%total", info.Total.ToString());
 
           GetRecordingNotification(L.notification_location_sharing_title, text, true);
         }, p_lifetime);
@@ -112,7 +114,8 @@ public class BackgroundService : CAndroidService
      .SetContentIntent(activity)
      .SetSmallIcon(Resource.Drawable.letter_r)
      .SetOnlyAlertOnce(true)
-     .SetOngoing(true);
+     .SetOngoing(true)
+     .SetVisibility(NotificationVisibility.Public);
 
     if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
 #pragma warning disable CA1416 // Validate platform compatibility

@@ -19,7 +19,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow;
   private readonly Subject<string> p_providerDisabledSubj;
   private readonly Subject<string> p_providerEnabledSubj;
-  private readonly ILogger p_logger;
+  private readonly ILog p_logger;
   private readonly object p_startStopLock = new();
 
   static AndroidLocationProvider()
@@ -28,7 +28,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     p_locationSubjPool = new Pool<ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>>(() => new ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>(1), null);
   }
 
-  public AndroidLocationProvider(ILogger _logger, IReadOnlyLifetime _lifetime)
+  public AndroidLocationProvider(ILog _logger, IReadOnlyLifetime _lifetime)
   {
     p_logger = _logger["location-provider"];
 

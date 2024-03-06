@@ -18,12 +18,12 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   ];
   private readonly IMapDataCache? p_tilesCache;
   private readonly IPreferencesStorage? p_storage;
-  private readonly ILogger? p_log;
+  private readonly ILog? p_log;
 
   public CachedMauiWebViewClient(
     WebViewHandler _handler,
     IMapDataCache? _tilesCache,
-    ILogger? _log,
+    ILog? _log,
     IPreferencesStorage? _storage) : base(_handler)
   {
     p_tilesCache = _tilesCache;

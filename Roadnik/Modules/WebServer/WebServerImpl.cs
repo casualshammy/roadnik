@@ -10,7 +10,7 @@ using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.WebServer.Middlewares;
 using System.Net;
 using System.Reactive.Linq;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.WebServer;
 
@@ -21,7 +21,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     return _ctx.CreateInstance((
       ISettingsController _settingsController,
       IDocumentStorageAot _documentStorage,
-      ILogger _logger,
+      ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
       ITilesCache _tilesCache,
@@ -32,7 +32,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
   private readonly ISettingsController p_settingsController;
   private readonly IDocumentStorageAot p_documentStorage;
-  private readonly ILogger p_logger;
+  private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
   private readonly ITilesCache p_tilesCache;
@@ -42,7 +42,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private WebServerImpl(
     ISettingsController _settingsController,
     IDocumentStorageAot _documentStorage,
-    ILogger _logger,
+    ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,
     ITilesCache _tilesCache,
@@ -107,58 +107,30 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       _opt.Listen(IPAddress.Parse(_host), _port);
     });
 
-    builder.Services.AddSingleton<ILogger>(p_logger);
+    builder.Services.AddSingleton<ILog>(p_logger);
+
+    var controller = new ApiControllerV0(
+     p_settingsController,
+     p_documentStorage,
+     p_logger,
+     p_webSocketCtrl,
+     p_roomsController,
+     p_tilesCache,
+     p_reqRateLimiter,
+     p_fCMPublisher);
 
     var app = builder.Build();
-
-    var requestsRequreAuth = new HashSet<string>()
-    {
-      ReqPaths.REGISTER_ROOM,
-      ReqPaths.UNREGISTER_ROOM,
-      ReqPaths.LIST_REGISTERED_ROOMS
-    };
-
     app
       .UseMiddleware<LogMiddleware>()
       .UseMiddleware<ForwardProxyMiddleware>()
+      .UseMiddleware<AuthMiddleware>(controller)
       .UseResponseCompression()
-      .UseMiddleware<AdminAccessMiddleware>(requestsRequreAuth, p_settingsController)
       .UseWebSockets(new WebSocketOptions()
       {
         KeepAliveInterval = TimeSpan.FromSeconds(30)
       });
 
-    var controller = new ApiControllerV0(
-      p_settingsController,
-      p_documentStorage,
-      p_logger,
-      p_webSocketCtrl,
-      p_roomsController,
-      p_tilesCache,
-      p_reqRateLimiter,
-      p_fCMPublisher);
-
-    app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
-    app.MapGet("/", controller.GetIndexFile);
-    app.MapGet("{**path}", controller.GetStaticFile);
-    app.MapGet("/ping", () => Results.Ok());
-    app.MapGet("/r/{**path}", controller.GetRoom);
-    app.MapGet("/thunderforest", controller.GetThunderforestImageAsync);
-    app.MapGet("/map-tile", controller.GetMapTileAsync);
-    app.MapGet(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointGetAsync);
-    app.MapPost(ReqPaths.STORE_PATH_POINT, controller.StoreRoomPointPostAsync);
-    app.MapGet(ReqPaths.GET_ROOM_PATHS, controller.GetRoomPathsAsync);
-    app.MapPost(ReqPaths.START_NEW_PATH, controller.StartNewPathAsync);
-    app.MapPost(ReqPaths.CREATE_NEW_POINT, controller.CreateNewPointAsync);
-    app.MapGet(ReqPaths.LIST_ROOM_POINTS, controller.GetRoomPointsAsync);
-    app.MapPost(ReqPaths.DELETE_ROOM_POINT, controller.DeleteRoomPointAsync);
-    app.MapGet(ReqPaths.GET_FREE_ROOM_ID, controller.GetFreeRoomIdAsync);
-    app.MapPost(ReqPaths.UPLOAD_LOG, controller.UploadLogAsync);
-    app.MapGet(ReqPaths.IS_ROOM_ID_VALID, controller.IsRoomIdValid);
-    app.MapGet("/ws", controller.StartWebSocketAsync);
-    app.MapPost(ReqPaths.REGISTER_ROOM, controller.RegisterRoomAsync);
-    app.MapPost(ReqPaths.UNREGISTER_ROOM, controller.DeleteRoomRegistrationAsync);
-    app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, controller.ListUsersAsync);
+    controller.RegisterPaths(app);
 
     return app;
   }

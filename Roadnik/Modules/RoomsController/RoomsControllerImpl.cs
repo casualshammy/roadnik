@@ -12,7 +12,7 @@ using Roadnik.Server.Interfaces;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Modules.RoomsController;
 
@@ -25,7 +25,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       IReadOnlyLifetime _lifetime,
       ISettingsController _settingsController,
       IWebSocketCtrl _webSocketCtrl,
-      ILogger _log) => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log));
+      ILog _log) => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log));
   }
 
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
@@ -38,7 +38,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
     IWebSocketCtrl _webSocketCtrl,
-    ILogger _log)
+    ILog _log)
   {
     p_storage = _storage;
     var log = _log["rooms-controller"];

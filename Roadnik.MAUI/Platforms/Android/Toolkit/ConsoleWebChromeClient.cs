@@ -6,9 +6,9 @@ namespace Roadnik.MAUI.Toolkit;
 class ConsoleWebChromeClient : WebChromeClient
 {
   private readonly InteractableWebView p_interactableWebView;
-  private readonly ILogger? p_log;
+  private readonly ILog? p_log;
 
-  public ConsoleWebChromeClient(InteractableWebView _interactableWebView, ILogger? _log) : base()
+  public ConsoleWebChromeClient(InteractableWebView _interactableWebView, ILog? _log) : base()
   {
     p_interactableWebView = _interactableWebView;
     p_log = _log?["chrome-client"];

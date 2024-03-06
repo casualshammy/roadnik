@@ -16,7 +16,7 @@ public partial class NavigationAppShell : Shell
     if (Application.Current is not IMauiApp app)
       throw new ApplicationException($"App is not '{nameof(IMauiApp)}'");
 
-    var log = app.Container.Locate<ILogger>();
+    var log = app.Container.Locate<ILog>();
     log.Info($"App shell is started");
 
     p_lifetime = app.Container.Locate<ILifetime>();

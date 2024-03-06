@@ -57,7 +57,7 @@ public class PushMessagesService : FirebaseMessagingService
         }
 
         var prefStorage = app.Container.Locate<IPreferencesStorage>();
-        var log = app.Container.Locate<ILogger>()["fcm-service"];
+        var log = app.Container.Locate<ILog>()["fcm-service"];
 
         PushMsg? pushMsg = null;
         try

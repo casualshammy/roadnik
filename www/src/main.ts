@@ -46,16 +46,16 @@ function initMap(): L.Map {
   const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
   const queryLayout = urlParams.get('map');
 
+  const mapsData = GetMapLayers();
+  const mapOverlays = GetMapOverlayLayers();
+
   let layer = DEFAULT_MAP_LAYER;
   if (queryLayout !== null) {
     layer = queryLayout;
   }
-  else if (cookieLayout !== undefined) {
+  else if (cookieLayout !== undefined && mapsData[cookieLayout] !== undefined) {
     layer = cookieLayout;
   }
-
-  const mapsData = GetMapLayers();
-  const mapOverlays = GetMapOverlayLayers();
 
   const map = new L.Map('map', {
     center: new L.LatLng(

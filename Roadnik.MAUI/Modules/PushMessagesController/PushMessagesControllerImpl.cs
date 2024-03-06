@@ -18,7 +18,7 @@ internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<
     return _ctx.CreateInstance((
       IPreferencesStorage _preferencesStorage,
       IReadOnlyLifetime _lifetime,
-      ILogger _log)
+      ILog _log)
       => new PushMessagesControllerImpl(_preferencesStorage, _lifetime, _log));
   }
 
@@ -27,7 +27,7 @@ internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<
   private PushMessagesControllerImpl(
     IPreferencesStorage _preferencesStorage,
     IReadOnlyLifetime _lifetime,
-    ILogger _log)
+    ILog _log)
   {
     var log = _log["firebase-messaging"];
     var retryFlow = new Subject<Unit>();

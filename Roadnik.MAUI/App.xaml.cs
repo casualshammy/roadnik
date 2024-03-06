@@ -10,7 +10,7 @@ public partial class App : CMauiApplication
 
   public App()
   {
-    var log = Container.Locate<ILogger>();
+    var log = Container.Locate<ILog>();
 
     log.Info($"App is starting...");
     InitializeComponent();

@@ -18,22 +18,27 @@ export function GetMapLayers(): L.Control.LayersObject {
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Landscape Map
-	var landscapeMapUrl = '../map-tile?type=tflandscape&x={x}&y={y}&z={z}',
-		landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
+	// var landscapeMapUrl = '../map-tile?type=tflandscape&x={x}&y={y}&z={z}',
+	// 	landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
 	var outdoorsMapUrl = '../map-tile?type=tfoutdoors&x={x}&y={y}&z={z}',
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
+	// CartoDb Dark
+	var cartoDbDarkUrl = '../map-tile?type=cartodark&x={x}&y={y}&z={z}',
+		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
+		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution });
 	// Googly Hybrid
 	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-		googleAttribution = "© 2024 Google",
+		googleAttribution = "© Google",
 		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
 
 	const result = {
 		[DEFAULT_MAP_LAYER]: osm,
 		"OpenCycleMap": cyclemap,
-		"Landscape": landscapeMap,
+		//"Landscape": landscapeMap,
 		"Outdoors": outdoorsMap,
-		"Google Hybrid": google
+		"Carto Dark": cartoDbDark,
+		"Google Hybrid": google,
 	};
 
 	return result;
@@ -57,7 +62,7 @@ export function GetMapOverlayLayers() {
 	// Strava Heatmap Run
 	const stravaRunUrl = '../map-tile?type=stravaheatmaprun&x={x}&y={y}&z={z}',
 		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
-		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRunAttribution,  });
+		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRunAttribution, });
 
 	const overlayMaps = {
 		"Trails": waymarkedshadinghike,

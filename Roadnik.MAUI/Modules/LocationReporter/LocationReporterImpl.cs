@@ -1,5 +1,6 @@
 ﻿using Android.App;
 using Android.Content;
+using Android.OS;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -14,6 +15,8 @@ using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text;
+using System.Text.Json;
 using static Android.Provider.CallLog;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -25,7 +28,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   {
     return _ctx.CreateInstance(
       (IReadOnlyLifetime _lifetime,
-      ILogger _log,
+      ILog _log,
       IPreferencesStorage _storage,
       IHttpClientProvider _httpClientProvider,
       ITelephonyMgrProvider _telephonyMgrProvider)
@@ -41,13 +44,13 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private readonly IPreferencesStorage p_storage;
   private readonly IHttpClientProvider p_httpClientProvider;
 
   private LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
-    ILogger _log,
+    ILog _log,
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
     ITelephonyMgrProvider _telephonyMgrProvider)
@@ -106,8 +109,13 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       })
       .Select(_ => _.First);
 
+    var batteryFlow = Observable
+      .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
+      .Select(_ => _.EventArgs.ChargeLevel)
+      .DistinctUntilChanged();
+
     var reportFlow = locationFlow
-      .CombineLatest(_telephonyMgrProvider.SignalLevel, prefsFlow)
+      .CombineLatest(prefsFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
       .Where(_ =>
       {
@@ -119,9 +127,11 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         return false;
       })
       .ObserveOn(reportScheduler)
+      .WithLatestFrom(batteryFlow, (_tuple, _battery) => (Location: _tuple.First, Prefs: _tuple.Second, Battery: _battery))
+      .WithLatestFrom(_telephonyMgrProvider.SignalLevel, (_tuple, _signal) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, Signal: _signal))
       .ScanAsync(ReportingCtx.Empty, async (_acc, _entry) =>
       {
-        var (location, signalStrength, prefs) = _entry;
+        var (location, prefs, battery, signalStrength) = _entry;
         var now = DateTimeOffset.UtcNow;
         var acc = _acc;
 
@@ -145,8 +155,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
               return acc;
           }
 
-          var batteryCharge = Battery.Default.ChargeLevel;
-
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
@@ -161,12 +169,14 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             Alt = (float)(location.Altitude ?? 0d),
             Speed = (float)(location.Speed ?? 0d),
             Acc = (float)(location.Accuracy ?? 100d),
-            Battery = (float)batteryCharge,
+            Battery = (float)battery,
             GsmSignal = (float?)signalStrength,
             Bearing = (float)(location.Course ?? 0d),
           };
 
-          using var res = await _httpClientProvider.Value.PostAsJsonAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", reqData, _lifetime.Token);
+          var reqDataJson = JsonSerializer.Serialize(reqData);
+          using var content = new StringContent(reqDataJson, Encoding.UTF8, "application/json");
+          using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };

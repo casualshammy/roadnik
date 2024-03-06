@@ -12,7 +12,7 @@ using System.Net.WebSockets;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Modules.WebSocketController;
 
@@ -21,12 +21,12 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   public static IWebSocketCtrl ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      ILogger _log,
+      ILog _log,
       ISettingsController _settingsController,
       IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
   }
 
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private readonly ISettingsController p_settingsCtrl;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly ConcurrentDictionary<int, WebSocketSession> p_sessions = new();
@@ -35,7 +35,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   private int p_sessionsCount = 0;
 
   public WebSocketCtrlImpl(
-    ILogger _log,
+    ILog _log,
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime)
   {

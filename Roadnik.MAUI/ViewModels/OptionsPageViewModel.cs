@@ -17,7 +17,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private readonly IPreferencesStorage p_storage;
   private readonly IPagesController p_pagesController;
   private readonly IHttpClientProvider p_httpClient;
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private string? p_serverName;
   private string? p_roomId;
   private string? p_username;
@@ -35,7 +35,7 @@ internal class OptionsPageViewModel : BaseViewModel
     p_storage = Container.Locate<IPreferencesStorage>();
     p_pagesController = Container.Locate<IPagesController>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
-    p_log = Container.Locate<ILogger>()["options-page-view-model"];
+    p_log = Container.Locate<ILog>()["options-page-view-model"];
 
     ServerAddressCommand = new Command(OnServerAddressCommand);
     RoomIdCommand = new Command(OnRoomIdCommand);

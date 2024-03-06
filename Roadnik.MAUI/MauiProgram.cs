@@ -6,15 +6,15 @@ using CommunityToolkit.Maui;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using Roadnik.MAUI.Modules.HttpClientProvider;
-using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Modules.LocationReporter;
 using Roadnik.MAUI.Modules.MapDataCache;
 using Roadnik.MAUI.Modules.PageController;
 using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
+using Roadnik.MAUI.Platforms.Android.Toolkit;
 using System.Text.RegularExpressions;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.MAUI;
 
@@ -32,34 +32,34 @@ public static partial class MauiProgram
     if (!Directory.Exists(logsFolder))
       Directory.CreateDirectory(logsFolder);
 
-    var fileLogger = new FileLogger(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1));
-    var androidLogger = new Platforms.Android.Toolkit.AndroidLogger("roadnik");
-    var logger = lifetime.ToDisposeOnEnded(new CompositeLogger(androidLogger, fileLogger));
+    var log = lifetime.ToDisposeOnEnded(new GenericLog(null));
+    log.AttachFileLog(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1));
+    log.AttachAndroidLog("roadnik");
 
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
     var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
-    logger.Info(line);
-    logger.Info(appStartedVersionStr);
-    logger.Info(line);
+    log.Info(line);
+    log.Info(appStartedVersionStr);
+    log.Info(line);
     lifetime.DoOnEnded(() =>
     {
-      logger.Info("=========================================");
-      logger.Info("============= app is closed =============");
-      logger.Info("=========================================");
+      log.Info("=========================================");
+      log.Info("============= app is closed =============");
+      log.Info("=========================================");
     });
 
     lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, LogFileCleanerRegex(), TimeSpan.FromDays(30), null, _file =>
     {
-      logger.Info($"Old file was removed: '{_file.Name}'");
+      log.Info($"Old file was removed: '{_file.Name}'");
     }));
 
-    logger.Info($"Installing dependencies...");
+    log.Info($"Installing dependencies...");
 
     var appDeps = AppDependencyManager
       .Create()
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
-      .AddSingleton<ILogger>(logger)
+      .AddSingleton<ILog>(log)
       .AddModule<DeepLinksControllerImpl, IDeepLinksController>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .AddModule<LocationReporterImpl, ILocationReporter>()
@@ -72,9 +72,9 @@ public static partial class MauiProgram
 
     Container = appDeps;
 
-    logger.Info($"Dependencies are installed");
+    log.Info($"Dependencies are installed");
 
-    logger.Info($"Building maui app...");
+    log.Info($"Building maui app...");
 
     var app = MauiApp
       .CreateBuilder()
@@ -87,7 +87,7 @@ public static partial class MauiProgram
       })
       .Build();
 
-    logger.Info($"Maui app is built");
+    log.Info($"Maui app is built");
 
     return app;
   }

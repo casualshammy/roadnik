@@ -11,7 +11,7 @@ namespace Roadnik.MAUI.Toolkit;
 public partial class InteractableWebView : WebView
 {
   private readonly IMapDataCache? p_tilesCache;
-  private readonly ILogger? p_log;
+  private readonly ILog? p_log;
   private readonly IPreferencesStorage? p_storage;
   private readonly Subject<JsToCSharpMsg> p_jsonDataFlow = new();
   private readonly Subject<(string MsgLevel, string Msg)> p_consoleMsgFlow = new();
@@ -20,7 +20,7 @@ public partial class InteractableWebView : WebView
   {
     var cMauiApp = Application.Current as CMauiApplication;
     p_tilesCache = cMauiApp?.Container.Locate<IMapDataCache>();
-    p_log = cMauiApp?.Container.Locate<ILogger>()["interactable-web-view"];
+    p_log = cMauiApp?.Container.Locate<ILog>()["interactable-web-view"];
     p_storage = cMauiApp?.Container.Locate<IPreferencesStorage>();
 
     JsonData = p_jsonDataFlow

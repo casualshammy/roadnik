@@ -5,27 +5,21 @@ using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Interfaces;
-using AxToolsServerNet.Data.Serializers;
 using FluentArgs;
-using Roadnik.Common.ReqRes;
 using Roadnik.Interfaces;
-using Roadnik.Modules.Controllers;
 using Roadnik.Modules.ReqRateLimiter;
 using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.Settings;
 using Roadnik.Modules.TilesCache;
 using Roadnik.Modules.WebSocketController;
-using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.WebServer;
-using Roadnik.Server.Modules.WebServer.Middlewares;
-using System.Net;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik;
 
@@ -71,9 +65,9 @@ public partial class Program
     if (!Directory.Exists(settings.LogDirPath))
       Directory.CreateDirectory(settings.LogDirPath);
 
-    using var logger = new CompositeLogger(
-      new FileLogger(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5)),
-      new ConsoleLogger());
+    using var log = new GenericLog(null);
+    log.AttachConsoleLog();
+    log.AttachFileLog(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5));
 
     lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
 
@@ -90,7 +84,7 @@ public partial class Program
 
     var depMgr = AppDependencyManager
       .Create()
-      .AddSingleton<ILogger>(logger)
+      .AddSingleton<ILog>(log)
       .AddSingleton<IDocumentStorageAot>(docStorage)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
@@ -105,13 +99,14 @@ public partial class Program
       .Build();
 
     var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
-    logger.Info($"-------------------------------------------");
-    logger.Info($"Roadnik Server Started");
-    logger.Info($"Version: {version}");
-    logger.Info($"Address: {settings.IpBind}:{settings.PortBind}");
-    logger.Info($"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}");
-    logger.Info($"Config file: '{configFilePath}'");
-    logger.Info($"-------------------------------------------");
+    log.Info($"\n" +
+      $"-------------------------------------------\n" +
+      $"**Roadnik Server Started**\n" +
+      $"Version: __{version}__\n" +
+      $"Address: __{settings.IpBind}:{settings.PortBind}__\n" +
+      $"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}\n" +
+      $"Config file: __{configFilePath}__\n" +
+      $"-------------------------------------------");
 
     lifetime.InstallConsoleCtrlCHook();
 
@@ -121,9 +116,12 @@ public partial class Program
     }
     catch (OperationCanceledException) { }
 
-    logger.Info($"-------------------------------------------");
-    logger.Info($"Server stopped");
-    logger.Info($"-------------------------------------------");
+    await lifetime.OnEnd.LastOrDefaultAsync();
+
+    log.Info($"\n" +
+      $"-------------------------------------------\n" +
+      $"Server stopped\n" +
+      $"-------------------------------------------");
   }
 
   [GeneratedRegex(@".+\.log")]

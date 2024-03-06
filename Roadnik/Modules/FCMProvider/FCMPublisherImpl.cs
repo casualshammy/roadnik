@@ -13,7 +13,7 @@ using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.FCMProvider;
 
@@ -21,10 +21,10 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
 {
   public static IFCMPublisher ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime, ILogger _log) => new FCMPublisherImpl(_settingsController, _lifetime, _log));
+    return _ctx.CreateInstance((ISettingsController _settingsController, IReadOnlyLifetime _lifetime, ILog _log) => new FCMPublisherImpl(_settingsController, _lifetime, _log));
   }
 
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private readonly IRxProperty<FCMSettions?> p_fcmSettings;
   private readonly HttpClient p_httpClient = new();
   private volatile FCMAccessToken? p_accessToken;
@@ -32,7 +32,7 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
   public FCMPublisherImpl(
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime,
-    ILogger _log)
+    ILog _log)
   {
     p_log = _log["fcm-provider"];
 

@@ -16,16 +16,16 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
     return _ctx.CreateInstance((
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider,
-      ILogger _logger) => new MapDataCacheImpl(_lifetime, _httpClientProvider, _logger));
+      ILog _logger) => new MapDataCacheImpl(_lifetime, _httpClientProvider, _logger));
   }
 
   private readonly Subject<string> p_workFlow = new();
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
 
   private MapDataCacheImpl(
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
-    ILogger _logger)
+    ILog _logger)
   {
     p_log = _logger["tiles-cache"];
 

@@ -14,15 +14,16 @@ using Roadnik.Server.Data.ReqRes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
-using System.IO;
+using Roadnik.Server.Toolkit;
+using System.Collections.Frozen;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using ILogger = Ax.Fw.SharedTypes.Interfaces.ILogger;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Modules.Controllers;
 
-public class ApiControllerV0
+public class ApiControllerV0 : GenericController
 {
   enum MapTileType
   {
@@ -30,11 +31,19 @@ public class ApiControllerV0
     StravaHeatmapRide,
     StravaHeatmapRun,
     OpenCycleMap,
-    TfLandscape,
-    TfOutdoors
+    //TfLandscape,
+    TfOutdoors,
+    CartoDark
   }
 
   private static readonly HttpClient p_httpClient = new();
+  private static readonly FrozenSet<string> p_authRequiredPaths = new string[] {
+    ReqPaths.REGISTER_ROOM,
+    ReqPaths.UNREGISTER_ROOM,
+    ReqPaths.LIST_REGISTERED_ROOMS }
+    .Select(_ => _.Trim('/', ' '))
+    .ToFrozenSet();
+
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
 
@@ -45,12 +54,12 @@ public class ApiControllerV0
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fcmPublisher;
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
 
   public ApiControllerV0(
     ISettingsController _settingsCtrl,
     IDocumentStorageAot _documentStorage,
-    ILogger _logger,
+    ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
     ITilesCache _tilesCache,
@@ -67,6 +76,48 @@ public class ApiControllerV0
     p_fcmPublisher = _fcmPublisher;
   }
 
+  public override void RegisterPaths(WebApplication _app)
+  {
+    _app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
+    _app.MapGet("/", GetIndexFile);
+    _app.MapGet("{**path}", GetStaticFile);
+    _app.MapGet("/ping", () => Results.Ok());
+    _app.MapGet("/r/{**path}", GetRoom);
+    _app.MapGet("/thunderforest", GetThunderforestImageAsync);
+    _app.MapGet("/map-tile", GetMapTileAsync);
+    _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
+    _app.MapPost(ReqPaths.STORE_PATH_POINT, StoreRoomPointPostAsync);
+    _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPathsAsync);
+    _app.MapPost(ReqPaths.START_NEW_PATH, StartNewPathAsync);
+    _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateNewPointAsync);
+    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, GetRoomPointsAsync);
+    _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
+    _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomIdAsync);
+    _app.MapPost(ReqPaths.UPLOAD_LOG, UploadLogAsync);
+    _app.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
+    _app.MapGet("/ws", StartWebSocketAsync);
+    _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoomAsync);
+    _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistrationAsync);
+    _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRoomsAsync);
+  }
+
+  public override Task<bool> AuthAsync(HttpRequest _req, CancellationToken _ct)
+  {
+    var path = _req.Path.ToString().Trim('/', ' ');
+    if (!p_authRequiredPaths.Contains(path))
+      return Task.FromResult(true);
+
+    var apiKeyStr = _req.Headers["api-key"].FirstOrDefault();
+    if (apiKeyStr.IsNullOrWhiteSpace())
+      return Task.FromResult(false);
+
+    var adminApiKey = p_settingsCtrl.Settings.Value?.AdminApiKey;
+    if (adminApiKey.IsNullOrWhiteSpace())
+      return Task.FromResult(false);
+
+    return Task.FromResult(adminApiKey == apiKeyStr);
+  }
+
   //[HttpGet("/")]
   public IResult GetIndexFile(HttpRequest _httpRequest) => GetStaticFile(_httpRequest, "/");
 
@@ -76,7 +127,7 @@ public class ApiControllerV0
     [FromRoute(Name = "path")] string _path)
   {
     var log = GetLog(_httpRequest);
-    log.Info($"Requested static path '{_path}'");
+    log.Info($"Requested **static path** __{_path}__");
 
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
@@ -214,12 +265,12 @@ public class ApiControllerV0
 
     if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _mapType, out var cachedStream, out var hash))
     {
-      log.Info($"Sending **cached** map tile; type:{_mapType}; x:{_x}; y:{_y}; z:{_z}");
+      log.Info($"Sending **cached map tile** __{_mapType}__/{_z}/{_x}/{_y}");
       _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
       return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
     }
 
-    log.Info($"Sending map tile; type:{_mapType}; x:{_x}; y:{_y}; z:{_z}...");
+    log.Info($"Sending **map tile** __{_mapType}__/{_z}/{_x}/{_y}...");
 
     var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
     var tfApiKeyParam = tfApiKey.IsNullOrEmpty() ? string.Empty : $"?apikey={tfApiKey}";
@@ -227,10 +278,11 @@ public class ApiControllerV0
     var url = mapType switch
     {
       MapTileType.OpenCycleMap => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      MapTileType.TfLandscape => $"https://tile.thunderforest.com/landscape/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      //MapTileType.TfLandscape => $"https://tile.thunderforest.com/landscape/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       MapTileType.TfOutdoors => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       MapTileType.StravaHeatmapRide => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
       MapTileType.StravaHeatmapRun => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
+      MapTileType.CartoDark => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
       _ => null
     };
 
@@ -414,7 +466,7 @@ public class ApiControllerV0
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    log.Info($"Requested to get geo data, room: '{_roomId}'");
+    log.Info($"Requested to **get geo data**, room: __{_roomId}__");
 
     var now = DateTimeOffset.UtcNow;
 
@@ -532,7 +584,7 @@ public class ApiControllerV0
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    log.Info($"Got req to list points in room '{_roomId}'");
+    log.Info($"Got req to **list points** in room __{_roomId}__");
 
     var entries = new List<ListRoomPointsResData>();
     await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%"), _ct: _ct))
@@ -717,21 +769,16 @@ public class ApiControllerV0
 
   //[ApiKeyRequired]
   //[HttpGet("list-registered-rooms")]
-  public async Task<IResult> ListUsersAsync(CancellationToken _ct)
+  public async Task<IResult> ListRoomsAsync(CancellationToken _ct)
   {
     var users = await p_roomsController.ListRegisteredRoomsAsync(_ct);
     return Results.Json(users, ControllersJsonCtx.Default.IReadOnlyListRoomInfo);
   }
 
-  private ILogger GetLog(HttpRequest _httpRequest)
+  private ILog GetLog(HttpRequest _httpRequest)
   {
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    var logPrefix = $"{Interlocked.Increment(ref p_reqCount)} | {ip}";
-    return p_log[logPrefix];
+    return p_log[Interlocked.Increment(ref p_reqCount).ToString()][$"{ip}"];
   }
-
-  private static IResult Forbidden(string _details) => Results.Problem(_details, statusCode: 403);
-  private static IResult InternalServerError(string? _details = null) => Results.Problem(_details, statusCode: (int)HttpStatusCode.InternalServerError);
-  private static IResult BadRequest(string _details) => Results.BadRequest(_details);
 
 }

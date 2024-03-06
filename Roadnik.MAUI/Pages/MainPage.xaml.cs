@@ -33,7 +33,7 @@ public partial class MainPage : CContentPage
   private readonly IPreferencesStorage p_prefs;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private readonly IObservable<bool> p_pageIsVisible;
   private readonly Subject<bool> p_pageAppearedChangeFlow = new();
   private readonly Subject<bool> p_webAppTracksSynchonizedSubj = new();
@@ -41,7 +41,7 @@ public partial class MainPage : CContentPage
 
   public MainPage()
   {
-    p_log = Container.Locate<ILogger>()["main-page"];
+    p_log = Container.Locate<ILog>()["main-page"];
     p_log.Info($"Main page is opening...");
 
     InitializeComponent();

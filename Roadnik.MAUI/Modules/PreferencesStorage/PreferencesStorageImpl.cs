@@ -17,14 +17,14 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 {
   public static IPreferencesStorage ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance((ILogger _log) => new PreferencesStorageImpl(_log));
+    return _ctx.CreateInstance((ILog _log) => new PreferencesStorageImpl(_log));
   }
 
-  private readonly ILogger p_log;
+  private readonly ILog p_log;
   private readonly SyncCache<string, object?> p_cache = new(new SyncCacheSettings(100, 10, TimeSpan.FromHours(1)));
   private readonly ReplaySubject<Unit> p_prefChangedFlow = new(1);
 
-  private PreferencesStorageImpl(ILogger _log)
+  private PreferencesStorageImpl(ILog _log)
   {
     p_log = _log["pref-storage"];
 

@@ -33,7 +33,7 @@ public class MainActivity : MauiAppCompatActivity
     if (Microsoft.Maui.Controls.Application.Current is not IMauiApp app)
       return;
 
-    var log = app.Container.Locate<ILogger>()["main-activity"];
+    var log = app.Container.Locate<ILog>()["main-activity"];
     log.Info($"Main activity is started");
 
     var pushMsg = Intent?.GetStringExtra("push-msg");

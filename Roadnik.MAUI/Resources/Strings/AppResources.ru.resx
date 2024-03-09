@@ -120,6 +120,9 @@
   <data name="generic.ago" xml:space="preserve">
     <value>назад</value>
   </data>
+  <data name="generic.cancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
   <data name="generic.hours" xml:space="preserve">
     <value>ч.</value>
   </data>
@@ -170,6 +173,12 @@
   </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Пользователь</value>
+  </data>
+  <data name="page.main.battery_optimization.body" xml:space="preserve">
+    <value>Для обеспечения правильного функционирования Roadnik необходимо отключить оптимизацию батареи.</value>
+  </data>
+  <data name="page.main.battery_optimization.title" xml:space="preserve">
+    <value>Оптимизация батареи включена</value>
   </data>
   <data name="page.options.connection_settings" xml:space="preserve">
     <value>Настройки подключения</value>

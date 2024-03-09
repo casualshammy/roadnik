@@ -70,6 +70,15 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Cancel に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_cancel {
+            get {
+                return ResourceManager.GetString("generic.cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   hours に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string generic_hours {
@@ -213,6 +222,24 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_bookmarks_username {
             get {
                 return ResourceManager.GetString("page.bookmarks.username", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   To ensure the proper functioning of the Roadnik app, it is necessary to disable battery optimization. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_main_battery_optimization_body {
+            get {
+                return ResourceManager.GetString("page.main.battery_optimization.body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Battery optimization is enabled に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_main_battery_optimization_title {
+            get {
+                return ResourceManager.GetString("page.main.battery_optimization.title", resourceCulture);
             }
         }
         

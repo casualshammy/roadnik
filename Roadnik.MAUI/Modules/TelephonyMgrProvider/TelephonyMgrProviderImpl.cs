@@ -1,4 +1,5 @@
-﻿using Android.Telephony;
+﻿using Android.Media.TV;
+using Android.Telephony;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -13,12 +14,14 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<ITel
 {
   public static ITelephonyMgrProvider ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance((IReadOnlyLifetime _lifetime) => new TelephonyMgrProviderImpl(_lifetime));
+    return _ctx.CreateInstance((IReadOnlyLifetime _lifetime, ILog _log) => new TelephonyMgrProviderImpl(_lifetime, _log["telephony-mgr"]));
   }
 
   private readonly TelephonyManager? p_telephonyManager;
 
-  private TelephonyMgrProviderImpl(IReadOnlyLifetime _lifetime)
+  private TelephonyMgrProviderImpl(
+    IReadOnlyLifetime _lifetime,
+    ILog _log)
   {
     p_telephonyManager = Android.App.Application.Context.GetSystemService(Android.Content.Context.TelephonyService) as TelephonyManager;
 
@@ -31,8 +34,16 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<ITel
         .StartWithDefault()
         .Subscribe(_ =>
         {
-          var signalStrengh = GetSignalStrength();
-          _observer.OnNext(signalStrengh);
+          try
+          {
+            var signalStrengh = GetSignalStrength();
+            _observer.OnNext(signalStrengh);
+          }
+          catch (Exception ex)
+          {
+            _log.Error($"Can't get signal strength", ex);
+            _observer.OnNext(null);
+          }
         });
     });
   }

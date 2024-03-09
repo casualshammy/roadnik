@@ -120,6 +120,9 @@
   <data name="generic.ago" xml:space="preserve">
     <value>ago</value>
   </data>
+  <data name="generic.cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="generic.hours" xml:space="preserve">
     <value>hours</value>
   </data>
@@ -170,6 +173,12 @@ Last successful report: %last-successful-report</value>
   </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Username</value>
+  </data>
+  <data name="page.main.battery_optimization.body" xml:space="preserve">
+    <value>To ensure the proper functioning of the Roadnik app, it is necessary to disable battery optimization.</value>
+  </data>
+  <data name="page.main.battery_optimization.title" xml:space="preserve">
+    <value>Battery optimization is enabled</value>
   </data>
   <data name="page.options.connection_settings" xml:space="preserve">
     <value>Connection settings</value>

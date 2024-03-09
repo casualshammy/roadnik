@@ -116,7 +116,10 @@ public partial class Program
     }
     catch (OperationCanceledException) { }
 
-    await lifetime.OnEnd.LastOrDefaultAsync();
+    var lifetimeEndDeadline = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1);
+    await lifetime.OnEnd
+      .TakeUntil(lifetimeEndDeadline)
+      .LastOrDefaultAsync();
 
     log.Info($"\n" +
       $"-------------------------------------------\n" +

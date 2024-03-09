@@ -60,25 +60,23 @@ public class BackgroundService : CAndroidService
         SecondsWord: L.generic_seconds);
 
       p_locationReporter.Stats
-        .CombineLatest(Observable.Interval(TimeSpan.FromSeconds(10)))
         .Sample(TimeSpan.FromSeconds(1))
-        .Subscribe(_tuple =>
+        .Subscribe(_info =>
         {
-          var (info, _) = _tuple;
-          var lastLocationFixTime = info.LastLocationFixTime != null ?
-            $"{info.LastLocationFixTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+          var lastLocationFixTime = _info.LastLocationFixTime != null ?
+            $"{_info.LastLocationFixTime.Value:MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
-          var lastSuccessfulReportTime = info.LastSuccessfulReportTime != null ?
-            $"{info.LastSuccessfulReportTime.Value.ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
+          var lastSuccessfulReportTime = _info.LastSuccessfulReportTime != null ?
+            $"{_info.LastSuccessfulReportTime.Value:MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
             L.notification_location_sharing_body_never;
 
           var text = L.notification_location_sharing_body
-            .Replace("%last-location-fix-accuracy", info.LastLocationFixAccuracy.ToString())
+            .Replace("%last-location-fix-accuracy", _info.LastLocationFixAccuracy.ToString())
             .Replace("%last-successful-report", lastSuccessfulReportTime)
             .Replace("%last-location-fix", lastLocationFixTime)
-            .Replace("%success", info.Successful.ToString())
-            .Replace("%total", info.Total.ToString());
+            .Replace("%success", _info.Successful.ToString())
+            .Replace("%total", _info.Total.ToString());
 
           GetRecordingNotification(L.notification_location_sharing_title, text, true);
         }, p_lifetime);

@@ -1,4 +1,5 @@
 ﻿using Android.OS;
+using Android.Provider;
 using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -23,6 +24,7 @@ using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text.Json;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Pages;
@@ -38,6 +40,7 @@ public partial class MainPage : CContentPage
   private readonly Subject<bool> p_pageAppearedChangeFlow = new();
   private readonly Subject<bool> p_webAppTracksSynchonizedSubj = new();
   private readonly MainPageViewModel p_bindingCtx;
+  private readonly PowerManager p_powerManager;
 
   public MainPage()
   {
@@ -52,6 +55,8 @@ public partial class MainPage : CContentPage
     p_prefs = Container.Locate<IPreferencesStorage>();
     p_lifetime = Container.Locate<IReadOnlyLifetime>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
+    var context = global::Android.App.Application.Context;
+    p_powerManager = (PowerManager)context.GetSystemService(Android.Content.Context.PowerService)!;
     var pushMsgCtrl = Container.Locate<IPushMessagesController>();
     var locationReporter = Container.Locate<ILocationReporter>();
 
@@ -203,7 +208,7 @@ public partial class MainPage : CContentPage
         {
           try
           {
-            if (!await IsLocationPermissionOkAsync())
+            if (!await MainThread.InvokeOnMainThreadAsync(() => IsLocationPermissionOkAsync()))
               return;
 
             string[] providers;
@@ -270,25 +275,6 @@ public partial class MainPage : CContentPage
     p_pageAppearedChangeFlow.OnNext(false);
   }
 
-  private async Task<bool> IsLocationPermissionOkAsync()
-  {
-    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-    if (permission == PermissionStatus.Granted)
-      return true;
-
-    var osVersion = DeviceInfo.Current.Version;
-    if (osVersion.Major < 11)
-    {
-      return await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted;
-    }
-    else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
-    {
-      p_bindingCtx.IsPermissionWindowShowing = true;
-      return false;
-    }
-    throw new NotImplementedException();
-  }
-
   private async Task OnMsgFromWebAppAsync((JsToCSharpMsg?, bool) _tuple, CancellationToken _ct)
   {
     var (msg, isPageVisible) = _tuple;
@@ -329,6 +315,7 @@ public partial class MainPage : CContentPage
       if (!await IsLocationPermissionOkAsync())
         return;
 
+      await RequestIgnoreBattaryOptimizationAsync(p_lifetime.Token);
       locationReporter.SetState(true);
     }
     else
@@ -526,4 +513,47 @@ public partial class MainPage : CContentPage
   {
     Shell.Current.FlyoutIsPresented = true;
   }
+
+  private async Task<bool> IsLocationPermissionOkAsync()
+  {
+    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+    if (permission == PermissionStatus.Granted)
+      return true;
+
+    var osVersion = DeviceInfo.Current.Version;
+    if (osVersion.Major < 11)
+    {
+      return await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted;
+    }
+    else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
+    {
+      p_bindingCtx.IsPermissionWindowShowing = true;
+      return false;
+    }
+    throw new NotImplementedException();
+  }
+
+  private async Task RequestIgnoreBattaryOptimizationAsync(CancellationToken _ct)
+  {
+    var context = global::Android.App.Application.Context;
+    if (p_powerManager.IsIgnoringBatteryOptimizations(context.PackageName))
+      return;
+
+    var dialogResult = await DisplayAlert(
+      L.page_main_battery_optimization_title,
+      L.page_main_battery_optimization_body,
+      "OK",
+      L.generic_cancel);
+
+    if (_ct.IsCancellationRequested)
+      return;
+    if (!dialogResult)
+      return;
+
+    var intent = new Android.Content.Intent(Settings.ActionIgnoreBatteryOptimizationSettings);
+    intent.AddFlags(Android.Content.ActivityFlags.NewTask);
+    context.StartActivity(intent);
+  }
+
+
 }

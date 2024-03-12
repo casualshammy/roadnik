@@ -230,14 +230,14 @@ public partial class MainPage : CContentPage
                   return;
 
                 var loc = _locs
-                  .OrderBy(_ => _.Accuracy ?? 100d)
+                  .OrderBy(_ => _.Accuracy)
                   .First();
 
                 try
                 {
                   var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
                   var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
-                  var acc = (loc.Accuracy ?? 100d).ToString(CultureInfo.InvariantCulture);
+                  var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {

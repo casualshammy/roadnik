@@ -1,12 +1,14 @@
-﻿namespace Roadnik.MAUI.Interfaces;
+﻿using Roadnik.MAUI.Data;
 
-public interface ILocationProvider
+namespace Roadnik.MAUI.Interfaces;
+
+internal interface ILocationProvider
 {
-  IObservable<Location> Location { get; }
+  IObservable<LocationData> Location { get; }
   IObservable<string> ProviderDisabled { get; }
   IObservable<string> ProviderEnabled { get; }
 
   void StopLocationWatcher();
   void StartLocationWatcher(IReadOnlyList<string> _providers, out IReadOnlySet<string> _providersEnabled);
-  static abstract Task<Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
+  static abstract Task<LocationData?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
 }

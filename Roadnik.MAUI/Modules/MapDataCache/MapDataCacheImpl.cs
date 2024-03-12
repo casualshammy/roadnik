@@ -37,8 +37,7 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
       cacheDir, 
       TimeSpan.FromDays(1),
       50 * 1024 * 1024, 
-      TimeSpan.FromDays(1),
-      true);
+      TimeSpan.FromDays(1));
 
 #if DEBUG
     _ = Task.Run(async () =>

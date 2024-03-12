@@ -2,7 +2,7 @@
 using Roadnik.Server.Toolkit;
 using System.Text.Json.Serialization;
 
-namespace AxToolsServerNet.Data.Serializers;
+namespace Roadnik.Server.JsonCtx;
 
 [JsonSerializable(typeof(WsBaseMsg))]
 [JsonSerializable(typeof(WsMsgHello))]

@@ -1,7 +1,7 @@
 ﻿using Roadnik.Data;
 using System.Text.Json.Serialization;
 
-namespace AxToolsServerNet.Data.Serializers;
+namespace Roadnik.Server.JsonCtx;
 
 [JsonSerializable(typeof(StorageEntry))]
 [JsonSerializable(typeof(RoomInfo))]

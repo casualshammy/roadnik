@@ -498,7 +498,7 @@ function onStart() {
         Swal.fire({
           icon: "error",
           title: "Room id is missed or invalid",
-          text: "Make sure root id is specified and valid",
+          text: "Make sure room id is specified and valid",
           footer: `Current room id: ${p_appCtx.roomId}`
         });
       }

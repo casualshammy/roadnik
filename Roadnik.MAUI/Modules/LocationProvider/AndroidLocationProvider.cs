@@ -5,6 +5,7 @@ using Android.Runtime;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
@@ -15,8 +16,8 @@ namespace Roadnik.MAUI.Modules.LocationProvider;
 internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {
   private static readonly LocationManager p_locationService;
-  private static readonly Pool<ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>> p_locationSubjPool;
-  private readonly ReplaySubject<Microsoft.Maui.Devices.Sensors.Location> p_locationFlow;
+  private static readonly Pool<ReplaySubject<LocationData>> p_locationSubjPool;
+  private readonly ReplaySubject<LocationData> p_locationFlow;
   private readonly Subject<string> p_providerDisabledSubj;
   private readonly Subject<string> p_providerEnabledSubj;
   private readonly ILog p_logger;
@@ -25,7 +26,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   static AndroidLocationProvider()
   {
     p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
-    p_locationSubjPool = new Pool<ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>>(() => new ReplaySubject<Microsoft.Maui.Devices.Sensors.Location>(1), null);
+    p_locationSubjPool = new Pool<ReplaySubject<LocationData>>(() => new ReplaySubject<LocationData>(1), null);
   }
 
   public AndroidLocationProvider(ILog _logger, IReadOnlyLifetime _lifetime)
@@ -44,7 +45,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     ProviderEnabled = p_providerEnabledSubj;
   }
 
-  public IObservable<Microsoft.Maui.Devices.Sensors.Location> Location { get; }
+  public IObservable<LocationData> Location { get; }
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
@@ -122,14 +123,15 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
 
       var timeStamp = DateTimeOffset.FromUnixTimeMilliseconds(_location.Time);
 
-      var location = new Microsoft.Maui.Devices.Sensors.Location(_location.Latitude, _location.Longitude, _location.Altitude)
-      {
-        Accuracy = _location.Accuracy,
-        Course = _location.HasBearing ? _location.Bearing : null,
-        Speed = _location.HasSpeed ? _location.Speed : null,
-        Timestamp = timeStamp,
-        VerticalAccuracy = _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null,
-      };
+      var location = new LocationData(
+        _location.Latitude,
+        _location.Longitude,
+        _location.Altitude,
+        _location.Accuracy,
+        _location.HasVerticalAccuracy ? _location.VerticalAccuracyMeters : null,
+        _location.HasBearing ? _location.Bearing : null,
+        _location.HasSpeed ? _location.Speed : null,
+        timeStamp);
 
       p_locationFlow.OnNext(location);
     }
@@ -159,13 +161,24 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     p_logger.Info($"Provider '{_provider}' was enabled");
   }
 
-  public static async Task<Microsoft.Maui.Devices.Sensors.Location?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
+  public static async Task<LocationData?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct)
   {
     try
     {
       var request = new GeolocationRequest(GeolocationAccuracy.Best, _timeout);
       var location = await Geolocation.GetLocationAsync(request, _ct);
-      return location;
+      if (location == null)
+        return null;
+
+      return new LocationData(
+        Latitude: location.Latitude,
+        Longitude: location.Longitude,
+        Altitude: location.Altitude ?? 0d,
+        Accuracy: (float?)location.Accuracy ?? 1000f,
+        VerticalAccuracy: (float?)location.VerticalAccuracy,
+        Course: (float?)location.Course,
+        Speed: (float?)location.Speed,
+        Timestamp: location.Timestamp);
     }
     catch (FeatureNotSupportedException)
     {

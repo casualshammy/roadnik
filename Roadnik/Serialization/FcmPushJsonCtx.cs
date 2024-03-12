@@ -2,7 +2,7 @@
 using Roadnik.Server.Modules.FCMProvider.Parts;
 using System.Text.Json.Serialization;
 
-namespace AxToolsServerNet.Data.Serializers;
+namespace Roadnik.Server.JsonCtx;
 
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
 [JsonSerializable(typeof(ServiceAccountAuthData))]

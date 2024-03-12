@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.App;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Log;
@@ -12,7 +13,9 @@ using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.Settings;
 using Roadnik.Modules.TilesCache;
 using Roadnik.Modules.WebSocketController;
+using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
+using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
@@ -49,6 +52,24 @@ public partial class Program
       Console.ReadLine();
       return;
     }
+
+    //var fallbackLogFilePath = Path.Combine(Path.GetTempPath(), $"roadnik-{DateTimeOffset.UtcNow:yyyy-MM-dd}.log");
+
+    //var app = AppBase.Create()
+    //  .UseConsoleLog()
+    //  .UseConfigFile<RawAppSettings>(configFilePath, SettingsJsonCtx.Default)
+    //  .UseFileLogFromConf<RawAppSettings>(_conf =>
+    //  {
+    //    if (_conf == null || _conf.LogDirPath.IsNullOrWhiteSpace())
+    //      return fallbackLogFilePath;
+
+    //    return Path.Combine(_conf.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log");
+    //  })
+    //  .UseFileLogRotateFromConf< RawAppSettings >(_conf =>
+    //  {
+    //    if (_conf == null || _conf.LogDirPath.IsNullOrWhiteSpace())
+    //      return fallbackLogFilePath;
+    //  }, false, )
 
     var lifetime = new Lifetime();
 
@@ -129,5 +150,8 @@ public partial class Program
 
   [GeneratedRegex(@".+\.log")]
   private static partial Regex GetLogFilesCleanerRegex();
+
+  [GeneratedRegex(@"roadnik\-.+\.log")]
+  private static partial Regex GetLogFilesFallbackCleanerRegex();
 
 }

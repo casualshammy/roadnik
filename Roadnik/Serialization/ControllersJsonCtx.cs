@@ -3,7 +3,7 @@ using Roadnik.Data;
 using Roadnik.Server.Data.ReqRes;
 using System.Text.Json.Serialization;
 
-namespace AxToolsServerNet.Data.Serializers;
+namespace Roadnik.Server.JsonCtx;
 
 [JsonSourceGenerationOptions(
   PropertyNameCaseInsensitive = true)]

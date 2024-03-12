@@ -1,6 +1,5 @@
 ﻿using Android.App;
 using Android.Content;
-using Android.OS;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -17,7 +16,6 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using System.Text.Json;
-using static Android.Provider.CallLog;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
@@ -36,7 +34,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   }
 
   record ReportingCtx(
-    Location? Location,
+    LocationData? Location,
     DateTimeOffset? LastReportAttemptTime)
   {
     public static ReportingCtx Empty { get; } = new ReportingCtx(null, null);
@@ -79,6 +77,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Replay(1)
       .RefCount();
 
+    var kalmanFilter = new KalmanFilter(100f * 1000 / 3600);
     var locationFlow = locationProvider.Location
       .DistinctUntilChanged(_ => _.Timestamp)
       .Buffer(TimeSpan.FromSeconds(1))
@@ -88,13 +87,13 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           return null;
 
         var location = _locations
-          .OrderBy(_ => _.Accuracy ?? 10000)
+          .OrderBy(_ => _.Accuracy)
           .First();
 
         stats = stats with
         {
           LastLocationFixTime = location.Timestamp,
-          LastLocationFixAccuracy = (int)(location.Accuracy ?? 10000d)
+          LastLocationFixAccuracy = (int)(location.Accuracy)
         };
         p_statsFlow.OnNext(stats);
 
@@ -105,9 +104,24 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Where(_tuple =>
       {
         var (location, prefs) = _tuple;
-        return location.Accuracy != null && location.Accuracy.Value <= prefs.MinAccuracy;
+        return location.Accuracy <= prefs.MinAccuracy;
       })
-      .Select(_ => _.First);
+      .Select(_tuple =>
+      {
+        var (location, prefs) = _tuple;
+        if (!prefs.LowPowerMode)
+          return location;
+
+        var filteredLatLng = kalmanFilter.CalculateNext(
+          location.Latitude,
+          location.Longitude,
+          location.Accuracy,
+          location.Timestamp.ToUnixTimeMilliseconds());
+
+        p_log.Info($"Kalman filter delta: {location.GetDistanceTo(filteredLatLng.Lat, filteredLatLng.Lng)}");
+
+        return location with { Latitude = filteredLatLng.Lat, Longitude = filteredLatLng.Lng };
+      });
 
     var batteryFlow = Observable
       .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
@@ -140,7 +154,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           if (string.IsNullOrWhiteSpace(prefs.ServerAddress) || string.IsNullOrWhiteSpace(prefs.RoomId))
             return acc;
 
-          var distance = acc.Location?.CalculateDistance(location, DistanceUnits.Kilometers) * 1000;
+          var distance = acc.Location?.GetDistanceTo(location);
 
           if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
           {
@@ -166,9 +180,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             Username = prefs.Username ?? prefs.RoomId,
             Lat = (float)location.Latitude,
             Lng = (float)location.Longitude,
-            Alt = (float)(location.Altitude ?? 0d),
+            Alt = (float)location.Altitude,
             Speed = (float)(location.Speed ?? 0d),
-            Acc = (float)(location.Accuracy ?? 100d),
+            Acc = (float)location.Accuracy,
             Battery = (float)battery,
             GsmSignal = (float?)signalStrength,
             Bearing = (float)(location.Course ?? 0d),
@@ -258,52 +272,52 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
     p_enableFlow.OnNext(false);
 
-    locationProvider.ProviderDisabled
-      .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))
-      .Where(_ => _.Enabled && _.ProviderDisabled == Android.Locations.LocationManager.GpsProvider)
-      .ToUnit()
-      .Subscribe(_unit =>
-      {
-        var context = Android.App.Application.Context;
-        var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
-        var activity = PendingIntent.GetActivity(
-          context,
-          0,
-          new Intent(Android.Provider.Settings.ActionLocationSourceSettings),
-          PendingIntentFlags.Immutable);
+    //locationProvider.ProviderDisabled
+    //  .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))
+    //  .Where(_ => _.Enabled && _.ProviderDisabled == Android.Locations.LocationManager.GpsProvider)
+    //  .ToUnit()
+    //  .Subscribe(_unit =>
+    //  {
+    //    var context = Android.App.Application.Context;
+    //    var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
+    //    var activity = PendingIntent.GetActivity(
+    //      context,
+    //      0,
+    //      new Intent(Android.Provider.Settings.ActionLocationSourceSettings),
+    //      PendingIntentFlags.Immutable);
 
-        var channelId = "LocationProviderIsDisabled";
-        var channel = new NotificationChannel(channelId, "Notify when location provider is disabled", NotificationImportance.Max);
-        notificationMgr.CreateNotificationChannel(channel);
-        var notification = new Notification.Builder(context, channelId)
-          .SetContentTitle("Location provider is disabled")
-          .SetContentText("Please enable location provider in your phone's settings")
-          .SetContentIntent(activity)
-          .SetSmallIcon(Resource.Drawable.letter_r)
-          .SetAutoCancel(true)
-          .Build();
+    //    var channelId = "LocationProviderIsDisabled";
+    //    var channel = new NotificationChannel(channelId, "Notify when location provider is disabled", NotificationImportance.Max);
+    //    notificationMgr.CreateNotificationChannel(channel);
+    //    var notification = new Notification.Builder(context, channelId)
+    //      .SetContentTitle("Location provider is disabled")
+    //      .SetContentText("Please enable location provider in your phone's settings")
+    //      .SetContentIntent(activity)
+    //      .SetSmallIcon(Resource.Drawable.letter_r)
+    //      .SetAutoCancel(true)
+    //      .Build();
 
-        notificationMgr.Notify(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED, notification);
+    //    notificationMgr.Notify(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED, notification);
 
-        var page = Shell.Current.CurrentPage;
-        if (page != null && page.IsVisible)
-        {
-          _ = page.DisplayAlert(
-            "Location provider is disabled",
-            "Please enable location provider in your phone's settings\n\nYou can click notification in the notification drawer to open location settings",
-            "Okay");
-        }
-      }, _lifetime);
+    //    var page = Shell.Current.CurrentPage;
+    //    if (page != null && page.IsVisible)
+    //    {
+    //      _ = page.DisplayAlert(
+    //        "Location provider is disabled",
+    //        "Please enable location provider in your phone's settings\n\nYou can click notification in the notification drawer to open location settings",
+    //        "Okay");
+    //    }
+    //  }, _lifetime);
 
-    locationProvider.ProviderEnabled
-      .Where(_ => _ == Android.Locations.LocationManager.GpsProvider)
-      .ToUnit()
-      .Subscribe(_unit =>
-      {
-        var context = Android.App.Application.Context;
-        var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
-        notificationMgr.Cancel(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED);
-      }, _lifetime);
+    //locationProvider.ProviderEnabled
+    //  .Where(_ => _ == Android.Locations.LocationManager.GpsProvider)
+    //  .ToUnit()
+    //  .Subscribe(_unit =>
+    //  {
+    //    var context = Android.App.Application.Context;
+    //    var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
+    //    notificationMgr.Cancel(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED);
+    //  }, _lifetime);
   }
 
   public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;

@@ -3,19 +3,27 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 public partial class CachedMauiWebViewClient : MauiWebViewClient
 {
+  private static readonly FrozenDictionary<string, string> p_corsAllowAllHeaders = new Dictionary<string, string>()
+  {
+    { "Access-Control-Allow-Origin", "*" }
+  }.ToFrozenDictionary();
+
   private static readonly Regex[] p_cacheRegexes = [
     CacheRegexMapTiles(),
     CacheRegexFavicon(),
     CacheRegexRoomHtml(),
     CacheRegexJs(),
+    CacheRegexCss(),
     CacheRegexOsm(),
   ];
+
   private readonly IMapDataCache? p_tilesCache;
   private readonly IPreferencesStorage? p_storage;
   private readonly ILog? p_log;
@@ -46,7 +54,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     {
       var cachedStream = p_tilesCache.Cache.Get(url);
       if (cachedStream != null)
-        return new WebResourceResponse(null, null, cachedStream);
+        return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
     }
     catch (Exception ex)
     {
@@ -68,6 +76,8 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex CacheRegexRoomHtml();
   [GeneratedRegex(@"\.js$")]
   private static partial Regex CacheRegexJs();
+  [GeneratedRegex(@"\.css$")]
+  private static partial Regex CacheRegexCss();
   [GeneratedRegex(@"openstreetmap\.org/\d+/\d+/\d+\.png$")]
   private static partial Regex CacheRegexOsm();
 

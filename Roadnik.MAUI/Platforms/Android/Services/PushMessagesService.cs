@@ -169,7 +169,8 @@ public class PushMessagesService : FirebaseMessagingService
        .SetSmallIcon(Resource.Drawable.letter_r_blue)
        .SetContentTitle(_contentTitle)
        .SetContentText(_contentText)
-       .SetAutoCancel(true);
+       .SetAutoCancel(true)
+       .SetShowWhen(true);
 
       var notification = builder.Build();
 

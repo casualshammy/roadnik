@@ -63,19 +63,16 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
       _req.Bearing ?? float.MinValue);
   }
 
-  public static bool TryGetFromByteArray(byte[] _data, string _key, out StoreLocationUdpMsg _msg)
+  public static bool TryGetFromByteArray(byte[] _data, out StoreLocationUdpMsg _msg)
   {
     _msg = default;
 
     try
     {
-      using var aes = new AesWithGcm(_key);
-      var decryptedData = aes.Decrypt(_data).ToArray();
-
-      if (decryptedData.Length != Size)
+      if (_data.Length != Size)
         return false;
 
-      var handle = GCHandle.Alloc(decryptedData, GCHandleType.Pinned);
+      var handle = GCHandle.Alloc(_data, GCHandleType.Pinned);
       try
       {
         var obj = Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(StoreLocationUdpMsg));
@@ -117,19 +114,15 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
     };
   }
 
-  public ReadOnlySpan<byte> ToByteArray(string _key)
+  public ReadOnlySpan<byte> ToByteArray()
   {
-    var size = Marshal.SizeOf(this);
-    var array = new byte[size];
-    var pointer = Marshal.AllocHGlobal(size);
+    var array = new byte[Size];
+    var pointer = Marshal.AllocHGlobal(Size);
     try
     {
       Marshal.StructureToPtr(this, pointer, true);
-      Marshal.Copy(pointer, array, 0, size);
-
-      using var aes = new AesWithGcm(_key);
-      var encryptedData = aes.Encrypt(array);
-      return encryptedData;
+      Marshal.Copy(pointer, array, 0, Size);
+      return array;
     }
     finally
     {

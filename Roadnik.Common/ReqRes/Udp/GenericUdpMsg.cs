@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+﻿using Ax.Fw;
 using System.Runtime.InteropServices;
 
 namespace Roadnik.Common.ReqRes.Udp;
@@ -30,7 +30,7 @@ public readonly struct GenericUdpMsg
     PayloadSize = _payload.Length;
     Payload = new byte[MaxPayloadSize];
     _payload.CopyTo(Payload);
-    PayloadHash = CalculatePayloadHash(Payload);
+    PayloadHash = Cryptography.CalculateCrc32(Payload);
   }
 
   public ReadOnlySpan<byte> ToByteArray()
@@ -68,7 +68,7 @@ public readonly struct GenericUdpMsg
 
       if (value.MagicWord != MagicWordRef)
         return false;
-      if (CalculatePayloadHash(value.Payload) != value.PayloadHash)
+      if (Cryptography.CalculateCrc32(value.Payload) != value.PayloadHash)
         return false;
 
       _msg = value;
@@ -81,19 +81,6 @@ public readonly struct GenericUdpMsg
     finally
     {
       handle.Free();
-    }
-  }
-
-  private static unsafe int CalculatePayloadHash(ReadOnlySpan<byte> _payload)
-  {
-    unchecked
-    {
-      uint rawHash = 0;
-      foreach (var b in _payload)
-        rawHash = BitOperations.Crc32C(rawHash, b);
-
-      int result = (int)rawHash;
-      return result;
     }
   }
 

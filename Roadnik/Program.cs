@@ -17,6 +17,7 @@ using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.FCMProvider;
+using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -116,7 +117,9 @@ public partial class Program
       .AddModule<TilesCacheImpl, ITilesCache>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
+      .AddModule<UdpServerImpl, IUdpServer>()
       .ActivateOnStart<IWebServer>()
+      .ActivateOnStart<IUdpServer>()
       .Build();
 
     var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));

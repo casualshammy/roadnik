@@ -5,6 +5,7 @@ using Ax.Fw.Storage.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Common.Serializers;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
@@ -416,7 +417,6 @@ public class ApiControllerV0 : GenericController
       return BadRequest("Username is incorrect!");
 
     var log = GetLog(_httpRequest);
-
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
     var room = await p_roomsController.GetRoomAsync(_req.RoomId, _ct);

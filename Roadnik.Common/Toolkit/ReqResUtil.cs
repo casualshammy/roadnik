@@ -15,11 +15,11 @@ public static partial class ReqResUtil
 
   public static int MaxUserMsgLength { get; } = 1024;
 
-  public static int MaxRoomIdLength { get; } = 16;
+  public const int MaxRoomIdLength = 16;
   public static int MinRoomIdLength { get; } = 8;
 
-  public static int MinUsernameLength { get; } = 4;
-  public static int MaxUsernameLength { get; } = 16;
+  public const int MinUsernameLength = 4;
+  public const int MaxUsernameLength = 16;
 
   public static string UserAgent { get; } = "RoadnikApp";
 

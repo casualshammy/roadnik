@@ -46,10 +46,10 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Log" Version="14.1.212" />
+				<PackageReference Include="Ax.Fw.Log" Version="14.2.219" />
 				<PackageReference Include="CommunityToolkit.Maui" Version="[2.0.0]" />
-				<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.7" />
-				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.7" />
+				<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.20" />
+				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.20" />
 				<PackageReference Include="QRCoder" Version="1.4.3" />
 
 				<PackageReference Include="Xamarin.Firebase.Iid" Version="[121.1.0]" />

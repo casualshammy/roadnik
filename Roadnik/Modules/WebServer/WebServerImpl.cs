@@ -19,7 +19,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   {
     return _ctx.CreateInstance((
       ISettingsController _settingsController,
-      IDocumentStorageAot _documentStorage,
+      IDocumentStorage _documentStorage,
       ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
@@ -30,7 +30,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   }
 
   private readonly ISettingsController p_settingsController;
-  private readonly IDocumentStorageAot p_documentStorage;
+  private readonly IDocumentStorage p_documentStorage;
   private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
@@ -40,7 +40,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
   private WebServerImpl(
     ISettingsController _settingsController,
-    IDocumentStorageAot _documentStorage,
+    IDocumentStorage _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,

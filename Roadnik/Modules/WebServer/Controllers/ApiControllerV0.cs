@@ -48,7 +48,7 @@ public class ApiControllerV0 : GenericController
   private static long p_reqCount = -1;
 
   private readonly ISettingsController p_settingsCtrl;
-  private readonly IDocumentStorageAot p_documentStorage;
+  private readonly IDocumentStorage p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
   private readonly ITilesCache p_tilesCache;
@@ -58,7 +58,7 @@ public class ApiControllerV0 : GenericController
 
   public ApiControllerV0(
     ISettingsController _settingsCtrl,
-    IDocumentStorageAot _documentStorage,
+    IDocumentStorage _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
@@ -472,11 +472,11 @@ public class ApiControllerV0 : GenericController
 
     const int maxReturnEntries = 250;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
-    var documents = await p_documentStorage
-      .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct)
+    var documents = (await p_documentStorage
+      .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct))
       .OrderBy(_ => _.Created)
       .Take(maxReturnEntries + 1)
-      .ToListAsync(_ct);
+      .ToList();
 
     GetPathResData result;
     if (documents.Count == 0)
@@ -587,7 +587,7 @@ public class ApiControllerV0 : GenericController
     log.Info($"Got req to **list points** in room __{_roomId}__");
 
     var entries = new List<ListRoomPointsResData>();
-    await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%"), _ct: _ct))
+    foreach (var entry in await p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%"), _ct: _ct))
       entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
 
     return Results.Json(entries, ControllersJsonCtx.Default.IReadOnlyListListRoomPointsResData);
@@ -613,7 +613,7 @@ public class ApiControllerV0 : GenericController
 
     log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
-    await foreach (var entry in p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_req.RoomId}.%"), _ct: _ct))
+    foreach (var entry in await p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_req.RoomId}.%"), _ct: _ct))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
         await p_documentStorage.DeleteSimpleDocumentAsync<GeoPointEntry>(entry.Key, _ct);
@@ -647,9 +647,9 @@ public class ApiControllerV0 : GenericController
     while (!_ct.IsCancellationRequested && !roomIdValid)
     {
       roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
-      roomIdValid = !await p_documentStorage
-        .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{roomId}.%"), _ct: _ct)
-        .AnyAsync(_ct);
+      roomIdValid = !(await p_documentStorage
+        .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{roomId}.%"), _ct: _ct))
+        .Any();
     }
 
     if (!roomIdValid || string.IsNullOrEmpty(roomId))

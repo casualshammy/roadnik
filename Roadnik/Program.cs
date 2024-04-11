@@ -90,12 +90,12 @@ public partial class Program
     log.AttachConsoleLog();
     log.AttachFileLog(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5));
 
-    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
+    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true, TimeSpan.FromHours(1)));
 
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
-    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorageAot(Path.Combine(settings.DataDirPath, "data.v0.db")));
+    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"), null));
 
     Observable
       .Interval(TimeSpan.FromHours(6))
@@ -106,7 +106,7 @@ public partial class Program
     var depMgr = AppDependencyManager
       .Create()
       .AddSingleton<ILog>(log)
-      .AddSingleton<IDocumentStorageAot>(docStorage)
+      .AddSingleton<IDocumentStorage>(docStorage)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ISettingsController>(settingsController)

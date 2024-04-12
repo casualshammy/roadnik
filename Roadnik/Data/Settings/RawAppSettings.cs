@@ -15,5 +15,8 @@ public class RawAppSettings
   public double? AnonymousMinIntervalMs { get; init; }
   public string? FCMServiceAccountJsonPath { get; init; }
   public string? FCMProjectId { get; init; }
+  public string? UdpTransportPublicKeyPath { get; init; }
+  public string? UdpTransportPrivateKeyPath { get; init; }
+  public string? UdpTransportPrivateKeyPassphrase { get; init; }
 
 }

@@ -10,19 +10,17 @@ public readonly struct GenericUdpMsg
   public const int MaxPayloadSize = 256;
 
   public readonly int MagicWord;
-  public readonly int CryptSerial;
+  public readonly byte Type;
   public readonly int PayloadHash;
   public readonly int PayloadSize;
 
   [MarshalAs(UnmanagedType.ByValArray, SizeConst = MaxPayloadSize)]
   public readonly byte[] Payload;
 
-  public GenericUdpMsg(
-    int _cryptSerial,
-    ReadOnlySpan<byte> _payload)
+  public GenericUdpMsg(byte _type, ReadOnlySpan<byte> _payload)
   {
     MagicWord = MagicWordRef;
-    CryptSerial = _cryptSerial;
+    Type = _type;
 
     if (_payload.Length > MaxPayloadSize)
       throw new FormatException($"Payload is too big; max size: {MaxPayloadSize}");
@@ -33,7 +31,7 @@ public readonly struct GenericUdpMsg
     PayloadHash = Cryptography.CalculateCrc32(Payload);
   }
 
-  public ReadOnlySpan<byte> ToByteArray()
+  public byte[] ToByteArray()
   {
     var size = Marshal.SizeOf(this);
     var array = new byte[size];

@@ -17,6 +17,7 @@ using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.FCMProvider;
+using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
@@ -101,8 +102,7 @@ public partial class Program
     Observable
       .Interval(TimeSpan.FromHours(6))
       .StartWithDefault()
-      .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
-      .Subscribe(lifetime);
+      .Subscribe(_ => docStorage.Flush(true), lifetime);
 
     var depMgr = AppDependencyManager
       .Create()
@@ -118,6 +118,7 @@ public partial class Program
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<UdpServerImpl, IUdpServer>()
+      .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .ActivateOnStart<IWebServer>()
       .ActivateOnStart<IUdpServer>()
       .Build();

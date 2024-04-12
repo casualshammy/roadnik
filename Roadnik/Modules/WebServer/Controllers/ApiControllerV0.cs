@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.Crypto;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
@@ -18,13 +19,14 @@ using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Toolkit;
 using System.Collections.Frozen;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Modules.Controllers;
 
-public class ApiControllerV0 : GenericController
+internal class ApiControllerV0 : GenericController
 {
   enum MapTileType
   {
@@ -37,7 +39,6 @@ public class ApiControllerV0 : GenericController
     CartoDark
   }
 
-  private static readonly HttpClient p_httpClient = new();
   private static readonly FrozenSet<string> p_authRequiredPaths = new string[] {
     ReqPaths.REGISTER_ROOM,
     ReqPaths.UNREGISTER_ROOM,
@@ -55,6 +56,7 @@ public class ApiControllerV0 : GenericController
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fcmPublisher;
+  private readonly IHttpClientProvider p_httpClientProvider;
   private readonly ILog p_log;
 
   public ApiControllerV0(
@@ -65,7 +67,8 @@ public class ApiControllerV0 : GenericController
     IRoomsController _usersController,
     ITilesCache _tilesCache,
     IReqRateLimiter _reqRateLimiter,
-    IFCMPublisher _fcmPublisher)
+    IFCMPublisher _fcmPublisher,
+    IHttpClientProvider _httpClientProvider) : base("/", ControllersJsonCtx.Default)
   {
     p_settingsCtrl = _settingsCtrl;
     p_documentStorage = _documentStorage;
@@ -75,6 +78,7 @@ public class ApiControllerV0 : GenericController
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
+    p_httpClientProvider = _httpClientProvider;
   }
 
   public override void RegisterPaths(WebApplication _app)
@@ -84,22 +88,22 @@ public class ApiControllerV0 : GenericController
     _app.MapGet("{**path}", GetStaticFile);
     _app.MapGet("/ping", () => Results.Ok());
     _app.MapGet("/r/{**path}", GetRoom);
-    _app.MapGet("/thunderforest", GetThunderforestImageAsync);
     _app.MapGet("/map-tile", GetMapTileAsync);
     _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
     _app.MapPost(ReqPaths.STORE_PATH_POINT, StoreRoomPointPostAsync);
-    _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPathsAsync);
+    _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPaths);
     _app.MapPost(ReqPaths.START_NEW_PATH, StartNewPathAsync);
     _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateNewPointAsync);
-    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, GetRoomPointsAsync);
+    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, GetRoomPoints);
     _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
-    _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomIdAsync);
+    _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
     _app.MapPost(ReqPaths.UPLOAD_LOG, UploadLogAsync);
     _app.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
     _app.MapGet("/ws", StartWebSocketAsync);
-    _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoomAsync);
-    _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistrationAsync);
-    _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRoomsAsync);
+    _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
+    _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
+    _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
+    _app.MapGet(ReqPaths.IS_UDP_AVAILABLE, IsUdpTransportAvailableAsync);
   }
 
   public override Task<bool> AuthAsync(HttpRequest _req, CancellationToken _ct)
@@ -188,62 +192,6 @@ public class ApiControllerV0 : GenericController
     return Results.Stream(stream, mime);
   }
 
-  //[HttpGet("/thunderforest")]
-  [Obsolete]
-  public async Task<IResult> GetThunderforestImageAsync(
-    HttpContext _httpCtx,
-    [FromQuery(Name = "x")] int? _x,
-    [FromQuery(Name = "y")] int? _y,
-    [FromQuery(Name = "z")] int? _z,
-    [FromQuery(Name = "type")] string? _type,
-    CancellationToken _ct)
-  {
-    if (_x is null)
-      return Results.BadRequest("X is null!");
-    if (_y is null)
-      return Results.BadRequest("Y is null!");
-    if (_z is null)
-      return Results.BadRequest("Z is null!");
-    if (_type.IsNullOrWhiteSpace())
-      return Results.BadRequest("Type is null!");
-    if (!ReqResUtil.ValidMapTypes.Contains(_type))
-      return Results.BadRequest("Type is incorrect!");
-
-    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
-    if (tfApiKey.IsNullOrWhiteSpace())
-      return Results.Problem($"Thunderforest API key is not set!", statusCode: (int)HttpStatusCode.InternalServerError);
-
-    var log = GetLog(_httpCtx.Request);
-
-    var tfCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
-    if (tfCacheSize != null && tfCacheSize.Value > 0)
-    {
-      if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _type, out var cachedStream, out var hash))
-      {
-        log.Info($"Sending **cached** thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
-        _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
-        return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
-      }
-    }
-
-    log.Info($"Sending thunderforest tile; type:{_type}; x:{_x}; y:{_y}; z:{_z}");
-    var url = $"https://tile.thunderforest.com/{_type}/{_z}/{_x}/{_y}.png?apikey={tfApiKey}";
-
-    if (tfCacheSize == null || tfCacheSize.Value <= 0)
-      return Results.Stream(await p_httpClient.GetStreamAsync(url, _ct), MimeMapping.KnownMimeTypes.Png);
-
-    using (var stream = await p_httpClient.GetStreamAsync(url, _ct))
-      await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _type, stream, _ct);
-
-    var newCachedStream = p_tilesCache.GetOrDefault(_x.Value, _y.Value, _z.Value, _type);
-    if (newCachedStream != null)
-      return Results.Stream(newCachedStream, MimeMapping.KnownMimeTypes.Png);
-
-    var errMsg = $"Can't find cached thunderforest tile: x:{_x.Value};y:{_y.Value};z:{_z.Value};t:{_type}";
-    log.Error(errMsg);
-    return InternalServerError(errMsg);
-  }
-
   //[HttpGet("/map-tile")]
   public async Task<IResult> GetMapTileAsync(
     HttpContext _httpCtx,
@@ -288,35 +236,19 @@ public class ApiControllerV0 : GenericController
     };
 
     if (url == null)
+    {
+      log.Warn($"Map type is not available: '{_mapType}'");
       return BadRequest($"Map type is not available: '{_mapType}'");
+    }
+
+    var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
+    if (mapCacheSize != null && mapCacheSize.Value > 0)
+      p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
 
     try
     {
-      using var req = new HttpRequestMessage(HttpMethod.Get, url);
-      req.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
-      using var res = await p_httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, _ct);
-      res.EnsureSuccessStatusCode();
-
-      var ms = new MemoryStream();
-      try
-      {
-        await res.Content.CopyToAsync(ms, _ct);
-
-        var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
-        if (mapCacheSize != null && mapCacheSize.Value > 0)
-        {
-          ms.Position = 0;
-          await p_tilesCache.StoreAsync(_x.Value, _y.Value, _z.Value, _mapType, ms, _ct);
-        }
-
-        ms.Position = 0;
-        return Results.Stream(ms, MimeMapping.KnownMimeTypes.Png);
-      }
-      catch (Exception)
-      {
-        await ms.DisposeAsync();
-        throw;
-      }
+      var stream = await p_httpClientProvider.Value.GetStreamAsync(url, _ct);
+      return Results.Stream(stream, MimeMapping.KnownMimeTypes.Png);
     }
     catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
     {
@@ -369,7 +301,7 @@ public class ApiControllerV0 : GenericController
 
     log.Info($"Requested to store geo data, room: '{_roomId}'");
 
-    var room = await p_roomsController.GetRoomAsync(_roomId, _ct);
+    var room = p_roomsController.GetRoom(_roomId);
     if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
@@ -398,7 +330,7 @@ public class ApiControllerV0 : GenericController
       (_battery ?? 0) / 100,
       (_gsmSignal ?? 0) / 100,
       _bearing);
-    await p_documentStorage.WriteSimpleDocumentAsync($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry, _ct);
+    p_documentStorage.WriteSimpleDocument($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -419,7 +351,14 @@ public class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
-    var room = await p_roomsController.GetRoomAsync(_req.RoomId, _ct);
+    var udpPayload = StoreLocationUdpMsg.FromStorePathPointReq(_req);
+    var udpMsg = new GenericUdpMsg(0, udpPayload.ToByteArray());
+    var udpMsgBytes = udpMsg.ToByteArray();
+    var privateKey = File.ReadAllText(p_settingsCtrl.Settings.Value!.UdpTransportPrivateKeyPath!);
+    using var rsaAes = new RsaAesGcm(null, privateKey, p_settingsCtrl.Settings.Value.UdpTransportPrivateKeyPassphrase);
+    var encUdpMsgBytes = BitConverter.ToString(rsaAes.Encrypt(udpMsgBytes).ToArray()).Replace("-", "");
+
+    var room = p_roomsController.GetRoom(_req.RoomId);
     if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
       return Forbidden("Anonymous publishing is forbidden!");
 
@@ -438,7 +377,7 @@ public class ApiControllerV0 : GenericController
     var now = DateTimeOffset.UtcNow;
 
     var record = new StorageEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, _req.Alt, _req.Speed, _req.Acc, _req.Battery, _req.GsmSignal, _req.Bearing);
-    await p_documentStorage.WriteSimpleDocumentAsync($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry, _ct);
+    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -446,7 +385,7 @@ public class ApiControllerV0 : GenericController
   }
 
   //[HttpGet(ReqPaths.GET_ROOM_PATHS)]
-  public async Task<IResult> GetRoomPathsAsync(
+  public IResult GetRoomPaths(
     HttpRequest _httpRequest,
     [FromQuery(Name = "roomId")] string? _roomId,
     [FromQuery(Name = "offset")] long? _offsetUnixTimeMs,
@@ -472,8 +411,8 @@ public class ApiControllerV0 : GenericController
 
     const int maxReturnEntries = 250;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
-    var documents = (await p_documentStorage
-      .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_roomId}.%"), _from: offset ?? null, _ct: _ct))
+    var documents = p_documentStorage
+      .ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_roomId}.%"), _from: offset ?? null)
       .OrderBy(_ => _.Created)
       .Take(maxReturnEntries + 1)
       .ToList();
@@ -555,7 +494,7 @@ public class ApiControllerV0 : GenericController
 
     var now = DateTimeOffset.UtcNow;
     var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
-    await p_documentStorage.WriteSimpleDocumentAsync($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point, DocStorageJsonCtx.Default.GeoPointEntry, _ct);
+    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point, DocStorageJsonCtx.Default.GeoPointEntry);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -567,7 +506,7 @@ public class ApiControllerV0 : GenericController
   }
 
   //[HttpGet(ReqPaths.LIST_ROOM_POINTS)]
-  public async Task<IResult> GetRoomPointsAsync(
+  public IResult GetRoomPoints(
     HttpRequest _httpRequest,
     [FromQuery(Name = "roomId")] string? _roomId,
     CancellationToken _ct)
@@ -587,7 +526,7 @@ public class ApiControllerV0 : GenericController
     log.Info($"Got req to **list points** in room __{_roomId}__");
 
     var entries = new List<ListRoomPointsResData>();
-    foreach (var entry in await p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%"), _ct: _ct))
+    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%")))
       entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
 
     return Results.Json(entries, ControllersJsonCtx.Default.IReadOnlyListListRoomPointsResData);
@@ -613,10 +552,10 @@ public class ApiControllerV0 : GenericController
 
     log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
-    foreach (var entry in await p_documentStorage.ListSimpleDocumentsAsync<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_req.RoomId}.%"), _ct: _ct))
+    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_req.RoomId}.%")))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
-        await p_documentStorage.DeleteSimpleDocumentAsync<GeoPointEntry>(entry.Key, _ct);
+        p_documentStorage.DeleteSimpleDocument<GeoPointEntry>(entry.Key);
         break;
       }
 
@@ -627,7 +566,7 @@ public class ApiControllerV0 : GenericController
   }
 
   //[HttpGet(ReqPaths.GET_FREE_ROOM_ID)]
-  public async Task<IResult> GetFreeRoomIdAsync(
+  public IResult GetFreeRoomId(
     HttpRequest _httpRequest,
     CancellationToken _ct)
   {
@@ -647,8 +586,8 @@ public class ApiControllerV0 : GenericController
     while (!_ct.IsCancellationRequested && !roomIdValid)
     {
       roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
-      roomIdValid = !(await p_documentStorage
-        .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{roomId}.%"), _ct: _ct))
+      roomIdValid = !p_documentStorage
+        .ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{roomId}.%"))
         .Any();
     }
 
@@ -712,6 +651,17 @@ public class ApiControllerV0 : GenericController
     return valid ? Results.Ok() : Results.StatusCode((int)HttpStatusCode.NotAcceptable);
   }
 
+  //[HttpGet(ReqPaths.IS_UDP_AVAILABLE)]
+  public async Task<IResult> IsUdpTransportAvailableAsync(CancellationToken _ct)
+  {
+    var publicKeyPath = p_settingsCtrl.Settings.Value?.UdpTransportPublicKeyPath;
+    if (publicKeyPath == null || !File.Exists(publicKeyPath))
+      return Results.StatusCode((int)HttpStatusCode.NotImplemented);
+
+    var hashString = await ReqResUtil.GetUdpPublicKeyHashAsync(publicKeyPath, _ct);
+    return Json(new IsUdpTransportAvailableRes(hashString));
+  }
+
   //[HttpGet("/ws")]
   public async Task<IResult> StartWebSocketAsync(
     HttpRequest _httpRequest,
@@ -731,7 +681,7 @@ public class ApiControllerV0 : GenericController
     var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
     log.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
 
-    var roomInfo = await p_roomsController.GetRoomAsync(_roomId, _ct);
+    var roomInfo = p_roomsController.GetRoom(_roomId);
     var maxPointsInRoom = roomInfo?.MaxPoints ?? p_settingsCtrl.Settings.Value?.AnonymousMaxPoints ?? int.MaxValue;
 
     using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
@@ -743,35 +693,33 @@ public class ApiControllerV0 : GenericController
 
   //[ApiKeyRequired]
   //[HttpPost("register-room")]
-  public async Task<IResult> RegisterRoomAsync(
-    [FromBody] RoomInfo? _req,
-    CancellationToken _ct)
+  public IResult RegisterRoom(
+    [FromBody] RoomInfo? _req)
   {
     if (_req == null)
       return BadRequest("Room data is null");
 
-    await p_roomsController.RegisterRoomAsync(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil, _ct);
+    p_roomsController.RegisterRoom(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil);
     return Results.Ok();
   }
 
   //[ApiKeyRequired]
   //[HttpPost("unregister-room")]
-  public async Task<IResult> DeleteRoomRegistrationAsync(
-    [FromBody] DeleteRoomReq? _req,
-    CancellationToken _ct)
+  public IResult DeleteRoomRegistration(
+    [FromBody] DeleteRoomReq? _req)
   {
     if (_req == null || _req.RoomId == null)
       return BadRequest("Room Id is null");
 
-    await p_roomsController.UnregisterRoomAsync(_req.RoomId, _ct);
+    p_roomsController.UnregisterRoom(_req.RoomId);
     return Results.Ok();
   }
 
   //[ApiKeyRequired]
   //[HttpGet("list-registered-rooms")]
-  public async Task<IResult> ListRoomsAsync(CancellationToken _ct)
+  public IResult ListRooms()
   {
-    var users = await p_roomsController.ListRegisteredRoomsAsync(_ct);
+    var users = p_roomsController.ListRegisteredRooms();
     return Results.Json(users, ControllersJsonCtx.Default.IReadOnlyListRoomInfo);
   }
 

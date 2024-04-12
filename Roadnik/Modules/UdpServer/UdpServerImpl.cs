@@ -1,4 +1,5 @@
-﻿using Ax.Fw.DependencyInjection;
+﻿using Ax.Fw.Crypto;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.ReqRes.Udp;
@@ -33,12 +34,21 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
         if (_conf == null)
           return;
 
+        if (!File.Exists(_conf.UdpTransportPrivateKeyPath))
+        {
+          _log.Warn($"Private key is not exist - udp server is inactive");
+          return;
+        }
+
+        var privateKey = File.ReadAllText(_conf.UdpTransportPrivateKeyPath);
+        var rsaAes = _life.ToDisposeOnEnded(new RsaAesGcm(null, privateKey, _conf.UdpTransportPrivateKeyPassphrase));
+
         _log.Info($"Starting server on {_conf.IpBind}:{_conf.PortBind}...");
         _life.DoOnEnded(() => _log.Info($"Server on {_conf.IpBind}:{_conf.PortBind} is stopped"));
 
         var endpoint = new IPEndPoint(IPAddress.Parse(_conf.IpBind), _conf.PortBind);
         var udpClient = _life.ToDisposeOnEnded(new UdpClient());
-        //udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
         udpClient.Client.Bind(endpoint);
 
         var thread = new Thread(async () =>
@@ -49,10 +59,13 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
             {
               var udpResult = await udpClient.ReceiveAsync(_life.Token);
               var msgBytes = udpResult.Buffer;
-              if (!GenericUdpMsg.TryGetFromByteArray(msgBytes, out var msg))
+
+              var decryptedBytes = rsaAes.Decrypt(msgBytes).ToArray();
+
+              if (!GenericUdpMsg.TryGetFromByteArray(decryptedBytes, out var msg))
                 continue;
 
-              if (!StoreLocationUdpMsg.TryGetFromByteArray(msg.Payload[..msg.PayloadSize], "987654321", out var storeReq))
+              if (!StoreLocationUdpMsg.TryGetFromByteArray(msg.Payload[..msg.PayloadSize], out var storeReq))
                 continue;
 
               _log.Info($"Got udp req: '{storeReq.RoomId}/{storeReq.Username}' -> {storeReq.Lat};{storeReq.Lng}");
@@ -61,7 +74,7 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-              _log.Error($"Error in thread: {ex}");
+              _log.Error($"Error occured while trying to process udp msg: {ex}");
             }
           }
         });

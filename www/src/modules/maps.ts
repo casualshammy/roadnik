@@ -17,14 +17,11 @@ export function GetMapLayers(): L.Control.LayersObject {
 	var cyclemapUrl = '../map-tile?type=opencyclemap&x={x}&y={y}&z={z}',
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
-	// Landscape Map
-	// var landscapeMapUrl = '../map-tile?type=tflandscape&x={x}&y={y}&z={z}',
-	// 	landscapeMap = new L.TileLayer(landscapeMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
-	var outdoorsMapUrl = '../map-tile?type=tfoutdoors&x={x}&y={y}&z={z}',
+	var outdoorsMapUrl = '../map-tile?type=tf-outdoors&x={x}&y={y}&z={z}',
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// CartoDb Dark
-	var cartoDbDarkUrl = '../map-tile?type=cartodark&x={x}&y={y}&z={z}',
+	var cartoDbDarkUrl = '../map-tile?type=carto-dark&x={x}&y={y}&z={z}',
 		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution });
 	// Googly Hybrid
@@ -55,12 +52,12 @@ export function GetMapOverlayLayers() {
 		waymarkedshadingbike = new L.TileLayer(waymarkedshadingbikeUrl, { maxZoom: 18, attribution: waymarkedshadingbikeAttribution });
 
 	// Strava Heatmap Ride
-	const stravaRideUrl = '../map-tile?type=stravaheatmapride&x={x}&y={y}&z={z}',
+	const stravaRideUrl = '../map-tile?type=strava-heatmap-ride&x={x}&y={y}&z={z}',
 		stravaRideAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
 		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRideAttribution });
 
 	// Strava Heatmap Run
-	const stravaRunUrl = '../map-tile?type=stravaheatmaprun&x={x}&y={y}&z={z}',
+	const stravaRunUrl = '../map-tile?type=strava-heatmap-run&x={x}&y={y}&z={z}',
 		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
 		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRunAttribution, });
 

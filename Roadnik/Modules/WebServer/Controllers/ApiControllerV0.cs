@@ -11,6 +11,7 @@ using Roadnik.Common.Serializers;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
+using Roadnik.Server.Data;
 using Roadnik.Server.Data.ReqRes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
@@ -28,6 +29,7 @@ namespace Roadnik.Modules.Controllers;
 
 internal class ApiControllerV0 : GenericController
 {
+  [Obsolete]
   enum MapTileType
   {
     None = 0,
@@ -207,7 +209,20 @@ internal class ApiControllerV0 : GenericController
       return Results.BadRequest("Y is null!");
     if (_z is null)
       return Results.BadRequest("Z is null!");
-    if (!Enum.TryParse<MapTileType>(_mapType, ignoreCase: true, out var mapType))
+    if (Enum.TryParse<MapTileType>(_mapType, ignoreCase: true, out var oldMapType))
+    {
+      _mapType = oldMapType switch
+      {
+        MapTileType.OpenCycleMap => Consts.TILE_TYPE_OPENCYCLEMAP,
+        MapTileType.TfOutdoors => Consts.TILE_TYPE_TF_OUTDOORS,
+        MapTileType.StravaHeatmapRide => Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE,
+        MapTileType.StravaHeatmapRun => Consts.TILE_TYPE_STRAVA_HEATMAP_RUN,
+        MapTileType.CartoDark => Consts.TILE_TYPE_CARTO_DARK,
+        _ => null
+      };
+    }
+
+    if (_mapType == null)
       return BadRequest($"Unknown map type: '{_mapType}'");
 
     var log = GetLog(_httpCtx.Request);
@@ -224,14 +239,13 @@ internal class ApiControllerV0 : GenericController
     var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
     var tfApiKeyParam = tfApiKey.IsNullOrEmpty() ? string.Empty : $"?apikey={tfApiKey}";
 
-    var url = mapType switch
+    var url = _mapType switch
     {
-      MapTileType.OpenCycleMap => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      //MapTileType.TfLandscape => $"https://tile.thunderforest.com/landscape/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      MapTileType.TfOutdoors => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      MapTileType.StravaHeatmapRide => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
-      MapTileType.StravaHeatmapRun => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
-      MapTileType.CartoDark => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
+      Consts.TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      Consts.TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
+      Consts.TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
+      Consts.TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
       _ => null
     };
 

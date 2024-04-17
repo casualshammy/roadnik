@@ -17,6 +17,8 @@ using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.FCMProvider;
+using Roadnik.Server.Modules.HttpClientProvider;
+using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -90,23 +92,22 @@ public partial class Program
     log.AttachConsoleLog();
     log.AttachFileLog(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5));
 
-    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), TimeSpan.FromHours(1)));
+    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true, TimeSpan.FromHours(1)));
 
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
-    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorageAot(Path.Combine(settings.DataDirPath, "data.v0.db")));
+    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"), null));
 
     Observable
       .Interval(TimeSpan.FromHours(6))
       .StartWithDefault()
-      .SelectAsync(async (_, _ct) => await docStorage.FlushAsync(true, _ct))
-      .Subscribe(lifetime);
+      .Subscribe(_ => docStorage.Flush(true), lifetime);
 
     var depMgr = AppDependencyManager
       .Create()
       .AddSingleton<ILog>(log)
-      .AddSingleton<IDocumentStorageAot>(docStorage)
+      .AddSingleton<IDocumentStorage>(docStorage)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ISettingsController>(settingsController)
@@ -116,7 +117,10 @@ public partial class Program
       .AddModule<TilesCacheImpl, ITilesCache>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
+      .AddModule<UdpServerImpl, IUdpServer>()
+      .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .ActivateOnStart<IWebServer>()
+      .ActivateOnStart<IUdpServer>()
       .Build();
 
     var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));

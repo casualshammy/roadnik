@@ -19,7 +19,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   public static IRoomsController ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance(
-      (IDocumentStorageAot _storage,
+      (IDocumentStorage _storage,
       IReadOnlyLifetime _lifetime,
       ISettingsController _settingsController,
       IWebSocketCtrl _webSocketCtrl,
@@ -28,11 +28,11 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
 
-  private readonly IDocumentStorageAot p_storage;
+  private readonly IDocumentStorage p_storage;
   private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
 
   private RoomsControllerImpl(
-    IDocumentStorageAot _storage,
+    IDocumentStorage _storage,
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
     IWebSocketCtrl _webSocketCtrl,
@@ -57,27 +57,27 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
             try
             {
-              var entries = p_storage.ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, _ct: _ct);
+              var entriesEE = p_storage.ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry);
 
-              await foreach (var roomGroup in entries.GroupBy(_ => _.Data.RoomId))
+              foreach (var roomGroup in entriesEE.GroupBy(_ => _.Data.RoomId))
               {
                 if (roomGroup.Key.IsNullOrEmpty())
                 {
-                  await foreach (var entry in roomGroup)
-                    await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+                  foreach (var entry in roomGroup)
+                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
 
                   continue;
                 }
 
                 var limit = _conf.AnonymousMaxPoints;
-                var room = await GetRoomAsync(roomGroup.Key, _ct);
+                var room = GetRoom(roomGroup.Key);
                 if (room?.MaxPoints != null)
                   limit = room.MaxPoints.Value;
 
                 var counter = 0;
-                await foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
+                foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
                   if (++counter > limit)
-                    await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
 
                 var deleted = counter - limit;
                 if (deleted > 0)
@@ -105,15 +105,15 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
           try
           {
-            var entries = p_storage.ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_data.RoomId}.%"), _to: to, _ct: _ct);
+            var entriesEE = p_storage.ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_data.RoomId}.%"), _to: to);
 
             var entriesDeleted = 0L;
-            await foreach (var entry in entries)
+            foreach (var entry in entriesEE)
             {
               if (entry.Data.Username != _data.Username)
                 continue;
 
-              await p_storage.DeleteSimpleDocumentAsync<StorageEntry>(entry.Key, _ct);
+              p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
               ++entriesDeleted;
             }
 
@@ -135,35 +135,31 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       .Subscribe(_lifetime);
   }
 
-  public async Task RegisterRoomAsync(
+  public void RegisterRoom(
     string _roomId,
     string _email,
     int? _maxPoints,
     double? _minPointInterval,
-    DateTimeOffset? _validUntil,
-    CancellationToken _ct)
+    DateTimeOffset? _validUntil)
   {
     var info = new RoomInfo(_roomId, _email, _maxPoints, _minPointInterval, _validUntil);
-    await p_storage.WriteSimpleDocumentAsync(_roomId, info, DocStorageJsonCtx.Default.RoomInfo, _ct);
+    p_storage.WriteSimpleDocument(_roomId, info, DocStorageJsonCtx.Default.RoomInfo);
   }
 
-  public async Task UnregisterRoomAsync(string _roomId, CancellationToken _ct)
-  {
-    await p_storage.DeleteSimpleDocumentAsync<RoomInfo>(_roomId.ToString(), _ct);
-  }
+  public void UnregisterRoom(string _roomId) => p_storage.DeleteSimpleDocument<RoomInfo>(_roomId);
 
-  public async Task<RoomInfo?> GetRoomAsync(string _roomId, CancellationToken _ct)
+  public RoomInfo? GetRoom(string _roomId)
   {
-    var doc = await p_storage.ReadSimpleDocumentAsync(_roomId, DocStorageJsonCtx.Default.RoomInfo, _ct);
+    var doc = p_storage.ReadSimpleDocument(_roomId, DocStorageJsonCtx.Default.RoomInfo);
     return doc?.Data;
   }
 
-  public async Task<IReadOnlyList<RoomInfo>> ListRegisteredRoomsAsync(CancellationToken _ct)
+  public IReadOnlyList<RoomInfo> ListRegisteredRooms()
   {
-    var users = await p_storage
-      .ListSimpleDocumentsAsync(DocStorageJsonCtx.Default.RoomInfo, _ct: _ct)
+    var users = p_storage
+      .ListSimpleDocuments(DocStorageJsonCtx.Default.RoomInfo)
       .Select(_ => _.Data)
-      .ToListAsync(_ct);
+      .ToList();
 
     return users;
   }

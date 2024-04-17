@@ -8,7 +8,11 @@ using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
+using System.Net.Http;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Text;
 using System.Text.Json;
 
@@ -16,19 +20,24 @@ namespace Roadnik.Modules.TilesCache;
 
 internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 {
+  record DownloadTask(string Key, string Url);
+
   public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      ISettingsController _settingsController, 
+      ISettingsController _settingsController,
       IReadOnlyLifetime _lifetime,
-      ILog _log) => new TilesCacheImpl(_settingsController, _lifetime, _log["tiles-cache"]));
+      IHttpClientProvider _httpClientProvider,
+      ILog _log) => new TilesCacheImpl(_settingsController, _lifetime, _httpClientProvider, _log["tiles-cache"]));
   }
 
   private readonly IRxProperty<FileCache?> p_cacheProp;
+  private readonly Subject<DownloadTask> p_downloadTaskSubj = new();
 
   private TilesCacheImpl(
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime,
+    IHttpClientProvider _httpClientProvider,
     ILog _log)
   {
     p_cacheProp = _settingsController.Settings
@@ -43,66 +52,59 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
           _conf.MapTilesCacheSize,
           TimeSpan.FromHours(6));
 
-        Observable
-         .Interval(TimeSpan.FromHours(1))
-         .StartWithDefault()
-         .ToUnit()
-         .ObserveOnThreadPool()
-         .Subscribe(_ =>
-         {
-           try
-           {
-             var dirInfo = new DirectoryInfo(folder);
-             if (!dirInfo.Exists)
-               return;
-
-             var totalFileCount = 0L;
-             var totalFolderCount = 0L;
-             var totalSize = 0L;
-             var sw = Stopwatch.StartNew();
-             foreach (var entry in dirInfo.GetFileSystemInfos("*", SearchOption.AllDirectories))
-             {
-               if (entry is FileInfo fileInfo)
-               {
-                 ++totalFileCount;
-                 totalSize += fileInfo.Length;
-               }
-               else if (entry is DirectoryInfo)
-               {
-                 ++totalFolderCount;
-               }
-             }
-             var stats = new FileCacheStatFile(totalFolderCount, totalFileCount, totalSize, sw.Elapsed.TotalMilliseconds, DateTimeOffset.UtcNow);
-             var json = JsonSerializer.Serialize(stats, FileCacheJsonCtx.Default.FileCacheStatFile);
-             File.WriteAllText(Path.Combine(folder, "cache-stats.json"), json, Encoding.UTF8);
-           }
-           catch (Exception ex)
-           {
-             _log.Error("Can't calculate or save cache stats", ex);
-           }
-         }, _life);
-
         return cache;
       })
       .ToProperty(_lifetime, null);
+
+    var downloadScheduler = new EventLoopScheduler();
+    p_downloadTaskSubj
+      .Delay(TimeSpan.FromSeconds(5), downloadScheduler)
+      .ObserveOn(downloadScheduler)
+      .SelectAsync(async (_task, _ct) =>
+      {
+        var cache = p_cacheProp.Value;
+        if (cache == null)
+          return;
+
+        try
+        {
+          _log.Info($"**Downloading** tile '__{_task.Key}__'...");
+
+          using var bodyStream = await _httpClientProvider.Value.GetStreamAsync(_task.Url, _ct);
+          await cache.StoreAsync(_task.Key, bodyStream, true, _ct);
+
+          _log.Info($"Tile '__{_task.Key}__' is downloaded");
+        }
+        catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
+        {
+          _log.Warn($"Tile '__{_task.Key}__' is not found");
+        }
+        catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+          _log.Warn($"Can't download tile '__{_task.Key}__' - unauthorized");
+        }
+        catch (Exception ex)
+        {
+          _log.Warn($"Can't download tile '{_task.Key}': {ex}");
+        }
+      }, downloadScheduler)
+      .Subscribe(_lifetime);
   }
 
-  public async Task StoreAsync(int _x, int _y, int _z, string _type, Stream _tileStream, CancellationToken _ct)
+  public void EnqueueUrl(int _x, int _y, int _z, string _type, string _url)
   {
-    if (p_cacheProp.Value == null)
-      return;
-
     var key = GetKey(_x, _y, _z, _type);
-    await p_cacheProp.Value.StoreAsync(key, _tileStream, false, _ct);
+    p_downloadTaskSubj.OnNext(new DownloadTask(key, _url));
   }
 
   public Stream? GetOrDefault(int _x, int _y, int _z, string _type)
   {
-    if (p_cacheProp.Value == null)
+    var cache = p_cacheProp.Value;
+    if (cache == null)
       return null;
 
     var key = GetKey(_x, _y, _z, _type);
-    return p_cacheProp.Value.Get(key);
+    return cache.Get(key);
   }
 
   public bool TryGet(
@@ -117,7 +119,6 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     _hash = null;
 
     var cache = p_cacheProp.Value;
-
     if (cache == null)
       return false;
 

@@ -14,5 +14,6 @@ public static class ReqPaths
   public const string REGISTER_ROOM = "/register-room";
   public const string UNREGISTER_ROOM = "/unregister-room";
   public const string LIST_REGISTERED_ROOMS = "/list-registered-rooms";
+  public const string IS_UDP_AVAILABLE = "/is-udp-available";
 
 }

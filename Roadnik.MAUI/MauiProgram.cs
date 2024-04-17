@@ -48,7 +48,7 @@ public static partial class MauiProgram
       log.Info("=========================================");
     });
 
-    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, LogFileCleanerRegex(), TimeSpan.FromDays(30), null, _file =>
+    lifetime.ToDisposeOnEnded(FileLoggerCleaner.Create(new DirectoryInfo(logsFolder), false, LogFileCleanerRegex(), TimeSpan.FromDays(30), false, null, _file =>
     {
       log.Info($"Old file was removed: '{_file.Name}'");
     }));

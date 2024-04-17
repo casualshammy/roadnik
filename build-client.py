@@ -46,7 +46,6 @@ build_common.packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirN
 print(f"===========================================", flush=True)
 print(f"Compiling client for framework '{framework}'...", flush=True)
 print(f"===========================================", flush=True)
-# build_common.packages.callThrowIfError(f"dotnet workload restore --project {sourceDirName}/{sourceDirName}.csproj")
 build_common.packages.callThrowIfError("dotnet workload install maui")
 build_common.packages.callThrowIfError(f"dotnet publish {sourceDirName} -c Release -p:AndroidSigningKeyPass={signingPassword} -p:AndroidSigningStorePass={signingPassword} -f {framework} -o \"{outputDir}\"")
 

@@ -4,16 +4,15 @@ namespace Roadnik.Interfaces;
 
 public interface IRoomsController
 {
-  Task RegisterRoomAsync(
+  void RegisterRoom(
     string _roomId,
     string _email,
     int? _maxPoints,
     double? _minPointInterval,
-    DateTimeOffset? _validUntil,
-    CancellationToken _ct);
+    DateTimeOffset? _validUntil);
 
-  Task UnregisterRoomAsync(string _roomId, CancellationToken _ct);
-  Task<RoomInfo?> GetRoomAsync(string _roomId, CancellationToken _ct);
-  Task<IReadOnlyList<RoomInfo>> ListRegisteredRoomsAsync(CancellationToken _ct);
+  void UnregisterRoom(string _roomId);
+  RoomInfo? GetRoom(string _roomId);
+  IReadOnlyList<RoomInfo> ListRegisteredRooms();
   void EnqueueUserWipe(string _roomId, string _username, long _upToDateTimeUnixMs);
 }

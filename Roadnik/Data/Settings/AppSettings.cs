@@ -17,6 +17,9 @@ public class AppSettings
   public required double AnonymousMinIntervalMs { get; init; }
   public string? FCMServiceAccountJsonPath { get; init; }
   public string? FCMProjectId { get; init; }
+  public string? UdpTransportPublicKeyPath { get; init; }
+  public string? UdpTransportPrivateKeyPath { get; init; }
+  public string? UdpTransportPrivateKeyPassphrase { get; init; }
 
   public static AppSettings FromRawSettings(RawAppSettings _rawSettings)
   {
@@ -34,7 +37,10 @@ public class AppSettings
       AnonymousMaxPoints = _rawSettings.AnonymousMaxPoints ?? 1000,
       AnonymousMinIntervalMs = _rawSettings.AnonymousMinIntervalMs ?? 9.9d * 1000,
       FCMServiceAccountJsonPath = _rawSettings.FCMServiceAccountJsonPath,
-      FCMProjectId = _rawSettings.FCMProjectId
+      FCMProjectId = _rawSettings.FCMProjectId,
+      UdpTransportPrivateKeyPath = _rawSettings.UdpTransportPrivateKeyPath,
+      UdpTransportPrivateKeyPassphrase = _rawSettings.UdpTransportPrivateKeyPassphrase,
+      UdpTransportPublicKeyPath = _rawSettings.UdpTransportPublicKeyPath,
     };
   }
 

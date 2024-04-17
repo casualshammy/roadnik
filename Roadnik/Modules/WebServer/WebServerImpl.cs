@@ -7,6 +7,7 @@ using Roadnik.Modules.Controllers;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Middlewares;
+using Roadnik.Server.Toolkit;
 using System.Net;
 using System.Reactive.Linq;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
@@ -19,35 +20,38 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   {
     return _ctx.CreateInstance((
       ISettingsController _settingsController,
-      IDocumentStorageAot _documentStorage,
+      IDocumentStorage _documentStorage,
       ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
       ITilesCache _tilesCache,
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
-      IReadOnlyLifetime _lifetime) => new WebServerImpl(_settingsController, _documentStorage, _logger["kestrel"], _webSocketCtrl, _roomsController, _tilesCache, _reqRateLimiter, _fCMPublisher, _lifetime));
+      IReadOnlyLifetime _lifetime,
+      IHttpClientProvider _httpClientProvider) => new WebServerImpl(_settingsController, _documentStorage, _logger["kestrel"], _webSocketCtrl, _roomsController, _tilesCache, _reqRateLimiter, _fCMPublisher, _lifetime, _httpClientProvider));
   }
 
   private readonly ISettingsController p_settingsController;
-  private readonly IDocumentStorageAot p_documentStorage;
+  private readonly IDocumentStorage p_documentStorage;
   private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fCMPublisher;
+  private readonly IHttpClientProvider p_httpClientProvider;
 
   private WebServerImpl(
     ISettingsController _settingsController,
-    IDocumentStorageAot _documentStorage,
+    IDocumentStorage _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,
     ITilesCache _tilesCache,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fCMPublisher,
-    IReadOnlyLifetime _lifetime)
+    IReadOnlyLifetime _lifetime,
+    IHttpClientProvider _httpClientProvider)
   {
     p_settingsController = _settingsController;
     p_documentStorage = _documentStorage;
@@ -57,6 +61,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fCMPublisher = _fCMPublisher;
+    p_httpClientProvider = _httpClientProvider;
 
     _settingsController.Settings
       .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind))
@@ -116,13 +121,14 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
      p_roomsController,
      p_tilesCache,
      p_reqRateLimiter,
-     p_fCMPublisher);
+     p_fCMPublisher,
+     p_httpClientProvider);
 
     var app = builder.Build();
     app
       .UseMiddleware<LogMiddleware>()
       .UseMiddleware<ForwardProxyMiddleware>()
-      .UseMiddleware<AuthMiddleware>(controller)
+      .UseMiddleware<AuthMiddleware>(p_logger, new GenericController[] { controller })
       .UseResponseCompression()
       .UseWebSockets(new WebSocketOptions()
       {

@@ -1,6 +1,7 @@
 ﻿using Ax.Fw.Extensions;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -15,11 +16,11 @@ public static partial class ReqResUtil
 
   public static int MaxUserMsgLength { get; } = 1024;
 
-  public static int MaxRoomIdLength { get; } = 16;
+  public const int MaxRoomIdLength = 16;
   public static int MinRoomIdLength { get; } = 8;
 
-  public static int MinUsernameLength { get; } = 4;
-  public static int MaxUsernameLength { get; } = 16;
+  public const int MinUsernameLength = 4;
+  public const int MaxUsernameLength = 16;
 
   public static string UserAgent { get; } = "RoadnikApp";
 
@@ -73,6 +74,14 @@ public static partial class ReqResUtil
 
     var url = urlBuilder.ToString();
     return url;
+  }
+
+  public static async Task<string> GetUdpPublicKeyHashAsync(string _path, CancellationToken _ct)
+  {
+    using var fileStream = File.Open(_path, FileMode.Open, FileAccess.Read);
+    var hash = await SHA256.HashDataAsync(fileStream, _ct);
+    var hashString = BitConverter.ToString(hash);
+    return hashString;
   }
 
   [GeneratedRegex(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled)]

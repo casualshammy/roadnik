@@ -7,6 +7,5 @@ namespace Roadnik.MAUI.JsonCtx;
   PropertyNameCaseInsensitive = true,
   PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(HostMsgTracksSynchronizedData))]
-internal partial class JsBridgeJsonCtx : JsonSerializerContext
-{
-}
+[JsonSerializable(typeof(HostMsgMapStateData))]
+internal partial class JsBridgeJsonCtx : JsonSerializerContext { }

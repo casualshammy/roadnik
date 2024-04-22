@@ -2,7 +2,7 @@ import L, { LatLng } from "leaflet";
 
 export const DEFAULT_MAP_LAYER: string = "OpenStreetMap";
 
-export interface IMapState {
+export interface ICookieMapState {
 	Lat: number;
 	Lng: number;
 	Zoom: number;
@@ -41,7 +41,7 @@ export function GetMapLayers(): L.Control.LayersObject {
 	return result;
 }
 
-export function GetMapOverlayLayers() {
+export function GetMapOverlayLayers(): L.Control.LayersObject {
 	// Waymarked
 	const waymarkedshadinghikeUrl = 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
 		waymarkedshadinghikeAttribution = 'Trails Data by <a href="http://www.waymarkedtrails.org" target="_blank">Waymarkedtrails</a>',
@@ -109,7 +109,7 @@ export function GenerateCircleIcon(_radius: number, _color: string): L.DivIcon {
 	return icon;
 }
 
-export function GetMapStateFromCookie(_cookie: string | undefined): IMapState | null {
+export function GetMapStateFromCookie(_cookie: string | undefined): ICookieMapState | null {
 	if (_cookie === undefined)
 		return null;
 
@@ -125,7 +125,7 @@ export function GetMapStateFromCookie(_cookie: string | undefined): IMapState | 
 		const zoomString = match[3];
 		const zoom = parseFloat(zoomString);
 
-		const result: IMapState = {
+		const result: ICookieMapState = {
 			Lat: lat,
 			Lng: lng,
 			Zoom: zoom

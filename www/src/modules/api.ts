@@ -52,6 +52,17 @@ export interface HostMsgTracksSynchronizedData {
   isFirstSync: boolean;
 }
 
+export interface IMapState {
+  lat: number;
+  lng: number;
+  zoom: number;
+  layer: string;
+  overlays: string[];
+  selectedPath: string | null;
+  selectedPathWindowLeft: number | null;
+  selectedPathWindowBottom: number | null;
+}
+
 interface DeleteRoomPointReq {
   RoomId: string;
   PointId: number;

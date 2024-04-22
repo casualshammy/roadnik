@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -43,37 +44,6 @@ public static partial class ReqResUtil
         sb.Append(c);
     }
     return sb.ToString();
-  }
-
-  public static string? GetMapAddress(
-    string? _serverAddress, 
-    string? _roomId, 
-    string? _mapLayer,
-    double? _lat,
-    double? _lng,
-    int? _zoom)
-  {
-    if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
-      return null;
-
-    var urlBuilder = new UriBuilder(_serverAddress);
-    urlBuilder.Path = "/r/";
-
-    var query = HttpUtility.ParseQueryString(urlBuilder.Query);
-    query["id"] = _roomId;
-    if (!_mapLayer.IsNullOrWhiteSpace())
-      query["map"] = _mapLayer;
-    if (_lat != null)
-      query["lat"] = _lat.Value.ToString(CultureInfo.InvariantCulture);
-    if (_lng != null)
-      query["lng"] = _lng.Value.ToString(CultureInfo.InvariantCulture);
-    if (_zoom != null)
-      query["zoom"] = _zoom.Value.ToString(CultureInfo.InvariantCulture);
-
-    urlBuilder.Query = query.ToString();
-
-    var url = urlBuilder.ToString();
-    return url;
   }
 
   public static async Task<string> GetUdpPublicKeyHashAsync(string _path, CancellationToken _ct)

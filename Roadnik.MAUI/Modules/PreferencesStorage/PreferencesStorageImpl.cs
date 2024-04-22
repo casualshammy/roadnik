@@ -9,6 +9,7 @@ using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Subjects;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
@@ -50,9 +51,31 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     return (T?)obj;
   }
 
+  public T? GetValueOrDefault<T>(string _key, JsonTypeInfo<T> _jsonTypeInfo)
+  {
+    if (p_cache.TryGet(_key, out var obj))
+      return (T?)obj;
+
+    var preferenceValue = Preferences.Default.Get(_key, (string?)null);
+    if (preferenceValue == null)
+      return default;
+
+    obj = JsonSerializer.Deserialize(preferenceValue, _jsonTypeInfo);
+    p_cache.Put(_key, obj);
+    return (T?)obj;
+  }
+
   public void SetValue<T>(string _key, T? _value)
   {
     var json = JsonSerializer.Serialize(_value);
+    Preferences.Default.Set(_key, json);
+    p_cache.Put(_key, _value);
+    p_prefChangedFlow.OnNext();
+  }
+
+  public void SetValue<T>(string _key, T _value, JsonTypeInfo<T> _jsonTypeInfo)
+  {
+    var json = JsonSerializer.Serialize(_value, _jsonTypeInfo);
     Preferences.Default.Set(_key, json);
     p_cache.Put(_key, _value);
     p_prefChangedFlow.OnNext();

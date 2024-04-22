@@ -1,4 +1,5 @@
 import { CLASS_IS_DRAGGING } from "./consts";
+import { Base64 } from 'js-base64';
 
 const p_rgbPerColorName: Map<string, Uint8ClampedArray | null> = new Map<string, Uint8ClampedArray | null>();
 
@@ -112,6 +113,16 @@ export function byteArrayToHexString(_byteArray: number[]): string {
       return ('0' + (_byte & 0xFF).toString(16)).slice(-2);
     })
     .join('');
+  return result;
+}
+
+export function utf8TextToBase64(_text: string) : string {
+  const result = Base64.encode(_text);
+  return result;
+}
+
+export function base64ToUtf8Text(_base64: string) : string {
+  const result = Base64.decode(_base64);
   return result;
 }
 

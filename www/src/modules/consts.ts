@@ -12,6 +12,7 @@ export const WS_MSG_ROOM_POINTS_UPDATED: string = "ws-msg-room-points-updated";
 
 export const JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
 export const HOST_MSG_TRACKS_SYNCHRONIZED = "host-msg-tracks-synchronized";
+export const HOST_MSG_MAP_STATE = "host-msg-map-state";
 
 export const CLASS_IS_DRAGGING: string = "__is_dragging";
 

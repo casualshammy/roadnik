@@ -26,6 +26,9 @@ using System.Reactive.Subjects;
 using System.Text.Json;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
+using Roadnik.MAUI.Data.JsonBridge;
+using System.Web;
+using System.Text;
 
 namespace Roadnik.MAUI.Pages;
 
@@ -108,7 +111,8 @@ public partial class MainPage : CContentPage
         var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
         var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
-        var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
+        var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
+        var url = GetMapAddress(serverAddress, roomId, mapState);
         if (url == null)
         {
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
@@ -287,6 +291,8 @@ public partial class MainPage : CContentPage
       OnHostMsgTracksSynchronized(msg);
     else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
       await OnJsMsgPointAddStartedAsync(msg);
+    else if (msg.MsgType == HOST_MSG_MAP_STATE)
+      OnWebAppMsgMapState(msg);
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
@@ -382,7 +388,7 @@ public partial class MainPage : CContentPage
   {
     var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
-    var url = ReqResUtil.GetMapAddress(serverAddress, roomId, null, null, null, null);
+    var url = GetMapAddress(serverAddress, roomId);
     if (url == null)
     {
       await DisplayAlert("Server address or room id is invalid", null, "Ok");
@@ -475,6 +481,25 @@ public partial class MainPage : CContentPage
     }
   }
 
+  private void OnWebAppMsgMapState(JsToCSharpMsg _msg)
+  {
+    try
+    {
+      var data = JsonSerializer.Deserialize(_msg.Data, JsBridgeJsonCtx.Default.HostMsgMapStateData);
+      if (data == null)
+      {
+        p_log.Error($"Data of webapp msg of type '{HOST_MSG_MAP_STATE}' is null");
+        return;
+      }
+
+      p_prefs.SetValue(PREF_WEBAPP_MAP_STATE, data, JsBridgeJsonCtx.Default.HostMsgMapStateData);
+    }
+    catch (Exception ex)
+    {
+      p_log.Error($"Cannot deserialize the data of webapp msg of type '{HOST_MSG_MAP_STATE}': {ex}");
+    }
+  }
+
   private async Task OnNotificationAsync(PushNotificationEvent _e, CancellationToken _ct)
   {
     if (_e.NotificationId == PUSH_MSG_NEW_POINT)
@@ -555,5 +580,45 @@ public partial class MainPage : CContentPage
     context.StartActivity(intent);
   }
 
+  private static string? GetMapAddress(
+    string? _serverAddress,
+    string? _roomId,
+    HostMsgMapStateData? _mapState = null)
+  {
+    if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
+      return null;
+
+    var urlBuilder = new UriBuilder(_serverAddress);
+    urlBuilder.Path = "/r/";
+
+    var query = HttpUtility.ParseQueryString(urlBuilder.Query);
+    query["id"] = _roomId;
+    if (_mapState?.Lat != null)
+      query["lat"] = _mapState.Lat.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.Lng != null)
+      query["lng"] = _mapState.Lng.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.Zoom != null)
+      query["zoom"] = ((int)_mapState.Zoom).ToString(CultureInfo.InvariantCulture);
+    if (_mapState != null && !_mapState.Layer.IsNullOrWhiteSpace())
+      query["layer"] = _mapState.Layer;
+    if (_mapState?.Overlays != null)
+    {
+      var json = JsonSerializer.Serialize(_mapState.Overlays, JsBridgeJsonCtx.Default.IReadOnlyListString);
+      var jsonBytes = Encoding.UTF8.GetBytes(json);
+      var base64 = Convert.ToBase64String(jsonBytes);
+      query["overlays"] = base64;
+    }
+    if (_mapState != null && !_mapState.SelectedPath.IsNullOrWhiteSpace())
+      query["selected_path"] = _mapState.SelectedPath;
+    if (_mapState?.SelectedPathWindowLeft != null)
+      query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
+    if (_mapState?.SelectedPathWindowBottom != null)
+      query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture); ;
+
+    urlBuilder.Query = query.ToString();
+
+    var url = urlBuilder.ToString();
+    return url;
+  }
 
 }

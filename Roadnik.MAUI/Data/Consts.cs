@@ -16,11 +16,13 @@ internal static class Consts
   public const string PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED = "settings.appearance.wipe-old-track-on-new-enabled";
   public const string PREF_NOTIFY_NEW_TRACK = "settings.notifications.on-new-track";
   public const string PREF_NOTIFY_NEW_POINT = "settings.notifications.on-new-point";
+  public const string PREF_WEBAPP_MAP_STATE = "webapp.map-state";
 
   public const string PREF_BOOKMARKS_LIST = "bookmarks.list";
 
   public const string HOST_MSG_TRACKS_SYNCHRONIZED = "host-msg-tracks-synchronized";
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
+  public const string HOST_MSG_MAP_STATE = "host-msg-map-state";
 
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
 

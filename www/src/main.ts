@@ -2,17 +2,20 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
 import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
-import { Pool, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
+import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
-import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY } from "./modules/consts";
+import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY, HOST_MSG_MAP_STATE } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
 import Swal from "sweetalert2";
 
+const mapsData = GetMapLayers();
+const mapOverlays = GetMapOverlayLayers();
+
 const p_storageApi = new Api.StorageApi();
-const p_appCtx = CreateAppCtx();
+const p_appCtx = CreateAppCtx(mapsData, mapOverlays);
 
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
@@ -25,89 +28,84 @@ const p_tracksUpdateRequired$ = new Subject<void>();
 const p_map = initMap();
 
 function initMap(): L.Map {
-  const queryString = window.location.search;
-  const urlParams = new URLSearchParams(queryString);
-
-  const cookieState = Cookies.get(COOKIE_MAP_STATE)
-  const state = GetMapStateFromCookie(cookieState);
-
-  let lat = parseFloat(urlParams.get('lat') ?? "");
-  if (Number.isNaN(lat) && state !== null)
-    lat = state.Lat;
-
-  let lng = parseFloat(urlParams.get('lng') ?? "");
-  if (Number.isNaN(lng) && state !== null)
-    lng = state.Lng;
-
-  let zoom = parseInt(urlParams.get('zoom') ?? "");
-  if (Number.isNaN(zoom) && state !== null)
-    zoom = state.Zoom;
-
-  const cookieLayout = Cookies.get(COOKIE_MAP_LAYER);
-  const queryLayout = urlParams.get('map');
-
-  const mapsData = GetMapLayers();
-  const mapOverlays = GetMapOverlayLayers();
-
-  let layer = DEFAULT_MAP_LAYER;
-  if (queryLayout !== null) {
-    layer = queryLayout;
-  }
-  else if (cookieLayout !== undefined && mapsData[cookieLayout] !== undefined) {
-    layer = cookieLayout;
-  }
-
   const map = new L.Map('map', {
     center: new L.LatLng(
-      Number.isNaN(lat) ? 51.4768 : lat,
-      Number.isNaN(lng) ? 0.0006 : lng),
-    zoom: Number.isNaN(zoom) ? 14 : zoom,
-    layers: [mapsData[layer]],
+      p_appCtx.mapState.lat,
+      p_appCtx.mapState.lng),
+    zoom: p_appCtx.mapState.zoom,
+    layers: [mapsData[p_appCtx.mapState.layer]],
     zoomControl: false
   });
 
-  const cookieOverlay = Cookies.get(COOKIE_MAP_OVERLAY);
-  if (cookieOverlay !== undefined) {
-    const overlays = JSON.parse(cookieOverlay) as string[];
-    for (const overlay of overlays) {
-      const overlayLayer = Object.entries(mapOverlays).find((_v, _i, _o) => _v[0] === overlay);
-      if (overlayLayer !== undefined)
-        map.addLayer(overlayLayer[1]);
-    }
-  }
+  for (const overlay of p_appCtx.mapState.overlays)
+    map.addLayer(mapOverlays[overlay]);
 
   map.attributionControl.setPrefix(false);
   if (p_appCtx.isRoadnikApp)
     map.attributionControl.remove();
 
   map.on('baselayerchange', function (_e) {
-    Cookies.set(COOKIE_MAP_LAYER, _e.name);
+    p_appCtx.mapState.layer = _e.name;
+
+    console.log(`Layer changed to ${p_appCtx.mapState.layer}`);
+
+    if (!p_appCtx.isRoadnikApp)
+      Cookies.set(COOKIE_MAP_LAYER, p_appCtx.mapState.layer);
+    else
+      sendMapStateToRoadnikApp();
   });
   map.on('overlayadd', function (_e) {
-    const cookie = Cookies.get(COOKIE_MAP_OVERLAY);
-    const overlays = cookie !== undefined ? JSON.parse(cookie) as string[] : [];
-    if (!overlays.includes(_e.name))
-      overlays.push(_e.name);
+    const overlay = _e.name;
+    if (!p_appCtx.mapState.overlays.includes(overlay))
+      p_appCtx.mapState.overlays.push(overlay);
 
-    Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(overlays));
+    console.log(`Added overlay '${overlay}'`);
+
+    if (!p_appCtx.isRoadnikApp)
+      Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(p_appCtx.mapState.overlays));
+    else
+      sendMapStateToRoadnikApp();
   });
   map.on('overlayremove', function (_e) {
-    const cookie = Cookies.get(COOKIE_MAP_OVERLAY);
-    const overlays = cookie !== undefined ? JSON.parse(cookie) as string[] : [];
-    const newOverlays = overlays.filter((_v, _i, _) => _v !== _e.name);
-    Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(newOverlays));
+    const overlay = _e.name;
+    p_appCtx.mapState.overlays = p_appCtx.mapState.overlays.filter((_v, _i, _) => _v !== overlay);
+
+    console.log(`Removed overlay '${overlay}'`);
+
+    if (!p_appCtx.isRoadnikApp)
+      Cookies.set(COOKIE_MAP_OVERLAY, JSON.stringify(p_appCtx.mapState.overlays));
+    else
+      sendMapStateToRoadnikApp();
   });
   map.on('zoomend', function (_e) {
     const location = map.getCenter();
-    const zoom = map.getZoom();
-    const stateString = `${location.lat}:${location.lng}:${zoom}`;
-    Cookies.set(COOKIE_MAP_STATE, stateString);
+
+    p_appCtx.mapState.lat = location.lat;
+    p_appCtx.mapState.lng = location.lng;
+    p_appCtx.mapState.zoom = map.getZoom();
+
+    if (!p_appCtx.isRoadnikApp) {
+      const stateString = `${p_appCtx.mapState.lat}:${p_appCtx.mapState.lng}:${p_appCtx.mapState.zoom}`;
+      Cookies.set(COOKIE_MAP_STATE, stateString);
+    }
+    else {
+      sendMapStateToRoadnikApp();
+    }
   });
   map.on('moveend', function (_e) {
     const location = map.getCenter();
-    const zoom = map.getZoom();
-    const stateString = `${location.lat}:${location.lng}:${zoom}`;
-    Cookies.set(COOKIE_MAP_STATE, stateString);
+
+    p_appCtx.mapState.lat = location.lat;
+    p_appCtx.mapState.lng = location.lng;
+    p_appCtx.mapState.zoom = map.getZoom();
+
+    if (!p_appCtx.isRoadnikApp) {
+      const stateString = `${p_appCtx.mapState.lat}:${p_appCtx.mapState.lng}:${p_appCtx.mapState.zoom}`;
+      Cookies.set(COOKIE_MAP_STATE, stateString);
+    }
+    else {
+      sendMapStateToRoadnikApp();
+    }
   });
   map.on("contextmenu", function (_e) {
     if (p_appCtx.roomId === null)
@@ -175,17 +173,18 @@ async function updatePathsAsync() {
   }
 
   if (!p_appCtx.firstTracksSyncCompleted) {
-    const cookieSelectedUser = Cookies.get(COOKIE_SELECTED_PATH);
-    if (cookieSelectedUser === undefined) {
-      console.log("Selected path is not set, setting default view...");
+    const selectedPath = p_appCtx.mapState.selectedPath;
+    if (selectedPath === null) {
+      console.log("Initial selected path is not set, setting default view...");
       setViewToAllTracks();
     }
-    else if (!setViewToTrack(cookieSelectedUser, p_map.getZoom())) {
-      console.log("Selected path is set but not found, setting default view...");
+    else if (!setViewToTrack(selectedPath, p_map.getZoom())) {
+      console.log("Initial selected path is set but not found, setting default view...");
       setViewToAllTracks();
     }
     else {
-      updateSelectedPath(cookieSelectedUser);
+      console.log(`Initial selected path is ${selectedPath}`);
+      updateSelectedPath(selectedPath);
     }
 
     if (p_appCtx.isRoadnikApp) {
@@ -289,7 +288,7 @@ function updateControlsForUser(
   if (marker !== undefined)
     marker.setLatLng(lastLocation);
 
-  if (p_appCtx.selectedTrack === _user) {
+  if (p_appCtx.mapState.selectedPath === _user) {
     updateSelectedPath(_user);
     p_map.flyTo(lastLocation);
   }
@@ -332,18 +331,32 @@ function buildPathPointPopup(_user: string, _entry: Api.TimedStorageEntry, _addC
   return popUpText;
 }
 
-function updateSelectedPath(_user: string | null) {
+function updateSelectedPath(_user: string | null, _log: boolean = true) {
   const div = document.getElementById("selected-path-container") as HTMLDivElement;
 
-  p_appCtx.selectedTrack = _user;
+  p_appCtx.mapState.selectedPath = _user;
 
   if (_user === null) {
     div.hidden = true;
-    Cookies.remove(COOKIE_SELECTED_PATH);
+    
+    if (!p_appCtx.isRoadnikApp)
+      Cookies.remove(COOKIE_SELECTED_PATH);
+    else
+      sendMapStateToRoadnikApp();
+
+    if (_log)
+      console.log(`Selected path is cleared`);
+
     return;
   }
 
-  Cookies.set(COOKIE_SELECTED_PATH, _user);
+  if (!p_appCtx.isRoadnikApp)
+    Cookies.set(COOKIE_SELECTED_PATH, _user);
+  else
+    sendMapStateToRoadnikApp();
+
+  if (_log)
+    console.log(`Selected path is set to ${_user}`);
 
   if (div.classList.contains(CLASS_IS_DRAGGING))
     return;
@@ -432,21 +445,29 @@ function onStart() {
   const selectedPathContainer = document.getElementById("selected-path-container");
   if (selectedPathContainer !== null) {
     makeDraggableBottomLeft(selectedPathContainer, (_left, _bottom) => {
-      Cookies.set(COOKIE_SELECTED_PATH_LEFT, _left.toString());
-      Cookies.set(COOKIE_SELECTED_PATH_BOTTOM, _bottom.toString());
+      p_appCtx.mapState.selectedPathWindowLeft = _left;
+      p_appCtx.mapState.selectedPathWindowBottom = _bottom;
+
+      if (!p_appCtx.isRoadnikApp) {
+        Cookies.set(COOKIE_SELECTED_PATH_LEFT, _left.toString());
+        Cookies.set(COOKIE_SELECTED_PATH_BOTTOM, _bottom.toString());
+      }
+      else {
+        sendMapStateToRoadnikApp();
+      }
     });
 
-    const left = Cookies.get(COOKIE_SELECTED_PATH_LEFT);
-    if (left !== undefined && parseFloat(left) > 0 && parseFloat(left) < (window.innerWidth - 10))
+    const left = p_appCtx.mapState.selectedPathWindowLeft;
+    if (left !== null)
       selectedPathContainer.style.left = left + "px";
 
-    const bottom = Cookies.get(COOKIE_SELECTED_PATH_BOTTOM);
-    if (bottom !== undefined && parseFloat(bottom) > 0 && parseFloat(bottom) < (window.innerHeight - 10))
+    const bottom = p_appCtx.mapState.selectedPathWindowBottom;
+    if (bottom !== null)
       selectedPathContainer.style.bottom = bottom + "px";
 
     selectedPathContainer.addEventListener('dblclick', (_ev: MouseEvent) => {
-      const path = Cookies.get(COOKIE_SELECTED_PATH);
-      if (path !== undefined)
+      const path = p_appCtx.mapState.selectedPath;
+      if (path !== null)
         setViewToTrack(path, p_map.getZoom());
     });
   }
@@ -506,9 +527,9 @@ function onStart() {
   }
 
   setInterval(() => {
-    const selectedTrack = p_appCtx.selectedTrack;
+    const selectedTrack = p_appCtx.mapState.selectedPath;
     if (selectedTrack !== null)
-      updateSelectedPath(selectedTrack);
+      updateSelectedPath(selectedTrack, false);
   }, 1000);
 }
 onStart();
@@ -516,9 +537,15 @@ onStart();
 // C# interaction
 function sendDataToHost(_msg: JsToCSharpMsg): void {
   try {
-    (window as any).jsBridge.invokeAction(JSON.stringify(_msg));
+    const json = JSON.stringify(_msg);
+    (window as any).jsBridge.invokeAction(json);
   }
   catch { }
+}
+
+function sendMapStateToRoadnikApp(): void {
+  const state = p_appCtx.mapState;
+  sendDataToHost({ msgType: HOST_MSG_MAP_STATE, data: state });
 }
 
 // exports for C#

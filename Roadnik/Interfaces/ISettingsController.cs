@@ -5,5 +5,5 @@ namespace Roadnik.Server.Interfaces;
 
 public interface ISettingsController
 {
-  IRxProperty<AppSettings?> Settings { get; }
+  IRxProperty<RawAppSettings?> Settings { get; }
 }

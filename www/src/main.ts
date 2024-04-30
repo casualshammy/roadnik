@@ -122,8 +122,17 @@ function initMap(): L.Map {
     }
   });
 
-  const layersControl = new L.Control.Layers(mapsData, mapOverlays);
-  map.addControl(layersControl);
+  L.control.scale({
+    position: 'bottomright',
+    maxWidth: 200,
+    metric: true,
+    imperial: false,
+    updateWhenIdle: true
+  }).addTo(map);
+
+  L.control.layers(
+    mapsData, mapOverlays
+  ).addTo(map);
 
   L.control.zoom({
     position: 'topright'
@@ -338,7 +347,7 @@ function updateSelectedPath(_user: string | null, _log: boolean = true) {
 
   if (_user === null) {
     div.hidden = true;
-    
+
     if (!p_appCtx.isRoadnikApp)
       Cookies.remove(COOKIE_SELECTED_PATH);
     else

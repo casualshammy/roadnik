@@ -10,7 +10,10 @@ namespace Roadnik.Modules.Settings;
 
 internal class SettingsController : ISettingsController
 {
-  public SettingsController(string _configPath, IReadOnlyLifetime _lifetime)
+  public SettingsController(
+    string _configPath, 
+    ILog _log,
+    IReadOnlyLifetime _lifetime)
   {
     var lifetime = _lifetime.GetChildLifetime();
     if (lifetime == null)
@@ -18,16 +21,10 @@ internal class SettingsController : ISettingsController
 
     var storage = new JsonStorage<RawAppSettings>(_configPath, SettingsJsonCtx.Default, lifetime);
     Settings = storage
-      .Select(_ =>
-      {
-        if (_ == null)
-          return null;
-
-        return AppSettings.FromRawSettings(_);
-      })
+      .Do(_ => _log.Warn($"New config is read"))
       .ToProperty(lifetime);
   }
 
-  public IRxProperty<AppSettings?> Settings { get; }
+  public IRxProperty<RawAppSettings?> Settings { get; }
 
 }

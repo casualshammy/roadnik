@@ -5,6 +5,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
+using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using FluentArgs;
 using Roadnik.Interfaces;
@@ -74,8 +75,10 @@ public partial class Program
     //  }, false, )
 
     var lifetime = new Lifetime();
+    using var log = new GenericLog(null);
+    log.AttachConsoleLog();
 
-    var settingsController = new SettingsController(configFilePath, lifetime);
+    var settingsController = new SettingsController(configFilePath, log["settings-ctrl"], lifetime);
 
     var settings = await settingsController.Settings
       .TakeUntil(DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5), TaskPoolScheduler.Default)
@@ -88,8 +91,6 @@ public partial class Program
     if (!Directory.Exists(settings.LogDirPath))
       Directory.CreateDirectory(settings.LogDirPath);
 
-    using var log = new GenericLog(null);
-    log.AttachConsoleLog();
     log.AttachFileLog(() => Path.Combine(settings.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5));
 
     lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(settings.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true, TimeSpan.FromHours(1)));
@@ -97,7 +98,10 @@ public partial class Program
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
-    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(Path.Combine(settings.DataDirPath, "data.v0.db"), null));
+    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
+      Path.Combine(settings.DataDirPath, "data.v0.db"), 
+      null, 
+      new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
     Observable
       .Interval(TimeSpan.FromHours(6))

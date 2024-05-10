@@ -73,7 +73,7 @@ public partial class MainPage : CContentPage
 
     p_pageIsVisible = p_pageAppearedChangeFlow
       .CombineLatest(App.WindowActivated)
-      .Throttle(TimeSpan.FromSeconds(1))
+      //.Throttle(TimeSpan.FromSeconds(1))
       .Scan(false, (_acc, _tuple) =>
       {
         var (appeared, appWindowActivated) = _tuple;
@@ -94,7 +94,7 @@ public partial class MainPage : CContentPage
         return (serverAddress, roomId);
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
-      .Sample(TimeSpan.FromSeconds(1), scheduler)
+      //.Sample(TimeSpan.FromSeconds(1), scheduler)
       .CombineLatest(p_pageIsVisible)
       .ObserveOn(scheduler)
       .SelectAsync(async (_entry, _ct) =>

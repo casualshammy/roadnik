@@ -236,8 +236,8 @@ internal class ApiControllerV0 : GenericController
 
     log.Info($"Sending **map tile** __{_mapType}__/{_z}/{_x}/{_y}...");
 
-    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApikey;
-    var tfApiKeyParam = tfApiKey.IsNullOrEmpty() ? string.Empty : $"?apikey={tfApiKey}";
+    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApiKey;
+    var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
 
     var url = _mapType switch
     {
@@ -316,16 +316,15 @@ internal class ApiControllerV0 : GenericController
     log.Info($"Requested to store geo data, room: '{_roomId}'");
 
     var room = p_roomsController.GetRoom(_roomId);
-    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
-      return Forbidden("Anonymous publishing is forbidden!");
+    var maxPathPoints = room?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom;
+    if (maxPathPoints != null && maxPathPoints == 0)
+      return Forbidden("Publishing is forbidden!");
 
-    var minInterval = room?.MinPointIntervalMs ?? p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
-    if (minInterval == null)
-      return InternalServerError($"'AnonymousMinIntervalMs' config value is misconfigured");
+    var minInterval = room?.MinPathPointIntervalMs ?? p_settingsCtrl.Settings.Value?.MinPathPointIntervalMs ?? 0u;
 
-    var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username ?? ""}";
+    var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username}";
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)minInterval))
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, minInterval))
     {
       log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_roomId}', username: '{_username}', time limit: '{minInterval} ms'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -365,24 +364,23 @@ internal class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
-    var udpPayload = StoreLocationUdpMsg.FromStorePathPointReq(_req);
-    var udpMsg = new GenericUdpMsg(0, udpPayload.ToByteArray());
-    var udpMsgBytes = udpMsg.ToByteArray();
-    var privateKey = File.ReadAllText(p_settingsCtrl.Settings.Value!.UdpTransportPrivateKeyPath!);
-    using var rsaAes = new RsaAesGcm(null, privateKey, p_settingsCtrl.Settings.Value.UdpTransportPrivateKeyPassphrase);
-    var encUdpMsgBytes = BitConverter.ToString(rsaAes.Encrypt(udpMsgBytes).ToArray()).Replace("-", "");
+    //var udpPayload = StoreLocationUdpMsg.FromStorePathPointReq(_req);
+    //var udpMsg = new GenericUdpMsg(0, udpPayload.ToByteArray());
+    //var udpMsgBytes = udpMsg.ToByteArray();
+    //var privateKey = File.ReadAllText(p_settingsCtrl.Settings.Value!.UdpTransportPrivateKeyPath!);
+    //using var rsaAes = new RsaAesGcm(null, privateKey, p_settingsCtrl.Settings.Value.UdpTransportPrivateKeyPassphrase);
+    //var encUdpMsgBytes = BitConverter.ToString(rsaAes.Encrypt(udpMsgBytes).ToArray()).Replace("-", "");
 
     var room = p_roomsController.GetRoom(_req.RoomId);
-    if (!(p_settingsCtrl.Settings.Value?.AllowAnonymousPublish == true) && room == null)
-      return Forbidden("Anonymous publishing is forbidden!");
+    var maxPathPoints = room?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom;
+    if (maxPathPoints != null && maxPathPoints == 0)
+      return Forbidden("Publishing is forbidden!");
 
-    var minInterval = room?.MinPointIntervalMs ?? p_settingsCtrl.Settings.Value?.AnonymousMinIntervalMs;
-    if (minInterval == null)
-      return InternalServerError($"'AnonymousMinIntervalMs' config value is misconfigured");
+    var minInterval = room?.MinPathPointIntervalMs ?? p_settingsCtrl.Settings.Value?.MinPathPointIntervalMs ?? 0u;
 
     var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_req.RoomId}/{_req.Username}";
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, (long)minInterval))
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, minInterval))
     {
       log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests, room '{_req.RoomId}', username: '{_req.Username}', time limit: '{minInterval} ms'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -672,8 +670,13 @@ internal class ApiControllerV0 : GenericController
     if (publicKeyPath == null || !File.Exists(publicKeyPath))
       return Results.StatusCode((int)HttpStatusCode.NotImplemented);
 
+    var port = p_settingsCtrl.Settings.Value?.PortBind;
+    if (port == null)
+      return Results.StatusCode((int)HttpStatusCode.NotImplemented);
+
     var hashString = await ReqResUtil.GetUdpPublicKeyHashAsync(publicKeyPath, _ct);
-    return Json(new IsUdpTransportAvailableRes(hashString));
+    var ipAddress = await p_httpClientProvider.Value.GetStringAsync("https://api.ipify.org/?format=text");
+    return Json(new IsUdpTransportAvailableRes($"{ipAddress}:{port}", hashString));
   }
 
   //[HttpGet("/ws")]
@@ -696,7 +699,7 @@ internal class ApiControllerV0 : GenericController
     log.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
 
     var roomInfo = p_roomsController.GetRoom(_roomId);
-    var maxPointsInRoom = roomInfo?.MaxPoints ?? p_settingsCtrl.Settings.Value?.AnonymousMaxPoints ?? int.MaxValue;
+    var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom ?? int.MaxValue;
 
     using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
     _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);
@@ -713,7 +716,7 @@ internal class ApiControllerV0 : GenericController
     if (_req == null)
       return BadRequest("Room data is null");
 
-    p_roomsController.RegisterRoom(_req.RoomId, _req.Email, _req.MaxPoints, _req.MinPointIntervalMs, _req.ValidUntil);
+    p_roomsController.RegisterRoom(_req.RoomId, _req.Email, _req.MaxPathPoints, _req.MaxPathPointAgeHours, _req.MinPathPointIntervalMs);
     return Results.Ok();
   }
 

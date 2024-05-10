@@ -1,3 +1,5 @@
 ﻿namespace Roadnik.Common.ReqRes;
 
-public record IsUdpTransportAvailableRes(string PublicKeyHash);
+public record IsUdpTransportAvailableRes(
+  string Endpoint, 
+  string PublicKeyHash);

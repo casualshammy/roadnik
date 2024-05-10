@@ -6,6 +6,6 @@ namespace Roadnik.Data;
 public record RoomInfo(
   string RoomId, 
   string Email, 
-  int? MaxPoints,
-  double? MinPointIntervalMs,
-  DateTimeOffset? ValidUntil);
+  uint? MaxPathPoints,
+  double? MaxPathPointAgeHours,
+  uint? MinPathPointIntervalMs);

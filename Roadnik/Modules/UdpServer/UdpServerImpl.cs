@@ -23,12 +23,12 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
   }
 
   private UdpServerImpl(
-    ISettingsController _settingsController, 
+    ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime,
     ILog _log)
   {
     _settingsController.Settings
-      .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind))
+      .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind, _?.UdpTransportPublicKeyPath, _?.UdpTransportPrivateKeyPath, _?.UdpTransportPrivateKeyPassphrase))
       .HotAlive(_lifetime, (_conf, _life) =>
       {
         if (_conf == null)
@@ -84,5 +84,5 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
       });
   }
 
-  
+
 }

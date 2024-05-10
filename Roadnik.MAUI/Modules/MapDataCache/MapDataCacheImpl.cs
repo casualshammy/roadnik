@@ -33,19 +33,14 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
     Directory.CreateDirectory(cacheDir);
 
     var cache = new FileCache(
-      _lifetime, 
-      cacheDir, 
+      _lifetime,
+      cacheDir,
       TimeSpan.FromDays(1),
-      50 * 1024 * 1024, 
-      TimeSpan.FromDays(1));
+      50 * 1024 * 1024,
+      TimeSpan.FromHours(1));
 
 #if DEBUG
-    _ = Task.Run(async () =>
-    {
-      await Task.Delay(TimeSpan.FromSeconds(1), _lifetime.Token);
-      if (!_lifetime.Token.IsCancellationRequested)
-        cache.RequestCleanFiles();
-    });
+    cache.RequestCleanFiles();
 #endif
 
     var scheduler = new EventLoopScheduler();
@@ -90,6 +85,12 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
   {
     p_log.Info($"New url for downloading: '{_url}'");
     p_workFlow.OnNext(_url);
+  }
+
+  public Stream? GetStream(string _url)
+  {
+    var stream = Cache.Get(_url);
+    return stream;
   }
 
 }

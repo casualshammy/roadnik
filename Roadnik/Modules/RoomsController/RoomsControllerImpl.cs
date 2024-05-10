@@ -10,7 +10,6 @@ using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Modules.RoomsController;
 
@@ -57,29 +56,32 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
             try
             {
+              var now = DateTimeOffset.UtcNow;
               var entriesEE = p_storage.ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry);
 
               foreach (var roomGroup in entriesEE.GroupBy(_ => _.Data.RoomId))
               {
-                if (roomGroup.Key.IsNullOrEmpty())
-                {
-                  foreach (var entry in roomGroup)
-                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+                var roomInfo = GetRoom(roomGroup.Key);
 
-                  continue;
-                }
-
-                var limit = _conf.AnonymousMaxPoints;
-                var room = GetRoom(roomGroup.Key);
-                if (room?.MaxPoints != null)
-                  limit = room.MaxPoints.Value;
+                var maxPathPoints = roomInfo?.MaxPathPoints ?? _conf.MaxPathPointsPerRoom;
+                var maxPathPointAgeHours = roomInfo?.MaxPathPointAgeHours ?? _conf.MaxPathPointAgeHours;
 
                 var counter = 0;
+                var deleted = 0;
                 foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
-                  if (++counter > limit)
+                {
+                  if (maxPathPointAgeHours != null && (now - entry.Created).TotalHours > maxPathPointAgeHours)
+                  {
                     p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+                    ++deleted;
+                  }
+                  else if (maxPathPoints != null && ++counter > maxPathPoints)
+                  {
+                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+                    ++deleted;
+                  }
+                }
 
-                var deleted = counter - limit;
                 if (deleted > 0)
                   log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
               }
@@ -138,11 +140,11 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   public void RegisterRoom(
     string _roomId,
     string _email,
-    int? _maxPoints,
-    double? _minPointInterval,
-    DateTimeOffset? _validUntil)
+    uint? _maxPathPoints,
+    double? _maxPathPointAgeHours,
+    uint? _minPathPointIntervalMs)
   {
-    var info = new RoomInfo(_roomId, _email, _maxPoints, _minPointInterval, _validUntil);
+    var info = new RoomInfo(_roomId, _email, _maxPathPoints, _maxPathPointAgeHours, _minPathPointIntervalMs);
     p_storage.WriteSimpleDocument(_roomId, info, DocStorageJsonCtx.Default.RoomInfo);
   }
 

@@ -56,7 +56,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   public async Task<bool> AcceptSocketAsync(
     WebSocket _webSocket,
     string _roomId,
-    int _maxPointsInRoom)
+    uint _maxPointsInRoom)
   {
     if (_webSocket.State != WebSocketState.Open)
       return false;
@@ -132,7 +132,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   private async Task CreateNewLoopAsync(
     WebSocketSession _session,
     SemaphoreSlim _completeSignal,
-    int _maxPointsInRoom)
+    uint _maxPointsInRoom)
   {
     var session = _session;
     var sessionIndex = Interlocked.Increment(ref p_sessionsCount);

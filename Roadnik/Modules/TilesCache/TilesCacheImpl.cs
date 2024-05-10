@@ -3,18 +3,13 @@ using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
-using Roadnik.Server.Data;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.JsonCtx;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Net.Http;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
-using System.Text.Json;
 
 namespace Roadnik.Modules.TilesCache;
 
@@ -44,12 +39,18 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       .WhereNotNull()
       .Alive(_lifetime, (_conf, _life) =>
       {
+        if (_conf.MapTilesCacheSize == null || _conf.MapTilesCacheSize <= 0)
+        {
+          _log.Warn($"Tiles cache is disabled");
+          return null;
+        }
+
         var folder = Path.Combine(_conf.DataDirPath, "tiles-cache");
         var cache = new FileCache(
           _life,
           folder,
           TimeSpan.FromDays(30),
-          _conf.MapTilesCacheSize,
+          _conf.MapTilesCacheSize.Value,
           TimeSpan.FromHours(6));
 
         return cache;

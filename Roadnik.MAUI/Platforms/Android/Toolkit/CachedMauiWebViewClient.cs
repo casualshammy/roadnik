@@ -22,9 +22,10 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     CacheRegexJs(),
     CacheRegexCss(),
     CacheRegexOsm(),
+    GetUnpkgPngRegex(),
   ];
 
-  private readonly IMapDataCache? p_tilesCache;
+  private readonly IMapDataCache? p_webDataCache;
   private readonly IPreferencesStorage? p_storage;
   private readonly ILog? p_log;
 
@@ -34,7 +35,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     ILog? _log,
     IPreferencesStorage? _storage) : base(_handler)
   {
-    p_tilesCache = _tilesCache;
+    p_webDataCache = _tilesCache;
     p_storage = _storage;
     p_log = _log?["cached-web-view-client"];
   }
@@ -43,7 +44,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     global::Android.Webkit.WebView? _view,
     IWebResourceRequest? _request)
   {
-    if (p_tilesCache == null)
+    if (p_webDataCache == null)
       return base.ShouldInterceptRequest(_view, _request);
 
     var url = _request?.Url?.ToString();
@@ -52,7 +53,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 
     try
     {
-      var cachedStream = p_tilesCache.Cache.Get(url);
+      var cachedStream = p_webDataCache.GetStream(url);
       if (cachedStream != null)
         return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
     }
@@ -64,15 +65,15 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     if (p_cacheRegexes.All(_ => !_.IsMatch(url)))
       return base.ShouldInterceptRequest(_view, _request);
 
-    p_tilesCache.EnqueueDownload(url);
+    p_webDataCache.EnqueueDownload(url);
     return base.ShouldInterceptRequest(_view, _request);
   }
 
-  [GeneratedRegex(@"map-tile\?type=\w+?&x=\d+&y=\d+&z=\d+$")]
+  [GeneratedRegex(@"map-tile\?type=[\w\-]+?&x=\d+&y=\d+&z=\d+$")]
   private static partial Regex CacheRegexMapTiles();
   [GeneratedRegex(@"favicon\.ico$")]
   private static partial Regex CacheRegexFavicon();
-  [GeneratedRegex(@"/r/\?id=[\w\-_]+$")]
+  [GeneratedRegex(@"/r/\?id=[\w\-_]+")]
   private static partial Regex CacheRegexRoomHtml();
   [GeneratedRegex(@"\.js$")]
   private static partial Regex CacheRegexJs();
@@ -80,5 +81,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex CacheRegexCss();
   [GeneratedRegex(@"openstreetmap\.org/\d+/\d+/\d+\.png$")]
   private static partial Regex CacheRegexOsm();
+  [GeneratedRegex(@"://unpkg\.com/.+?\.png$")]
+  private static partial Regex GetUnpkgPngRegex();
 
 }

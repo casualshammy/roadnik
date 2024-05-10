@@ -7,9 +7,9 @@ public interface IRoomsController
   void RegisterRoom(
     string _roomId,
     string _email,
-    int? _maxPoints,
-    double? _minPointInterval,
-    DateTimeOffset? _validUntil);
+    uint? _maxPathPoints,
+    double? _maxPathPointAgeHours,
+    uint? _minPathPointIntervalMs);
 
   void UnregisterRoom(string _roomId);
   RoomInfo? GetRoom(string _roomId);

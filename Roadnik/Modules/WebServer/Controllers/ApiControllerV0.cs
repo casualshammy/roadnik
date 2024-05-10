@@ -364,12 +364,12 @@ internal class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
     log.Info($"Requested to store geo data, room: '{_req.RoomId}'");
 
-    var udpPayload = StoreLocationUdpMsg.FromStorePathPointReq(_req);
-    var udpMsg = new GenericUdpMsg(0, udpPayload.ToByteArray());
-    var udpMsgBytes = udpMsg.ToByteArray();
-    var privateKey = File.ReadAllText(p_settingsCtrl.Settings.Value!.UdpTransportPrivateKeyPath!);
-    using var rsaAes = new RsaAesGcm(null, privateKey, p_settingsCtrl.Settings.Value.UdpTransportPrivateKeyPassphrase);
-    var encUdpMsgBytes = BitConverter.ToString(rsaAes.Encrypt(udpMsgBytes).ToArray()).Replace("-", "");
+    //var udpPayload = StoreLocationUdpMsg.FromStorePathPointReq(_req);
+    //var udpMsg = new GenericUdpMsg(0, udpPayload.ToByteArray());
+    //var udpMsgBytes = udpMsg.ToByteArray();
+    //var privateKey = File.ReadAllText(p_settingsCtrl.Settings.Value!.UdpTransportPrivateKeyPath!);
+    //using var rsaAes = new RsaAesGcm(null, privateKey, p_settingsCtrl.Settings.Value.UdpTransportPrivateKeyPassphrase);
+    //var encUdpMsgBytes = BitConverter.ToString(rsaAes.Encrypt(udpMsgBytes).ToArray()).Replace("-", "");
 
     var room = p_roomsController.GetRoom(_req.RoomId);
     var maxPathPoints = room?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom;

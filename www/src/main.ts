@@ -10,6 +10,7 @@ import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, Get
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
 import Swal from "sweetalert2";
+import "leaflet-arrowheads";
 
 const mapsData = GetMapLayers();
 const mapOverlays = GetMapOverlayLayers();
@@ -259,6 +260,14 @@ function initControlsForUser(_user: string): void {
         }
       });
 
+    path.arrowheads({
+      //offsets: {end: "15px"},
+      //frequency: 20, 
+      size: '12px'
+      //yawn: 40,
+      //fill: true
+    });
+
     p_paths.set(_user, path);
   }
 
@@ -299,7 +308,8 @@ function updateControlsForUser(
 
   if (p_appCtx.mapState.selectedPath === _user) {
     updateSelectedPath(_user);
-    p_map.flyTo(lastLocation);
+    if (document.hasFocus())
+      p_map.flyTo(lastLocation);
   }
 
   const path = p_paths.get(_user);
@@ -540,6 +550,17 @@ function onStart() {
     if (selectedTrack !== null)
       updateSelectedPath(selectedTrack, false);
   }, 1000);
+
+  window.addEventListener("focus", _ev => {
+    for (const path of p_paths) {
+      const [user, line] = path;
+      if (p_appCtx.mapState.selectedPath === user) {
+        const lastLocation = line.getLatLngs().at(-1) as L.LatLng;
+        if (lastLocation !== undefined)
+          p_map.flyTo(lastLocation);
+      }
+    }
+  }, false);
 }
 onStart();
 

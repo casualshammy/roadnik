@@ -57,9 +57,8 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
             try
             {
               var now = DateTimeOffset.UtcNow;
-              var entriesEE = p_storage.ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry);
 
-              foreach (var roomGroup in entriesEE.GroupBy(_ => _.Data.RoomId))
+              foreach (var roomGroup in p_storage.ListSimpleDocuments<StorageEntry>().GroupBy(_ => _.Data.RoomId))
               {
                 var roomInfo = GetRoom(roomGroup.Key);
 
@@ -107,7 +106,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
           try
           {
-            var entriesEE = p_storage.ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_data.RoomId}.%"), _to: to);
+            var entriesEE = p_storage.ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"), _to: to);
 
             var entriesDeleted = 0L;
             foreach (var entry in entriesEE)
@@ -145,21 +144,21 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     uint? _minPathPointIntervalMs)
   {
     var info = new RoomInfo(_roomId, _email, _maxPathPoints, _maxPathPointAgeHours, _minPathPointIntervalMs);
-    p_storage.WriteSimpleDocument(_roomId, info, DocStorageJsonCtx.Default.RoomInfo);
+    p_storage.WriteSimpleDocument(_roomId, info);
   }
 
   public void UnregisterRoom(string _roomId) => p_storage.DeleteSimpleDocument<RoomInfo>(_roomId);
 
   public RoomInfo? GetRoom(string _roomId)
   {
-    var doc = p_storage.ReadSimpleDocument(_roomId, DocStorageJsonCtx.Default.RoomInfo);
+    var doc = p_storage.ReadSimpleDocument<RoomInfo>(_roomId);
     return doc?.Data;
   }
 
   public IReadOnlyList<RoomInfo> ListRegisteredRooms()
   {
     var users = p_storage
-      .ListSimpleDocuments(DocStorageJsonCtx.Default.RoomInfo)
+      .ListSimpleDocuments<RoomInfo>()
       .Select(_ => _.Data)
       .ToList();
 

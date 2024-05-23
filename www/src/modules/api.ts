@@ -43,6 +43,11 @@ export interface WsMsgPathWiped {
   Username: string;
 }
 
+export interface WsMsgPathTruncated {
+  Username: string;
+  PathPoints: number;
+}
+
 export interface JsToCSharpMsg {
   msgType: string;
   data: any;

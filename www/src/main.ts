@@ -1,11 +1,11 @@
 import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
-import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
+import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgPathTruncated, WsMsgPathWiped } from "./modules/api";
 import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, getColorForStringAsync, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
-import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY, HOST_MSG_MAP_STATE } from "./modules/consts";
+import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY, HOST_MSG_MAP_STATE, WS_MSG_PATH_TRUNCATED } from "./modules/consts";
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
@@ -262,8 +262,8 @@ async function initControlsForUserAsync(_user: string): Promise<void> {
       });
 
     path.arrowheads({
-      offsets: {end: "20px"},
-      frequency: '75px', 
+      offsets: { end: "20px" },
+      frequency: '75px',
       size: '12px'
       //yawn: 40,
       //fill: true
@@ -527,6 +527,23 @@ function onStart() {
       else if (_data.Type == WS_MSG_ROOM_POINTS_UPDATED) {
         console.log("Points were changed, updating markers...");
         await updatePointsAsync();
+      }
+      else if (_data.Type == WS_MSG_PATH_TRUNCATED) {
+        const msgData: WsMsgPathTruncated = _data.Payload;
+
+        const geoEntries = p_geoEntries[msgData.Username];
+        if (geoEntries !== undefined) {
+          const entriesToDelete = geoEntries.length - msgData.PathPoints;
+          if (entriesToDelete > 0) {
+            geoEntries.splice(0, entriesToDelete);
+
+            const path = p_paths.get(msgData.Username);
+            if (path !== undefined) {
+              const points = geoEntries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
+              path.setLatLngs(points);
+            }
+          }
+        }
       }
     });
   }

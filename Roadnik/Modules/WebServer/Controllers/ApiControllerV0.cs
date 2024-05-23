@@ -347,6 +347,9 @@ internal class ApiControllerV0 : GenericController
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
+    if (room?.MaxPointsPerPath > 0)
+      p_roomsController.EnqueuePathTruncate(_roomId, _username ?? _roomId);
+
     return Results.Ok();
   }
 
@@ -392,6 +395,9 @@ internal class ApiControllerV0 : GenericController
     p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+
+    if (room?.MaxPointsPerPath > 0)
+      p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.Username);
 
     return Results.Ok();
   }
@@ -716,7 +722,7 @@ internal class ApiControllerV0 : GenericController
     if (_req == null)
       return BadRequest("Room data is null");
 
-    p_roomsController.RegisterRoom(_req.RoomId, _req.Email, _req.MaxPathPoints, _req.MaxPathPointAgeHours, _req.MinPathPointIntervalMs);
+    p_roomsController.RegisterRoom(_req);
     return Results.Ok();
   }
 

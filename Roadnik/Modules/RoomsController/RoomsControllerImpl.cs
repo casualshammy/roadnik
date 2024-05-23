@@ -26,9 +26,11 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   }
 
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
+  record PathTruncateInfo(string RoomId, string Username);
 
   private readonly IDocumentStorage p_storage;
   private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
+  private readonly Subject<PathTruncateInfo> p_pathTruncateFlow = new();
 
   private RoomsControllerImpl(
     IDocumentStorage _storage,
@@ -134,18 +136,53 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       })
       .Do(_ => Interlocked.Increment(ref wipeCounter))
       .Subscribe(_lifetime);
+
+    p_pathTruncateFlow
+      .SelectAsync(async (_data, _ct) =>
+      {
+        await semaphore.WaitAsync(_ct);
+
+        try
+        {
+          var maxPointsPerPath = GetRoom(_data.RoomId)?.MaxPointsPerPath;
+          if (maxPointsPerPath == null || maxPointsPerPath == 0)
+            return;
+
+          log.Info($"Truncating path points for '{_data.RoomId}/{_data.Username}' to '{maxPointsPerPath}' points");
+
+          var entriesEE = p_storage
+            .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"))
+            .Where(_ => _.Data.Username == _data.Username)
+            .OrderByDescending(_ => _.Created);
+
+          var counter = 0;
+          var removedDocumentsCount = 0;
+          foreach (var entry in entriesEE)
+          {
+            if (++counter > maxPointsPerPath)
+            {
+              p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+              ++removedDocumentsCount;
+            }
+          }
+
+          await _webSocketCtrl.SendMsgByRoomIdAsync(_data.RoomId, new WsMsgPathTruncated(_data.Username, maxPointsPerPath.Value), _ct);
+
+          log.Info($"Truncated '{_data.RoomId}/{_data.Username}' to '{maxPointsPerPath}' points (removed: {removedDocumentsCount})");
+        }
+        catch (Exception ex)
+        {
+          log.Error($"Can't truncate entries for {_data.RoomId}/{_data.Username}", ex);
+        }
+        finally
+        {
+          semaphore.Release();
+        }
+      })
+      .Subscribe(_lifetime);
   }
 
-  public void RegisterRoom(
-    string _roomId,
-    string _email,
-    uint? _maxPathPoints,
-    double? _maxPathPointAgeHours,
-    uint? _minPathPointIntervalMs)
-  {
-    var info = new RoomInfo(_roomId, _email, _maxPathPoints, _maxPathPointAgeHours, _minPathPointIntervalMs);
-    p_storage.WriteSimpleDocument(_roomId, info);
-  }
+  public void RegisterRoom(RoomInfo _roomInfo) => p_storage.WriteSimpleDocument(_roomInfo.RoomId, _roomInfo);
 
   public void UnregisterRoom(string _roomId) => p_storage.DeleteSimpleDocument<RoomInfo>(_roomId);
 
@@ -172,6 +209,14 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   {
     var data = new UserWipeInfo(_roomId, _username, _upToDateTimeUnixMs);
     p_userWipeFlow.OnNext(data);
+  }
+
+  public void EnqueuePathTruncate(
+    string _roomId,
+    string _username)
+  {
+    var data = new PathTruncateInfo(_roomId, _username);
+    p_pathTruncateFlow.OnNext(data);
   }
 
 }

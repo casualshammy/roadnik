@@ -9,6 +9,7 @@ export const WS_MSG_TYPE_HELLO: string = "ws-msg-hello";
 export const WS_MSG_TYPE_DATA_UPDATED: string = "ws-msg-data-updated";
 export const WS_MSG_PATH_WIPED: string = "ws-msg-path-wiped";
 export const WS_MSG_ROOM_POINTS_UPDATED: string = "ws-msg-room-points-updated";
+export const WS_MSG_PATH_TRUNCATED: string = "ws-msg-path-truncated";
 
 export const JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
 export const HOST_MSG_TRACKS_SYNCHRONIZED = "host-msg-tracks-synchronized";

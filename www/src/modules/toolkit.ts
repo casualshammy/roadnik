@@ -1,4 +1,4 @@
-import { CLASS_IS_DRAGGING } from "./consts";
+import { CLASS_IS_DRAGGING, TRACK_COLORS } from "./consts";
 import { Base64 } from 'js-base64';
 
 const p_rgbPerColorName: Map<string, Uint8ClampedArray | null> = new Map<string, Uint8ClampedArray | null>();
@@ -116,14 +116,34 @@ export function byteArrayToHexString(_byteArray: number[]): string {
   return result;
 }
 
-export function utf8TextToBase64(_text: string) : string {
+export function utf8TextToBase64(_text: string): string {
   const result = Base64.encode(_text);
   return result;
 }
 
-export function base64ToUtf8Text(_base64: string) : string {
+export function base64ToUtf8Text(_base64: string): string {
   const result = Base64.decode(_base64);
   return result;
+}
+
+export async function sha256Async(_str: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(_str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map(b => b
+      .toString(16)
+      .padStart(2, '0'))
+    .join('');
+
+  return hashHex;
+}
+
+export async function getColorForStringAsync(_str: string): Promise<string> {
+  const sha = await sha256Async(_str);
+  const index = parseInt(sha.substring(0, 1), 16);
+
+  return TRACK_COLORS[index];
 }
 
 export class Pool<T> {

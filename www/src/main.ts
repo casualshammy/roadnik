@@ -2,7 +2,7 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
 import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgPathWiped } from "./modules/api";
-import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
+import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, getColorForStringAsync, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY, HOST_MSG_MAP_STATE } from "./modules/consts";
@@ -167,11 +167,11 @@ async function updatePathsAsync() {
   const users = Object.keys(usersMap);
 
   // init users controls
-  for (let user of users)
-    initControlsForUser(user);
+  for (const user of users)
+    await initControlsForUserAsync(user);
 
   // update users controls
-  for (let user of users) {
+  for (const user of users) {
     const userData = usersMap[user];
     updateControlsForUser(user, userData, prevOffset === 0);
   }
@@ -214,11 +214,12 @@ async function updatePathsAsync() {
   }
 }
 
-function initControlsForUser(_user: string): void {
+async function initControlsForUserAsync(_user: string): Promise<void> {
   let color = p_appCtx.userColors.get(_user);
   if (color === undefined) {
-    color = TRACK_COLORS[p_appCtx.userColorIndex++ % TRACK_COLORS.length];
+    color = await getColorForStringAsync(_user); //TRACK_COLORS[p_appCtx.userColorIndex++ % TRACK_COLORS.length];
     p_appCtx.userColors.set(_user, color);
+    console.log(`Color for user ${_user}: ${color}`);
   }
 
   if (p_markers.get(_user) === undefined) {
@@ -261,8 +262,8 @@ function initControlsForUser(_user: string): void {
       });
 
     path.arrowheads({
-      //offsets: {end: "15px"},
-      //frequency: 20, 
+      offsets: {end: "20px"},
+      frequency: '75px', 
       size: '12px'
       //yawn: 40,
       //fill: true
@@ -308,7 +309,7 @@ function updateControlsForUser(
 
   if (p_appCtx.mapState.selectedPath === _user) {
     updateSelectedPath(_user);
-    if (document.hasFocus())
+    if (document.hasFocus()) // if we fly to location in background, path position will be uncorrect until next location update
       p_map.flyTo(lastLocation);
   }
 
@@ -552,14 +553,17 @@ function onStart() {
   }, 1000);
 
   window.addEventListener("focus", _ev => {
-    for (const path of p_paths) {
-      const [user, line] = path;
-      if (p_appCtx.mapState.selectedPath === user) {
-        const lastLocation = line.getLatLngs().at(-1) as L.LatLng;
-        if (lastLocation !== undefined)
-          p_map.flyTo(lastLocation);
-      }
-    }
+    // fly to selected user's position
+    const selectedPath = p_appCtx.mapState.selectedPath;
+    if (selectedPath === null)
+      return;
+
+    const lastLocation = p_geoEntries[selectedPath]?.at(-1);
+    if (lastLocation === undefined)
+      return;
+
+    p_map.flyTo([lastLocation.Latitude, lastLocation.Longitude]);
+    console.log(`Map is fly to the latest location of user ${selectedPath}`);
   }, false);
 }
 onStart();

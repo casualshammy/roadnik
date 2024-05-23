@@ -17,16 +17,20 @@ export const HOST_MSG_MAP_STATE = "host-msg-map-state";
 export const CLASS_IS_DRAGGING: string = "__is_dragging";
 
 export const TRACK_COLORS: string[] = [
-	"maroon",
-	"purple",
-	"green",
-	"olive",
-	"navy",
-	"teal",
-	"red",
-	"fuchsia",
-	"lime",
-	"yellow",
-	"blue",
 	"aqua",
+	"blue",
+	"blueviolet",
+	"chocolate",
+	"fuchsia",
+	"goldenrod",
+	"green",
+	"lime",
+	"maroon",
+	"navy",
+	"olive",
+	"orangered",
+	"purple",
+	"red",
+	"teal",
+	"yellow"
 ];

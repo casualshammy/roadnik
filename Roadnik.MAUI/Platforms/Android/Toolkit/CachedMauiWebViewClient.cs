@@ -51,10 +51,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     if (url == null)
       return base.ShouldInterceptRequest(_view, _request);
 
-#if DEBUG
-    return base.ShouldInterceptRequest(_view, _request);
-#endif
-
     try
     {
       var cachedStream = p_webDataCache.GetStream(url);

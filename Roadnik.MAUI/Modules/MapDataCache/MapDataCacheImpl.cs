@@ -35,7 +35,7 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
     var cache = new FileCache(
       _lifetime,
       cacheDir,
-      TimeSpan.FromDays(1),
+      TimeSpan.FromDays(3),
       50 * 1024 * 1024,
       TimeSpan.FromHours(1));
 

@@ -99,8 +99,8 @@ public partial class Program
       Directory.CreateDirectory(settings.DataDirPath);
 
     var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(settings.DataDirPath, "data.v0.db"), 
-      null, 
+      Path.Combine(settings.DataDirPath, "data.v0.db"),
+      DocStorageJsonCtx.Default, 
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
     Observable

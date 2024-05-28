@@ -343,9 +343,12 @@ internal class ApiControllerV0 : GenericController
       (_battery ?? 0) / 100,
       (_gsmSignal ?? 0) / 100,
       _bearing);
-    p_documentStorage.WriteSimpleDocument($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry);
+    p_documentStorage.WriteSimpleDocument($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+
+    if (room?.MaxPointsPerPath > 0)
+      p_roomsController.EnqueuePathTruncate(_roomId, _username ?? _roomId);
 
     return Results.Ok();
   }
@@ -389,9 +392,12 @@ internal class ApiControllerV0 : GenericController
     var now = DateTimeOffset.UtcNow;
 
     var record = new StorageEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, _req.Alt, _req.Speed, _req.Acc, _req.Battery, _req.GsmSignal, _req.Bearing);
-    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record, DocStorageJsonCtx.Default.StorageEntry);
+    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+
+    if (room?.MaxPointsPerPath > 0)
+      p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.Username);
 
     return Results.Ok();
   }
@@ -424,7 +430,7 @@ internal class ApiControllerV0 : GenericController
     const int maxReturnEntries = 250;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
     var documents = p_documentStorage
-      .ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{_roomId}.%"), _from: offset ?? null)
+      .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null)
       .OrderBy(_ => _.Created)
       .Take(maxReturnEntries + 1)
       .ToList();
@@ -506,7 +512,7 @@ internal class ApiControllerV0 : GenericController
 
     var now = DateTimeOffset.UtcNow;
     var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
-    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point, DocStorageJsonCtx.Default.GeoPointEntry);
+    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -538,7 +544,7 @@ internal class ApiControllerV0 : GenericController
     log.Info($"Got req to **list points** in room __{_roomId}__");
 
     var entries = new List<ListRoomPointsResData>();
-    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_roomId}.%")))
+    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_roomId}.%")))
       entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
 
     return Results.Json(entries, ControllersJsonCtx.Default.IReadOnlyListListRoomPointsResData);
@@ -564,7 +570,7 @@ internal class ApiControllerV0 : GenericController
 
     log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
-    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(DocStorageJsonCtx.Default.GeoPointEntry, new LikeExpr($"{_req.RoomId}.%")))
+    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%")))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
         p_documentStorage.DeleteSimpleDocument<GeoPointEntry>(entry.Key);
@@ -599,7 +605,7 @@ internal class ApiControllerV0 : GenericController
     {
       roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
       roomIdValid = !p_documentStorage
-        .ListSimpleDocuments(DocStorageJsonCtx.Default.StorageEntry, new LikeExpr($"{roomId}.%"))
+        .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{roomId}.%"))
         .Any();
     }
 
@@ -716,7 +722,7 @@ internal class ApiControllerV0 : GenericController
     if (_req == null)
       return BadRequest("Room data is null");
 
-    p_roomsController.RegisterRoom(_req.RoomId, _req.Email, _req.MaxPathPoints, _req.MaxPathPointAgeHours, _req.MinPathPointIntervalMs);
+    p_roomsController.RegisterRoom(_req);
     return Results.Ok();
   }
 

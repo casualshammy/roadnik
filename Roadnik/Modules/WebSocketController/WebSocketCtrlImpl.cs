@@ -47,6 +47,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
     WsHelper.RegisterMsType("ws-msg-path-wiped", typeof(WsMsgPathWiped));
     WsHelper.RegisterMsType("ws-msg-room-points-updated", typeof(WsMsgRoomPointsUpdated));
     WsHelper.RegisterMsType("ws-msg-data-updated", typeof(WsMsgUpdateAvailable));
+    WsHelper.RegisterMsType("ws-msg-path-truncated", typeof(WsMsgPathTruncated));
     WsHelper.RegisterSerializationContext(WebSocketJsonCtx.Default);
   }
 

@@ -9,6 +9,7 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(WsMsgPathWiped))]
 [JsonSerializable(typeof(WsMsgUpdateAvailable))]
 [JsonSerializable(typeof(WsMsgRoomPointsUpdated))]
+[JsonSerializable(typeof(WsMsgPathTruncated))]
 internal partial class WebSocketJsonCtx : JsonSerializerContext
 {
 

@@ -3,13 +3,14 @@ import { IMapState } from "../api";
 import { DEFAULT_MAP_LAYER, GetMapStateFromCookie } from "../maps";
 import { COOKIE_MAP_LAYER, COOKIE_MAP_OVERLAY, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT } from "../consts";
 import { base64ToUtf8Text } from "../toolkit";
+import L from "leaflet";
+import { CurrentLocationControl } from "./CurrentLocationControl";
 
 export interface IAppCtx {
     readonly isRoadnikApp: boolean;
     readonly roomId: string | null;
     lastTracksOffset: number;
-    currentLocationMarker: L.Marker | undefined;
-    currentLocationCircle: L.Circle | undefined;
+    currentLocation: CurrentLocationControl | undefined;
     userColorIndex: number;
     readonly userColors: Map<string, string>;
     firstTracksSyncCompleted: boolean;
@@ -121,8 +122,7 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
         isRoadnikApp: isRoadnikApp,
         roomId: urlParams.get('id'),
         lastTracksOffset: 0,
-        currentLocationMarker: undefined,
-        currentLocationCircle: undefined,
+        currentLocation: undefined,
         userColorIndex: 0,
         userColors: new Map<string, string>(),
         firstTracksSyncCompleted: false,

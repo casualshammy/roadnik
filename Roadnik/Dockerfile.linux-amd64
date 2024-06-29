@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-dotnet
+WORKDIR /app
+RUN apt-get update
+RUN apt-get -y install clang zlib1g-dev
+COPY ./ ./
+RUN dotnet publish -r linux-x64 -o out Roadnik
+
+FROM node:20-alpine AS build-node
+WORKDIR /app
+COPY ./www ./
+RUN npm i
+RUN npm run build
+
+FROM mcr.microsoft.com/dotnet/runtime:8.0 as final
+EXPOSE 8080
+WORKDIR /app
+COPY --from=build-dotnet /app/out ./bin
+COPY --from=build-node /app/dist ./www
+RUN chmod +x /app/bin/roadnik-server
+
+ENTRYPOINT ["/app/bin/roadnik-server"]

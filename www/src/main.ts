@@ -570,9 +570,11 @@ function onStart() {
         timeout: 30000,
       };
 
-      navigator.geolocation.watchPosition(_pos => {
-        updateCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy);
-      }, undefined, options);
+      const onUpdate = (_pos: GeolocationPosition) => updateCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy);
+      navigator.geolocation.watchPosition(onUpdate, undefined, options);
+      console.log(`Subscribed to geolocation updates`);
+    } else {
+      console.log(`Geolocation is not available`);
     }
   }
 

@@ -9,6 +9,7 @@ import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_
 import { DEFAULT_MAP_LAYER, GenerateCircleIcon, GeneratePulsatingCircleIcon, GetMapLayers, GetMapOverlayLayers, GetMapStateFromCookie } from "./modules/maps";
 import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "rxjs";
 import { CreateAppCtx } from "./modules/parts/AppCtx";
+import { CurrentLocationControl } from "./modules/parts/CurrentLocationControl";
 import Swal from "sweetalert2";
 import "leaflet-arrowheads";
 
@@ -561,6 +562,18 @@ function onStart() {
         });
       }
     }, 1000);
+
+    if ("geolocation" in navigator) {
+      const options = {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 30000,
+      };
+
+      navigator.geolocation.watchPosition(_pos => {
+        updateCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy);
+      }, undefined, options);
+    }
   }
 
   setInterval(() => {
@@ -635,26 +648,14 @@ function setViewToTrack(_pathName: string, _zoom: number): boolean {
 (window as any).setViewToTrack = setViewToTrack;
 
 function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number): boolean {
-  if (p_appCtx.currentLocationMarker === undefined) {
-    const icon = GenerateCircleIcon(10, "black");
-    p_appCtx.currentLocationMarker = L.marker([_lat, _lng], { icon: icon, interactive: false });
-    console.log("Created current location merker");
-  }
-  if (p_appCtx.currentLocationCircle === undefined) {
-    const circle = L.circle([_lat, _lng], 100, { color: "black", fillColor: '*', fillOpacity: 0.3, interactive: false });
-    p_appCtx.currentLocationCircle = circle;
-    console.log("Created current location circle");
+  if (p_appCtx.currentLocation === undefined) {
+    p_appCtx.currentLocation = new CurrentLocationControl(p_map);
+    console.log("Created current location marker");
   }
 
-  p_appCtx.currentLocationMarker
-    .setLatLng([_lat, _lng])
-    .addTo(p_map);
+  p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy);
 
-  p_appCtx.currentLocationCircle
-    .setLatLng([_lat, _lng])
-    .setRadius(_accuracy)
-    .addTo(p_map);
-
+  console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}`)
   return true;
 }
 (window as any).updateCurrentLocation = updateCurrentLocation;

@@ -11,7 +11,7 @@ import { Subject, concatMap, scan, switchMap, asyncScheduler, observeOn } from "
 import { CreateAppCtx } from "./modules/parts/AppCtx";
 import { CurrentLocationControl } from "./modules/parts/CurrentLocationControl";
 import Swal from "sweetalert2";
-import "leaflet-arrowheads";
+import "leaflet-textpath";
 
 const mapsData = GetMapLayers();
 const mapOverlays = GetMapOverlayLayers();
@@ -262,12 +262,17 @@ async function initControlsForUserAsync(_user: string): Promise<void> {
         }
       });
 
-    path.arrowheads({
-      offsets: { end: "20px" },
-      frequency: '75px',
-      size: '12px'
-      //yawn: 40,
-      //fill: true
+    (path as any).setText('  ➤  ', {
+      repeat: true,
+      offset: 11,
+      below: true,
+      bold: true,
+      attributes: {
+        fill: color, 
+        'font-size': '30',
+        'font-family': 'monospace',
+        'font-weight': 'bold'
+      }
     });
 
     p_paths.set(_user, path);

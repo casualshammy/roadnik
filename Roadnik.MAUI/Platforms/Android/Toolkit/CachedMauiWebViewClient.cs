@@ -55,7 +55,13 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     {
       var cachedStream = p_webDataCache.GetStream(url);
       if (cachedStream != null)
-        return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
+      {
+        var mime = MimeMapping.MimeUtility.GetMimeMapping(url);
+        if (mime == MimeMapping.KnownMimeTypes.Bin)
+          mime = null;
+
+        return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
+      }
     }
     catch (Exception ex)
     {

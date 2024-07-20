@@ -127,7 +127,7 @@ export function base64ToUtf8Text(_base64: string): string {
   return result;
 }
 
-export async function getColorForStringAsync(_str: string): Promise<string> {
+export function getColorForString(_str: string): string {
   const sha = sha256(_str);
   const index = parseInt(sha.substring(0, 1), 16);
 

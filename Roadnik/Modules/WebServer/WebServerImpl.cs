@@ -127,6 +127,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     var app = builder.Build();
     app
       .UseMiddleware<LogMiddleware>()
+      .UseMiddleware<DebugCorsMiddleware>(p_logger)
       .UseMiddleware<ForwardProxyMiddleware>()
       .UseMiddleware<AuthMiddleware>(p_logger, new GenericController[] { controller })
       .UseResponseCompression()

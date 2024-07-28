@@ -1,4 +1,5 @@
 ﻿using Android.Webkit;
+using Ax.Fw;
 using Ax.Fw.SharedTypes.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
@@ -55,7 +56,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     {
       if (p_webDataCache.TryGetStream(url, out var cachedStream, out var mime))
       {
-        if (mime == MimeMapping.KnownMimeTypes.Bin)
+        if (mime == MimeTypes.Bin)
           mime = null;
 
         return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);

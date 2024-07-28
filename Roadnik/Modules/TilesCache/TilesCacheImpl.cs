@@ -71,8 +71,12 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
         {
           _log.Info($"**Downloading** tile '__{_task.Key}__'...");
 
-          using var bodyStream = await _httpClientProvider.Value.GetStreamAsync(_task.Url, _ct);
-          await cache.StoreAsync(_task.Key, bodyStream, true, _ct);
+          using var res = await _httpClientProvider.Value.GetAsync(_task.Url, _ct);
+          res.EnsureSuccessStatusCode();
+
+          using var stream = await res.Content.ReadAsStreamAsync(_ct);
+          var mime = res.Content.Headers.ContentType?.ToString();
+          await cache.StoreAsync(_task.Key, stream, mime, true, _ct);
 
           _log.Info($"Tile '__{_task.Key}__' is downloaded");
         }
@@ -105,7 +109,10 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       return null;
 
     var key = GetKey(_x, _y, _z, _type);
-    return cache.Get(key);
+    if (cache.TryGet(key, out var stream, out _))
+      return stream;
+
+    return null;
   }
 
   public bool TryGet(
@@ -124,11 +131,11 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       return false;
 
     var key = GetKey(_x, _y, _z, _type);
-    if (!cache.TryGet(key, out var stream, out _, out var hash))
+    if (!cache.TryGet(key, out var stream, out var meta))
       return false;
 
     _stream = stream;
-    _hash = hash;
+    _hash = meta.Hash;
     return true;
   }
 

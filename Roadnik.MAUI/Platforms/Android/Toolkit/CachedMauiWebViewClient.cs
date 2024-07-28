@@ -25,13 +25,13 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     GetUnpkgPngRegex(),
   ];
 
-  private readonly IMapDataCache? p_webDataCache;
+  private readonly IWebDataCache? p_webDataCache;
   private readonly IPreferencesStorage? p_storage;
   private readonly ILog? p_log;
 
   public CachedMauiWebViewClient(
     WebViewHandler _handler,
-    IMapDataCache? _tilesCache,
+    IWebDataCache? _tilesCache,
     ILog? _log,
     IPreferencesStorage? _storage) : base(_handler)
   {
@@ -53,9 +53,13 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 
     try
     {
-      var cachedStream = p_webDataCache.GetStream(url);
-      if (cachedStream != null)
-        return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
+      if (p_webDataCache.TryGetStream(url, out var cachedStream, out var mime))
+      {
+        if (mime == MimeMapping.KnownMimeTypes.Bin)
+          mime = null;
+
+        return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);
+      }
     }
     catch (Exception ex)
     {

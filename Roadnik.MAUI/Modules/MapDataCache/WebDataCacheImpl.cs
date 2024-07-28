@@ -3,26 +3,27 @@ using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
+using System.Diagnostics.CodeAnalysis;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.MapDataCache;
 
-internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
+internal class WebDataCacheImpl : IWebDataCache, IAppModule<IWebDataCache>
 {
-  public static IMapDataCache ExportInstance(IAppDependencyCtx _ctx)
+  public static IWebDataCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider,
-      ILog _logger) => new MapDataCacheImpl(_lifetime, _httpClientProvider, _logger));
+      ILog _logger) => new WebDataCacheImpl(_lifetime, _httpClientProvider, _logger));
   }
 
   private readonly Subject<string> p_workFlow = new();
   private readonly ILog p_log;
 
-  private MapDataCacheImpl(
+  private WebDataCacheImpl(
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
     ILog _logger)
@@ -63,8 +64,12 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
 
         try
         {
-          using (var networkStream = await _httpClientProvider.Value.GetStreamAsync(_url, _ct))
-            await cache.StoreAsync(_url, networkStream, true, _ct);
+          using var res = await _httpClientProvider.Value.GetAsync(_url, _ct);
+          res.EnsureSuccessStatusCode();
+
+          using var stream = await res.Content.ReadAsStreamAsync(_ct);
+          var mime = res.Content.Headers.ContentType?.ToString();
+          await cache.StoreAsync(_url, stream, mime, true, _ct);
 
           p_log.Info($"Url is downloaded: '{_url}'");
         }
@@ -87,10 +92,22 @@ internal class MapDataCacheImpl : IMapDataCache, IAppModule<IMapDataCache>
     p_workFlow.OnNext(_url);
   }
 
-  public Stream? GetStream(string _url)
+  public bool TryGetStream(
+    string _url,
+    [NotNullWhen(true)] out Stream? _stream,
+    [NotNullWhen(true)] out string? _mime)
   {
-    var stream = Cache.Get(_url);
-    return stream;
+    _stream = null;
+    _mime = null;
+
+    if (Cache.TryGet(_url, out var stream, out var meta))
+    {
+      _stream = stream;
+      _mime = meta.Mime;
+      return true;
+    }
+
+    return false;
   }
 
 }

@@ -1,5 +1,5 @@
 import { sha256 } from "js-sha256";
-import { CLASS_IS_DRAGGING, TRACK_COLORS } from "./consts";
+import * as Consts from "../data/Consts";
 import { Base64 } from 'js-base64';
 
 const p_rgbPerColorName: Map<string, Uint8ClampedArray | null> = new Map<string, Uint8ClampedArray | null>();
@@ -11,15 +11,8 @@ export const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
   }, {} as Record<K, T[]>);
 
 export function sleepAsync(_ms: number) {
-  return new Promise<void>((_resolve, _reject) => {
-    let timerId: NodeJS.Timeout | null = null;
-    let completed = false;
-    timerId = setTimeout(() => {
-      if (completed)
-        return;
-
-      timerId = null;
-      completed = true;
+  return new Promise<void>(_resolve => {
+    setTimeout(() => {
       _resolve();
     }, _ms);
   });
@@ -27,8 +20,8 @@ export function sleepAsync(_ms: number) {
 
 export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left: number, _bottom: number) => void) {
   element.addEventListener('mousedown', function (ev: MouseEvent) {
-    var offsetX = ev.clientX - parseInt(window.getComputedStyle(element).left);
-    var offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.clientY;
+    const offsetX = ev.clientX - parseInt(window.getComputedStyle(element).left);
+    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.clientY;
 
     function mouseMoveHandler(e: MouseEvent) {
       const style = window.getComputedStyle(element);
@@ -41,14 +34,14 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
 
       element.style.left = left + 'px';
       element.style.bottom = bottom + 'px';
-      element.classList.add(CLASS_IS_DRAGGING);
+      element.classList.add(Consts.CLASS_IS_DRAGGING);
       _callback(left, bottom);
     }
 
     function reset() {
       window.removeEventListener('mousemove', mouseMoveHandler);
       window.removeEventListener('mouseup', reset);
-      element.classList.remove(CLASS_IS_DRAGGING);
+      element.classList.remove(Consts.CLASS_IS_DRAGGING);
     }
 
     window.addEventListener('mousemove', mouseMoveHandler);
@@ -56,8 +49,8 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
   });
 
   element.addEventListener('touchstart', function (ev: TouchEvent) {
-    var offsetX = ev.touches[0].clientX - parseInt(window.getComputedStyle(element).left);
-    var offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.touches[0].clientY;
+    const offsetX = ev.touches[0].clientX - parseInt(window.getComputedStyle(element).left);
+    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.touches[0].clientY;
 
     function mouseMoveHandler(e: TouchEvent) {
       const style = window.getComputedStyle(element);
@@ -70,7 +63,7 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
 
       element.style.left = left + 'px';
       element.style.bottom = bottom + 'px';
-      element.classList.add(CLASS_IS_DRAGGING);
+      element.classList.add(Consts.CLASS_IS_DRAGGING);
       _callback(left, bottom);
     }
 
@@ -78,7 +71,7 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
       window.removeEventListener('touchmove', mouseMoveHandler);
       window.removeEventListener('touchend', reset);
       window.removeEventListener('touchcancel', reset);
-      element.classList.remove(CLASS_IS_DRAGGING);
+      element.classList.remove(Consts.CLASS_IS_DRAGGING);
     }
 
     window.addEventListener('touchmove', mouseMoveHandler);
@@ -131,28 +124,5 @@ export function getColorForString(_str: string): string {
   const sha = sha256(_str);
   const index = parseInt(sha.substring(0, 1), 16);
 
-  return TRACK_COLORS[index];
-}
-
-export class Pool<T> {
-  private readonly p_pool: T[] = [];
-  private readonly p_factory: () => T;
-
-  constructor(_factory: () => T) {
-    this.p_factory = _factory;
-  }
-
-  resolve(): T {
-    const v = this.p_pool.pop() ?? this.p_factory();
-    return v;
-  }
-
-  free(_value: T): void {
-    this.p_pool.push(_value);
-  }
-
-  getAvailableCount(): number {
-    return this.p_pool.length;
-  }
-
+  return Consts.TRACK_COLORS[index];
 }

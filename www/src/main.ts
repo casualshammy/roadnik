@@ -2,7 +2,7 @@ import * as L from "leaflet"
 import * as Api from "./modules/api";
 import { TimeSpan } from "./modules/timespan";
 import { HostMsgTracksSynchronizedData, JsToCSharpMsg, TimedStorageEntry, WsMsgPathTruncated, WsMsgPathWiped } from "./modules/api";
-import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, getColorForStringAsync, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
+import { Pool, base64ToUtf8Text, byteArrayToHexString, colorNameToRgba, getColorForString, groupBy, makeDraggableBottomLeft, sleepAsync } from "./modules/toolkit";
 import { LeafletMouseEvent } from "leaflet";
 import Cookies from "js-cookie";
 import { CLASS_IS_DRAGGING, COOKIE_MAP_LAYER, COOKIE_MAP_STATE, COOKIE_SELECTED_PATH_BOTTOM, COOKIE_SELECTED_PATH_LEFT, COOKIE_SELECTED_PATH, HOST_MSG_TRACKS_SYNCHRONIZED, JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED, TRACK_COLORS, WS_MSG_PATH_WIPED, WS_MSG_ROOM_POINTS_UPDATED, WS_MSG_TYPE_DATA_UPDATED, WS_MSG_TYPE_HELLO, COOKIE_MAP_OVERLAY, HOST_MSG_MAP_STATE, WS_MSG_PATH_TRUNCATED } from "./modules/consts";
@@ -169,7 +169,7 @@ async function updatePathsAsync() {
 
   // init users controls
   for (const user of users)
-    await initControlsForUserAsync(user);
+    initControlsForUserAsync(user);
 
   // update users controls
   for (const user of users) {
@@ -215,10 +215,10 @@ async function updatePathsAsync() {
   }
 }
 
-async function initControlsForUserAsync(_user: string): Promise<void> {
+function initControlsForUserAsync(_user: string): void {
   let color = p_appCtx.userColors.get(_user);
   if (color === undefined) {
-    color = await getColorForStringAsync(_user); //TRACK_COLORS[p_appCtx.userColorIndex++ % TRACK_COLORS.length];
+    color = getColorForString(_user); //TRACK_COLORS[p_appCtx.userColorIndex++ % TRACK_COLORS.length];
     p_appCtx.userColors.set(_user, color);
     console.log(`Color for user ${_user}: ${color}`);
   }

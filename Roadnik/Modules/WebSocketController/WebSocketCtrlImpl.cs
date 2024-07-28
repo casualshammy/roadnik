@@ -139,7 +139,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
     var sessionIndex = Interlocked.Increment(ref p_sessionsCount);
     p_sessions.TryAdd(sessionIndex, session);
 
-    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(60));
 
     WebSocketReceiveResult? receiveResult = null;
 

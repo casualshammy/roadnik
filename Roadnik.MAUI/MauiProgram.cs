@@ -67,7 +67,7 @@ public static partial class MauiProgram
       .AddModule<PreferencesStorageImpl, IPreferencesStorage>()
       .AddModule<PushMessagesControllerImpl, IPushMessagesController>()
       .AddModule<TelephonyMgrProviderImpl, ITelephonyMgrProvider>()
-      .AddModule<MapDataCacheImpl, IMapDataCache>()
+      .AddModule<WebDataCacheImpl, IWebDataCache>()
       .ActivateOnStart<IPushMessagesController>();
 
     Container = appDeps;

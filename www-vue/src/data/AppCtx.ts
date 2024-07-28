@@ -66,7 +66,7 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
     const overlaysJson = CommonToolkit.base64ToUtf8Text(urlParamOverlays);
     const rawOverlays = JSON.parse(overlaysJson) as string[];
     for (const overlay of rawOverlays) {
-      const overlayLayer = Object.entries(_overlays).find((_v, _i, _o) => _v[0] === overlay);
+      const overlayLayer = Object.entries(_overlays).find(_v => _v[0] === overlay);
       if (overlayLayer !== undefined)
         overlays.push(overlay);
     }
@@ -74,7 +74,7 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
   else if (cookieOverlay !== undefined && cookieOverlay !== null) {
     const rawOverlays = JSON.parse(cookieOverlay) as string[];
     for (const overlay of rawOverlays) {
-      const overlayLayer = Object.entries(_overlays).find((_v, _i, _o) => _v[0] === overlay);
+      const overlayLayer = Object.entries(_overlays).find(_v => _v[0] === overlay);
       if (overlayLayer !== undefined)
         overlays.push(overlay);
     }

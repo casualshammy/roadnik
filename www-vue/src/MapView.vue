@@ -101,7 +101,7 @@ function setupMap(_map: L.Map) {
   });
   _map.on('overlayremove', function (_e) {
     const overlay = _e.name;
-    p_mapState.value.overlays = p_mapState.value.overlays.filter((_v, _i, _) => _v !== overlay);
+    p_mapState.value.overlays = p_mapState.value.overlays.filter(_v => _v !== overlay);
 
     console.log(`Removed overlay '${overlay}'`);
 
@@ -110,7 +110,7 @@ function setupMap(_map: L.Map) {
     else
       p_hostApi.sendMapStateToRoadnikApp();
   });
-  _map.on('zoomend', function (_e) {
+  _map.on('zoomend', () => {
     const location = _map.getCenter();
 
     p_mapState.value.lat = location.lat;
@@ -125,7 +125,7 @@ function setupMap(_map: L.Map) {
       p_hostApi.sendMapStateToRoadnikApp();
     }
   });
-  _map.on('moveend', function (_e) {
+  _map.on('moveend', () => {
     const location = _map.getCenter();
 
     p_mapState.value.lat = location.lat;
@@ -176,11 +176,11 @@ function setupDataFlow(_map: L.Map) {
   p_tracksUpdateRequired$
     .pipe(
       observeOn(asyncScheduler),
-      switchMap(async _ => await updatePathsAsync()))
+      switchMap(async () => await updatePathsAsync()))
     .subscribe();
 
   if (p_appCtx.roomId !== null) {
-    const ws = p_backendApi.setupWs(p_appCtx.roomId, async (_ws, _data) => {
+    p_backendApi.setupWs(p_appCtx.roomId, async (_ws, _data) => {
       console.log(`WS MSG: ${_data.Type}`);
       if (_data.Type === Consts.WS_MSG_TYPE_HELLO) {
         const msgData: WsMsgHello = _data.Payload;
@@ -258,7 +258,7 @@ function setupDataFlow(_map: L.Map) {
     }
   }
 
-  window.addEventListener("focus", _ev => {
+  window.addEventListener("focus", () => {
     // fly to selected user's position
     const selectedPath = p_mapState.value.selectedPath;
     if (selectedPath === null)
@@ -337,10 +337,10 @@ async function updatePathsAsync() {
     const selectedPath = p_mapState.value.selectedPath;
     if (selectedPath === null) {
       console.log("Initial selected path is not set, setting default view...");
-      setViewToAllTracks();
+      //setViewToAllTracks();
     }
     else if (!setViewToTrack(selectedPath, p_map.value!.getZoom())) {
-      console.log("Initial selected path is set but not found, setting default view...");
+      console.log("Initial selected path is set but not found, setting view to all paths...");
       setViewToAllTracks();
     }
     else {
@@ -386,7 +386,7 @@ async function updatePointsAsync() {
       marker.setLatLng([entry.Lat, entry.Lng])
       marker.addTo(p_map.value!);
       marker.bindPopup(text);
-      marker.on("contextmenu", function (_e) {
+      marker.on("contextmenu", () => {
         p_backendApi.deletePointAsync(p_appCtx.roomId!, entry.PointId);
       });
     }
@@ -639,6 +639,4 @@ function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number): b
 
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

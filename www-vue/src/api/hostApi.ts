@@ -67,7 +67,9 @@ export class HostApi {
       const json = JSON.stringify(_msg);
       (window as any).jsBridge.invokeAction(json);
     }
-    catch { }
+    catch (_error) {
+      console.error(`Can't send data to Roadnik app: ${_error}`);
+    }
   }
 
 }

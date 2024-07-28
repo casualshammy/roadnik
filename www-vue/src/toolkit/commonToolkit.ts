@@ -11,15 +11,8 @@ export const groupBy = <T, K extends keyof any>(arr: T[], key: (i: T) => K) =>
   }, {} as Record<K, T[]>);
 
 export function sleepAsync(_ms: number) {
-  return new Promise<void>((_resolve, _reject) => {
-    let timerId: number | null = null;
-    let completed = false;
-    timerId = setTimeout(() => {
-      if (completed)
-        return;
-
-      timerId = null;
-      completed = true;
+  return new Promise<void>(_resolve => {
+    setTimeout(() => {
       _resolve();
     }, _ms);
   });
@@ -27,8 +20,8 @@ export function sleepAsync(_ms: number) {
 
 export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left: number, _bottom: number) => void) {
   element.addEventListener('mousedown', function (ev: MouseEvent) {
-    var offsetX = ev.clientX - parseInt(window.getComputedStyle(element).left);
-    var offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.clientY;
+    const offsetX = ev.clientX - parseInt(window.getComputedStyle(element).left);
+    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.clientY;
 
     function mouseMoveHandler(e: MouseEvent) {
       const style = window.getComputedStyle(element);
@@ -56,8 +49,8 @@ export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left:
   });
 
   element.addEventListener('touchstart', function (ev: TouchEvent) {
-    var offsetX = ev.touches[0].clientX - parseInt(window.getComputedStyle(element).left);
-    var offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.touches[0].clientY;
+    const offsetX = ev.touches[0].clientX - parseInt(window.getComputedStyle(element).left);
+    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.touches[0].clientY;
 
     function mouseMoveHandler(e: TouchEvent) {
       const style = window.getComputedStyle(element);

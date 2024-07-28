@@ -13,22 +13,22 @@ export function GetMapLayers(): L.Control.LayersObject {
 	const apiUrl = import.meta.env.MODE === "development" ? "http://localhost:5544" : "..";
 
 	// OpenStreetMap
-	var osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+	const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 		osmAttribution = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)',
 		osm = new L.TileLayer(osmUrl, { maxZoom: 18, attribution: osmAttribution });
 	// OpenCycleMap
-	var cyclemapUrl = `${apiUrl}/map-tile?type=opencyclemap&x={x}&y={y}&z={z}`,
+	const cyclemapUrl = `${apiUrl}/map-tile?type=opencyclemap&x={x}&y={y}&z={z}`,
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// Outdoors Map
-	var outdoorsMapUrl = `${apiUrl}/map-tile?type=tf-outdoors&x={x}&y={y}&z={z}`,
+	const outdoorsMapUrl = `${apiUrl}/map-tile?type=tf-outdoors&x={x}&y={y}&z={z}`,
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
 	// CartoDb Dark
-	var cartoDbDarkUrl = `${apiUrl}/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
+	const cartoDbDarkUrl = `${apiUrl}/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
 		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution });
 	// Googly Hybrid
-	var googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+	const googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
 		googleAttribution = "© Google",
 		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
 
@@ -125,7 +125,7 @@ export function GetMapStateFromCookie(_cookie: string | undefined): ICookieMapSt
 	if (_cookie === undefined)
 		return null;
 
-	const regex = /^([\d\.]+)\:([\d\.]+)\:([\d\.]+)$/g;
+	const regex = /^([\d.]+):([\d.]+):([\d.]+)$/g;
 	const match = regex.exec(_cookie);
 	if (match !== null) {
 		const latString = match[1];

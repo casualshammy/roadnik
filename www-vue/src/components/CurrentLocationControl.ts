@@ -9,7 +9,7 @@ export class CurrentLocationControl {
 
   public constructor(_map: L.Map) {
     const markerIcon = GenerateCircleIcon(10, "black");
-    this.p_marker = L.marker([0, 0], { icon: markerIcon, interactive: false }).addTo(_map);;
+    this.p_marker = L.marker([0, 0], { icon: markerIcon, interactive: false }).addTo(_map);
 
     const accuracyCircle = L.circle([0, 0], { radius: 100, color: "black", fillColor: '*', fillOpacity: 0.3, interactive: false });
     this.p_accuracyCircle = accuracyCircle.addTo(_map);

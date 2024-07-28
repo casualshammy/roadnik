@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue';
 import * as CommonToolkit from '../toolkit/commonToolkit';
 import { TimeSpan } from '@/toolkit/timespan';
 
@@ -83,12 +83,13 @@ const bgColor = computed(() => {
     return '#bebebe';
 
   const colorBytes = CommonToolkit.colorNameToRgba(props.state?.color);
-  if (colorBytes !== null) {
-    const bgR = Math.min(128 + colorBytes[0] / 4, 255);
-    const bgG = Math.min(128 + colorBytes[1] / 4, 255);
-    const bgB = Math.min(128 + colorBytes[2] / 4, 255);
-    return `#${CommonToolkit.byteArrayToHexString([bgR, bgG, bgB])}`;
-  }
+  if (colorBytes === null)
+    return '#bebebe';
+
+  const bgR = Math.min(128 + colorBytes[0] / 4, 255);
+  const bgG = Math.min(128 + colorBytes[1] / 4, 255);
+  const bgB = Math.min(128 + colorBytes[2] / 4, 255);
+  return `#${CommonToolkit.byteArrayToHexString([bgR, bgG, bgB])}`;
 });
 const timestamp = ref('');
 

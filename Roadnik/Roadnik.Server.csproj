@@ -16,9 +16,9 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.App" Version="14.3.232" />
-				<PackageReference Include="Ax.Fw.Log" Version="14.3.232" />
-				<PackageReference Include="Ax.Fw.Storage" Version="14.3.232" />
+				<PackageReference Include="Ax.Fw.App" Version="14.3.233" />
+				<PackageReference Include="Ax.Fw.Log" Version="14.3.233" />
+				<PackageReference Include="Ax.Fw.Storage" Version="14.3.233" />
 				<PackageReference Include="MimeMapping" Version="3.0.1" />
 				<PackageReference Include="System.Linq.Async" Version="6.0.1" />
 				<PackageReference Include="FluentArgs" Version="0.9.7" />

@@ -102,19 +102,6 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     p_downloadTaskSubj.OnNext(new DownloadTask(key, _url));
   }
 
-  public Stream? GetOrDefault(int _x, int _y, int _z, string _type)
-  {
-    var cache = p_cacheProp.Value;
-    if (cache == null)
-      return null;
-
-    var key = GetKey(_x, _y, _z, _type);
-    if (cache.TryGet(key, out var stream, out _))
-      return stream;
-
-    return null;
-  }
-
   public bool TryGet(
     int _x,
     int _y,

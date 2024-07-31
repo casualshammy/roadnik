@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import 'leaflet/dist/leaflet.css';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, shallowRef, watch } from 'vue';
 import L from 'leaflet';
 import { type LatLngZoom } from '../data/LatLngZoom';
 
@@ -17,7 +17,7 @@ const props = defineProps<{
   layers?: L.Layer[] | undefined,
 }>();
 
-const map = ref<L.Map>();
+const map = shallowRef<L.Map>();
 const location = computed(() => props.location);
 
 onMounted(() => {

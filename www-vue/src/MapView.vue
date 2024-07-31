@@ -12,10 +12,18 @@
                      @onMoved="onSelectedUserPopupMoved"
                      @onDblClick="onSelectedUserPopupDblClick"
                      @onCloseButton="() => updateSelectedPath(null)" />
+
+  <ComboBox
+            v-if="pathsComboBoxEntries?.length > 0"
+            class="paths_combobox"
+            :options="pathsComboBoxEntries"
+            :value="pathsComboBoxSelectedEntry"
+            @changed="onUsersComboBoxChanged">
+  </ComboBox>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, type ComputedRef, type Ref, shallowRef, shallowReactive } from "vue";
 import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
@@ -24,6 +32,7 @@ import "leaflet-textpath";
 
 import LeafletMap from './components/LeafletMap.vue';
 import SelectedUserPopup from './components/SelectedUserPopup.vue';
+import ComboBox from './components/ComboBox.vue';
 import { type SelectedUserPopupState } from './components/SelectedUserPopup.vue';
 import { CurrentLocationControl } from './components/CurrentLocationControl';
 
@@ -54,13 +63,28 @@ const p_hostApi = new HostApi(p_appCtx, p_mapLocation);
 
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
-const p_paths = new Map<string, L.Polyline>();
+const p_paths = shallowReactive(new Map<string, L.Polyline>());
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 const p_geoEntries: { [userName: string]: TimedStorageEntry[] } = {};
 const p_tracksUpdateRequired$ = new Subject<void>();
 
-const p_map = ref<L.Map>();
+const p_map = shallowRef<L.Map>();
+
+const pathsComboBoxEntries: ComputedRef<string[]> = computed(() => {
+  const array: string[] = [];
+
+  p_paths.forEach((_value, _key) => {
+    array.push(_key);
+  });
+
+  array.sort((_a, _b) => _a > _b ? -1 : 1);
+  array.unshift('-- Paths --');
+
+  return array;
+});
+
+const pathsComboBoxSelectedEntry: Ref<string | undefined> = ref();
 
 function onMapCreated(_map: L.Map) {
   p_map.value = _map;
@@ -291,6 +315,14 @@ function onSelectedUserPopupDblClick() {
   const path = p_mapState.value.selectedPath;
   if (path !== null)
     setViewToTrack(path);
+}
+
+function onUsersComboBoxChanged(_value: string) {
+  const user = p_paths.get(_value) !== undefined ? _value : null;
+  updateSelectedPath(user, true);
+
+  if (user !== null)
+    setViewToTrack(user);
 }
 
 async function updatePathsAsync() {
@@ -580,6 +612,7 @@ function setViewToAllTracks(): boolean {
 
 function updateSelectedPath(_user: string | null, _log: boolean = true) {
   p_mapState.value.selectedPath = _user;
+  pathsComboBoxSelectedEntry.value = _user ?? undefined;
 
   if (_user === null) {
     p_selectedUserState.value = undefined;
@@ -639,4 +672,11 @@ function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number): b
 
 </script>
 
-<style scoped></style>
+<style scoped>
+.paths_combobox {
+  position: fixed;
+  z-index: 10000;
+  left: 5px;
+  bottom: 5px;
+}
+</style>

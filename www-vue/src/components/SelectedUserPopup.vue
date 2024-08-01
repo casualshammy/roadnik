@@ -1,8 +1,8 @@
 <template>
   <div
        ref="containerRef"
-       :onmousedown="onContainerMouseDown"
-       :on-touchstart="onTouchStart"
+       @mousedown="onContainerMouseDown"
+       @touchstart="onTouchStart"
        :style="{
         position: 'fixed',
         zIndex: '10000',

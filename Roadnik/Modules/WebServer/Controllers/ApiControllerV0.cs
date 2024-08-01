@@ -1,12 +1,10 @@
 ﻿using Ax.Fw;
-using Ax.Fw.Crypto;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.ReqRes.PushMessages;
-using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Common.Serializers;
 using Roadnik.Common.Toolkit;
 using Roadnik.Data;
@@ -20,7 +18,6 @@ using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Toolkit;
 using System.Collections.Frozen;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
@@ -423,7 +420,7 @@ internal class ApiControllerV0 : GenericController
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
     }
 
-    log.Info($"Requested to **get geo data**, room: __{_roomId}__");
+    log.Info($"Requested **paths** of room: __{_roomId}__; offset __{_offsetUnixTimeMs}__");
 
     var now = DateTimeOffset.UtcNow;
 

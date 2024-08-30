@@ -19,7 +19,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static readonly Regex[] p_cacheRegexes = [
     CacheRegexMapTiles(),
     CacheRegexFavicon(),
-    CacheRegexRoomHtml(),
     CacheRegexJs(),
     CacheRegexCss(),
     CacheRegexOsm(),
@@ -78,8 +77,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex CacheRegexMapTiles();
   [GeneratedRegex(@"favicon\.ico$")]
   private static partial Regex CacheRegexFavicon();
-  [GeneratedRegex(@"/r/\?id=[\w\-_]+")]
-  private static partial Regex CacheRegexRoomHtml();
   [GeneratedRegex(@"\.js$")]
   private static partial Regex CacheRegexJs();
   [GeneratedRegex(@"\.css$")]

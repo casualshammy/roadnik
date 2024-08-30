@@ -348,12 +348,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
     var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
 
-    var counter = 10;
-    while (counter-- > 0 && !_ct.IsCancellationRequested)
+    var counter = -1;
+    while (++counter < 10 && !_ct.IsCancellationRequested)
     {
       try
       {
-        p_log.Info($"Sending request to start new track '{roomId}/{username}'; retry: '{counter}'...");
+        p_log.Info($"Sending request to start new track '{roomId}/{username}'; try: '{counter}'...");
         using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
         using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
         req.Content = content;
@@ -365,7 +365,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       }
       catch (Exception ex)
       {
-        p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error (retry: '{counter}')", ex);
+        p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error (try: '{counter}')", ex);
         await Task.Delay(TimeSpan.FromSeconds(6), _ct);
       }
     }

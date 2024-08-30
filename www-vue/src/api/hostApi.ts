@@ -34,7 +34,7 @@ export class HostApi {
     this.p_appCtx = _appCtx;
     this.p_mapLocation = _mapLocation;
 
-    (window as any).setLocation = this.setLocation;
+    (window as any).setLocation = this.setLocation.bind(this);
   }
 
   // JS => C#

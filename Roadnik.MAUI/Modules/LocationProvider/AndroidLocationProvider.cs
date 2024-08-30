@@ -104,7 +104,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
         {
           p_logger.Error($"Can't remove updates!", ex);
         }
-      });
+      }, TimeSpan.FromSeconds(5));
 
       if (!success)
         p_logger.Error($"Un-subscription routine is timed out");

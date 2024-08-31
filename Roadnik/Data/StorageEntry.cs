@@ -1,10 +1,6 @@
-﻿using Ax.Fw.SharedTypes.Attributes;
+﻿namespace Roadnik.Server.Data;
 
-namespace Roadnik.Data;
-
-[SimpleDocument("geo-data")]
 internal record StorageEntry(
-  string RoomId,
   string Username,
   float Latitude,
   float Longitude,

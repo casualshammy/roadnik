@@ -1,11 +1,10 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Ax.Fw.Storage.Interfaces;
 using Roadnik.Interfaces;
-using Roadnik.Modules.Controllers;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
+using Roadnik.Server.Modules.WebServer.Controllers;
 using Roadnik.Server.Modules.WebServer.Middlewares;
 using Roadnik.Server.Toolkit;
 using System.Net;
@@ -20,7 +19,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   {
     return _ctx.CreateInstance((
       ISettingsController _settingsController,
-      IDocumentStorage _documentStorage,
+      IDbProvider _documentStorage,
       ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
@@ -28,11 +27,21 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
-      IHttpClientProvider _httpClientProvider) => new WebServerImpl(_settingsController, _documentStorage, _logger["kestrel"], _webSocketCtrl, _roomsController, _tilesCache, _reqRateLimiter, _fCMPublisher, _lifetime, _httpClientProvider));
+      IHttpClientProvider _httpClientProvider) => new WebServerImpl(
+        _settingsController, 
+        _documentStorage, 
+        _logger["kestrel"], 
+        _webSocketCtrl, 
+        _roomsController, 
+        _tilesCache, 
+        _reqRateLimiter, 
+        _fCMPublisher, 
+        _lifetime, 
+        _httpClientProvider));
   }
 
   private readonly ISettingsController p_settingsController;
-  private readonly IDocumentStorage p_documentStorage;
+  private readonly IDbProvider p_documentStorage;
   private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
@@ -43,7 +52,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
   private WebServerImpl(
     ISettingsController _settingsController,
-    IDocumentStorage _documentStorage,
+    IDbProvider _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,

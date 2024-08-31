@@ -10,6 +10,7 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
   public static readonly int Size = Marshal.SizeOf<StoreLocationUdpMsg>();
 
   public StoreLocationUdpMsg(
+    int _sessionId,
     string _roomId,
     string _username,
     float _lat,
@@ -21,6 +22,7 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
     float _gsmSignal,
     float _bearing) : this()
   {
+    SessionId = _sessionId;
     RoomId = _roomId;
     Username = _username;
     Lat = _lat;
@@ -32,6 +34,8 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
     GsmSignal = _gsmSignal;
     Bearing = _bearing;
   }
+
+  public readonly int SessionId;
 
   [MarshalAs(UnmanagedType.ByValTStr, SizeConst = ReqResUtil.MaxRoomIdLength)]
   public readonly string RoomId;
@@ -51,6 +55,7 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
   public static StoreLocationUdpMsg FromStorePathPointReq(StorePathPointReq _req)
   {
     return new StoreLocationUdpMsg(
+      _req.SessionId,
       _req.RoomId,
       _req.Username,
       _req.Lat,
@@ -101,6 +106,7 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
   {
     return new StorePathPointReq()
     {
+      SessionId = SessionId,
       RoomId = RoomId,
       Username = Username,
       Lat = Lat,

@@ -1,10 +1,10 @@
 ﻿using Ax.Fw.Storage.Data;
+using Roadnik.Server.Data;
 
 namespace Roadnik.Data;
 
 internal record TimedStorageEntry(
   long UnixTimeMs,
-  string RoomId,
   string Username,
   float Latitude,
   float Longitude,
@@ -20,7 +20,6 @@ internal record TimedStorageEntry(
     var data = _document.Data;
     return new TimedStorageEntry(
       _document.Created.ToUnixTimeMilliseconds(),
-      data.RoomId,
       data.Username,
       data.Latitude,
       data.Longitude,

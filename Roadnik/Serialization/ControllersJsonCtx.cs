@@ -9,7 +9,6 @@ namespace Roadnik.Server.JsonCtx;
   PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(StorePathPointReq))]
 [JsonSerializable(typeof(GetPathResData))]
-[JsonSerializable(typeof(StartNewPathReq))]
 [JsonSerializable(typeof(CreateNewPointReq))]
 [JsonSerializable(typeof(IReadOnlyList<ListRoomPointsResData>))]
 [JsonSerializable(typeof(DeleteRoomPointReq))]
@@ -17,7 +16,4 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(DeleteRoomReq))]
 [JsonSerializable(typeof(IReadOnlyList<RoomInfo>))]
 [JsonSerializable(typeof(IsUdpTransportAvailableRes))]
-internal partial class ControllersJsonCtx : JsonSerializerContext
-{
-
-}
+internal partial class ControllersJsonCtx : JsonSerializerContext { }

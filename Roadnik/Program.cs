@@ -17,6 +17,7 @@ using Roadnik.Modules.WebSocketController;
 using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
+using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.UdpServer;
@@ -98,20 +99,12 @@ public partial class Program
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
-    var docStorage = lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(settings.DataDirPath, "data.v0.db"),
-      DocStorageJsonCtx.Default, 
-      new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
-
-    Observable
-      .Interval(TimeSpan.FromHours(6))
-      .StartWithDefault()
-      .Subscribe(_ => docStorage.Flush(true), lifetime);
+    var dbProvider = new DbProviderImpl(lifetime, log["db-provider"], settings);
 
     var depMgr = AppDependencyManager
       .Create()
       .AddSingleton<ILog>(log)
-      .AddSingleton<IDocumentStorage>(docStorage)
+      .AddSingleton<IDbProvider>(dbProvider)
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ISettingsController>(settingsController)

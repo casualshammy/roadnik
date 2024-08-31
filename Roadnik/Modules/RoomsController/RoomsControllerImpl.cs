@@ -5,6 +5,7 @@ using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using Roadnik.Data;
 using Roadnik.Interfaces;
+using Roadnik.Server.Data;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
@@ -18,7 +19,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   public static IRoomsController ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance(
-      (IDocumentStorage _storage,
+      (IDbProvider _storage,
       IReadOnlyLifetime _lifetime,
       ISettingsController _settingsController,
       IWebSocketCtrl _webSocketCtrl,
@@ -28,12 +29,12 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
   record PathTruncateInfo(string RoomId, string Username);
 
-  private readonly IDocumentStorage p_storage;
+  private readonly IDbProvider p_storage;
   private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
   private readonly Subject<PathTruncateInfo> p_pathTruncateFlow = new();
 
   private RoomsControllerImpl(
-    IDocumentStorage _storage,
+    IDbProvider _storage,
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
     IWebSocketCtrl _webSocketCtrl,
@@ -60,7 +61,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
             {
               var now = DateTimeOffset.UtcNow;
 
-              foreach (var roomGroup in p_storage.ListSimpleDocuments<StorageEntry>().GroupBy(_ => _.Data.RoomId))
+              foreach (var roomGroup in p_storage.Paths.ListDocumentsMeta().GroupBy(_ => _.Namespace))
               {
                 var roomInfo = GetRoom(roomGroup.Key);
 
@@ -73,12 +74,12 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
                 {
                   if (maxPathPointAgeHours != null && (now - entry.Created).TotalHours > maxPathPointAgeHours)
                   {
-                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+                    p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
                     ++deleted;
                   }
                   else if (maxPathPoints != null && ++counter > maxPathPoints)
                   {
-                    p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+                    p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
                     ++deleted;
                   }
                 }
@@ -108,15 +109,13 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
           try
           {
-            var entriesEE = p_storage.ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"), _to: to);
-
             var entriesDeleted = 0L;
-            foreach (var entry in entriesEE)
+            foreach (var entry in p_storage.Paths.ListDocuments<StorageEntry>(_data.RoomId, _to: to))
             {
               if (entry.Data.Username != _data.Username)
                 continue;
 
-              p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+              p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
               ++entriesDeleted;
             }
 
@@ -150,8 +149,8 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
 
           log.Info($"Truncating path points for '{_data.RoomId}/{_data.Username}' to '{maxPointsPerPath}' points");
 
-          var entriesEE = p_storage
-            .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_data.RoomId}.%"))
+          var entriesEE = p_storage.Paths
+            .ListDocuments<StorageEntry>(_data.RoomId)
             .Where(_ => _.Data.Username == _data.Username)
             .OrderByDescending(_ => _.Created);
 
@@ -161,7 +160,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
           {
             if (++counter > maxPointsPerPath)
             {
-              p_storage.DeleteSimpleDocument<StorageEntry>(entry.Key);
+              p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
               ++removedDocumentsCount;
             }
           }
@@ -182,19 +181,19 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       .Subscribe(_lifetime);
   }
 
-  public void RegisterRoom(RoomInfo _roomInfo) => p_storage.WriteSimpleDocument(_roomInfo.RoomId, _roomInfo);
+  public void RegisterRoom(RoomInfo _roomInfo) => p_storage.GenericData.WriteSimpleDocument(_roomInfo.RoomId, _roomInfo);
 
-  public void UnregisterRoom(string _roomId) => p_storage.DeleteSimpleDocument<RoomInfo>(_roomId);
+  public void UnregisterRoom(string _roomId) => p_storage.GenericData.DeleteSimpleDocument<RoomInfo>(_roomId);
 
   public RoomInfo? GetRoom(string _roomId)
   {
-    var doc = p_storage.ReadSimpleDocument<RoomInfo>(_roomId);
+    var doc = p_storage.GenericData.ReadSimpleDocument<RoomInfo>(_roomId);
     return doc?.Data;
   }
 
   public IReadOnlyList<RoomInfo> ListRegisteredRooms()
   {
-    var users = p_storage
+    var users = p_storage.GenericData
       .ListSimpleDocuments<RoomInfo>()
       .Select(_ => _.Data)
       .ToList();

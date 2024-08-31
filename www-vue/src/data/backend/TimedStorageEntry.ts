@@ -1,6 +1,5 @@
 export interface TimedStorageEntry {
   UnixTimeMs: number;
-  RoomId: string;
   Username: string;
   Latitude: number;
   Longitude: number;

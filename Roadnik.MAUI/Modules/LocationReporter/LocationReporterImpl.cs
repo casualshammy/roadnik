@@ -34,10 +34,11 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   }
 
   record ReportingCtx(
+    int? SessionId,
     LocationData? Location,
     DateTimeOffset? LastReportAttemptTime)
   {
-    public static ReportingCtx Empty { get; } = new ReportingCtx(null, null);
+    public static ReportingCtx Empty { get; } = new ReportingCtx(null, null, null);
   }
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
@@ -72,7 +73,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
-        LowPowerMode = _storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE)
+        LowPowerMode = _storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE),
+        WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED)
       })
       .Replay(1)
       .RefCount();
@@ -126,7 +128,14 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     var batteryFlow = Observable
       .FromEventPattern<BatteryInfoChangedEventArgs>(_ => Battery.BatteryInfoChanged += _, _ => Battery.BatteryInfoChanged -= _)
       .Select(_ => _.EventArgs.ChargeLevel)
-      .DistinctUntilChanged();
+      .DistinctUntilChanged()
+      .Replay(1)
+      .RefCount();
+
+    var signalLevelFlow = _telephonyMgrProvider.SignalLevel
+      .DistinctUntilChanged()
+      .Replay(1)
+      .RefCount();
 
     var reportFlow = locationFlow
       .CombineLatest(prefsFlow)
@@ -142,7 +151,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       })
       .ObserveOn(reportScheduler)
       .WithLatestFrom(batteryFlow, (_tuple, _battery) => (Location: _tuple.First, Prefs: _tuple.Second, Battery: _battery))
-      .WithLatestFrom(_telephonyMgrProvider.SignalLevel, (_tuple, _signal) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, Signal: _signal))
+      .WithLatestFrom(signalLevelFlow, (_tuple, _signal) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, Signal: _signal))
       .ScanAsync(ReportingCtx.Empty, async (_acc, _entry) =>
       {
         var (location, prefs, battery, signalStrength) = _entry;
@@ -172,10 +181,17 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);
 
+          if (acc.SessionId == null)
+          {
+            acc = acc with { SessionId = Random.Shared.Next(int.MinValue, int.MaxValue) };
+            p_log.Info($"New session id: {acc.SessionId}");
+          }
+
           p_log.Info($"Sending location data, lat: {location.Latitude}, lng: {location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");
 
-          var reqData = new StorePathPointReq()
+          var reqData = new StorePathPointReq
           {
+            SessionId = acc.SessionId.Value,
             RoomId = prefs.RoomId,
             Username = prefs.Username ?? prefs.RoomId,
             Lat = (float)location.Latitude,
@@ -186,6 +202,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             Battery = (float)battery,
             GsmSignal = (float?)signalStrength,
             Bearing = (float)(location.Course ?? 0d),
+            WipeOldPath = prefs.WipeOldPath,
           };
 
           var reqDataJson = JsonSerializer.Serialize(reqData);
@@ -260,13 +277,12 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        _ = Task.Run(async () => await ReportStartNewPathAsync(_life.Token));
-
         var providers = (string[])(conf.LowPowerMode ?
           [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider] :
           [Android.Locations.LocationManager.GpsProvider]);
 
         locationProvider.StartLocationWatcher(providers, out var locProvidersEnabled);
+        reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });
 
@@ -330,45 +346,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   {
     p_enableFlow.OnNext(_enabled);
     p_log.Info($"Stats reporter {(_enabled ? "enabled" : "disable")}");
-  }
-
-  private async Task ReportStartNewPathAsync(CancellationToken _ct = default)
-  {
-    var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    if (serverAddress.IsNullOrWhiteSpace())
-      return;
-
-    var roomId = p_storage.GetValueOrDefault<string>(PREF_ROOM);
-    if (roomId.IsNullOrWhiteSpace())
-      return;
-
-    var username = p_storage.GetValueOrDefault<string>(PREF_USERNAME);
-    if (username.IsNullOrWhiteSpace())
-      return;
-
-    var wipeOldTrack = p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED);
-
-    var counter = -1;
-    while (++counter < 10 && !_ct.IsCancellationRequested)
-    {
-      try
-      {
-        p_log.Info($"Sending request to start new track '{roomId}/{username}'; try: '{counter}'...");
-        using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.START_NEW_PATH}");
-        using var content = JsonContent.Create(new StartNewPathReq(roomId, username, wipeOldTrack));
-        req.Content = content;
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var res = await p_httpClientProvider.Value.SendAsync(req, cts.Token);
-        res.EnsureSuccessStatusCode();
-        p_log.Info($"Sent request to start new track '{roomId}/{username}'");
-        break;
-      }
-      catch (Exception ex)
-      {
-        p_log.Error($"Request to start new path '{roomId}/{username}' was completed with error (try: '{counter}')", ex);
-        await Task.Delay(TimeSpan.FromSeconds(6), _ct);
-      }
-    }
   }
 
 }

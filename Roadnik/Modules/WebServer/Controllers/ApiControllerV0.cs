@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
@@ -10,6 +11,7 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data;
+using Roadnik.Server.Data.DbTypes;
 using Roadnik.Server.Data.ReqRes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
@@ -22,22 +24,10 @@ using System.Text;
 using System.Text.Json;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
-namespace Roadnik.Modules.Controllers;
+namespace Roadnik.Server.Modules.WebServer.Controllers;
 
 internal class ApiControllerV0 : GenericController
 {
-  [Obsolete]
-  enum MapTileType
-  {
-    None = 0,
-    StravaHeatmapRide,
-    StravaHeatmapRun,
-    OpenCycleMap,
-    //TfLandscape,
-    TfOutdoors,
-    CartoDark
-  }
-
   private static readonly FrozenSet<string> p_authRequiredPaths = new string[] {
     ReqPaths.REGISTER_ROOM,
     ReqPaths.UNREGISTER_ROOM,
@@ -49,7 +39,7 @@ internal class ApiControllerV0 : GenericController
   private static long p_reqCount = -1;
 
   private readonly ISettingsController p_settingsCtrl;
-  private readonly IDocumentStorage p_documentStorage;
+  private readonly IDbProvider p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
   private readonly ITilesCache p_tilesCache;
@@ -60,7 +50,7 @@ internal class ApiControllerV0 : GenericController
 
   public ApiControllerV0(
     ISettingsController _settingsCtrl,
-    IDocumentStorage _documentStorage,
+    IDbProvider _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
@@ -91,7 +81,6 @@ internal class ApiControllerV0 : GenericController
     _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
     _app.MapPost(ReqPaths.STORE_PATH_POINT, StoreRoomPointPostAsync);
     _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPaths);
-    _app.MapPost(ReqPaths.START_NEW_PATH, StartNewPathAsync);
     _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateNewPointAsync);
     _app.MapGet(ReqPaths.LIST_ROOM_POINTS, GetRoomPoints);
     _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
@@ -206,18 +195,6 @@ internal class ApiControllerV0 : GenericController
       return Results.BadRequest("Y is null!");
     if (_z is null)
       return Results.BadRequest("Z is null!");
-    if (Enum.TryParse<MapTileType>(_mapType, ignoreCase: true, out var oldMapType))
-    {
-      _mapType = oldMapType switch
-      {
-        MapTileType.OpenCycleMap => Consts.TILE_TYPE_OPENCYCLEMAP,
-        MapTileType.TfOutdoors => Consts.TILE_TYPE_TF_OUTDOORS,
-        MapTileType.StravaHeatmapRide => Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE,
-        MapTileType.StravaHeatmapRun => Consts.TILE_TYPE_STRAVA_HEATMAP_RUN,
-        MapTileType.CartoDark => Consts.TILE_TYPE_CARTO_DARK,
-        _ => null
-      };
-    }
 
     if (_mapType == null)
       return BadRequest($"Unknown map type: '{_mapType}'");
@@ -330,7 +307,6 @@ internal class ApiControllerV0 : GenericController
     var now = DateTimeOffset.UtcNow;
 
     var record = new StorageEntry(
-      _roomId,
       _username ?? _roomId,
       _lat.Value,
       _lng.Value,
@@ -340,7 +316,7 @@ internal class ApiControllerV0 : GenericController
       (_battery ?? 0) / 100,
       (_gsmSignal ?? 0) / 100,
       _bearing);
-    p_documentStorage.WriteSimpleDocument($"{_roomId}.{now.ToUnixTimeMilliseconds()}", record);
+    p_documentStorage.Paths.WriteDocument(_roomId, now.ToUnixTimeMilliseconds().ToString(), record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -377,7 +353,6 @@ internal class ApiControllerV0 : GenericController
       return Forbidden("Publishing is forbidden!");
 
     var minInterval = room?.MinPathPointIntervalMs ?? p_settingsCtrl.Settings.Value?.MinPathPointIntervalMs ?? 0u;
-
     var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_req.RoomId}/{_req.Username}";
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
     if (!p_reqRateLimiter.IsReqOk(compositeKey, ip, minInterval))
@@ -388,8 +363,21 @@ internal class ApiControllerV0 : GenericController
 
     var now = DateTimeOffset.UtcNow;
 
-    var record = new StorageEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, _req.Alt, _req.Speed, _req.Acc, _req.Battery, _req.GsmSignal, _req.Bearing);
-    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", record);
+    var sessionKey = $"{_req.RoomId}/{_req.Username}";
+    var sessionDoc = p_documentStorage.GenericData.ReadSimpleDocument<RoomUserSession>(sessionKey);
+    if (sessionDoc == null || sessionDoc.Data.SessionId != _req.SessionId)
+    {
+      log.Info($"New session {_req.SessionId} is started, username '{_req.Username}', wipe: '{_req.WipeOldPath}'");
+      if (_req.WipeOldPath == true)
+        p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
+
+      var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgNewTrackStarted(_req.Username), AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
+      var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
+      await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
+    }
+
+    var record = new StorageEntry(_req.Username, _req.Lat, _req.Lng, _req.Alt, _req.Speed, _req.Acc, _req.Battery, _req.GsmSignal, _req.Bearing);
+    p_documentStorage.Paths.WriteDocument(_req.RoomId, now.ToUnixTimeMilliseconds().ToString(), record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -426,8 +414,8 @@ internal class ApiControllerV0 : GenericController
 
     const int maxReturnEntries = 250;
     var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
-    var documents = p_documentStorage
-      .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{_roomId}.%"), _from: offset ?? null)
+    var documents = p_documentStorage.Paths
+      .ListDocuments<StorageEntry>(_roomId, _from: offset ?? null)
       .OrderBy(_ => _.Created)
       .Take(maxReturnEntries + 1)
       .ToList();
@@ -455,34 +443,6 @@ internal class ApiControllerV0 : GenericController
     return Results.Json(result, ControllersJsonCtx.Default.GetPathResData);
   }
 
-  //[HttpPost(ReqPaths.START_NEW_PATH)]
-  public async Task<IResult> StartNewPathAsync(
-    HttpRequest _httpRequest,
-    [FromBody] StartNewPathReq _req,
-    CancellationToken _ct)
-  {
-    var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqOk(ReqPaths.START_NEW_PATH, ip, 10 * 1000))
-    {
-      log.Warn($"[{ReqPaths.START_NEW_PATH}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
-    }
-
-    var now = DateTimeOffset.UtcNow;
-
-    log.Info($"Requested to start new path, room '{_req.RoomId}', username '{_req.Username}', wipe: '{_req.WipeData}'");
-    if (_req.WipeData)
-      p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
-
-    var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgNewTrackStarted(_req.Username), AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
-    var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
-    await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
-
-    return Results.Ok();
-  }
-
   //[HttpPost(ReqPaths.CREATE_NEW_POINT)]
   public async Task<IResult> CreateNewPointAsync(
     HttpRequest _httpRequest,
@@ -492,7 +452,7 @@ internal class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_NEW_POINT, ip, () => new Ax.Fw.TimeWall(10, TimeSpan.FromSeconds(10))))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_NEW_POINT, ip, () => new TimeWall(10, TimeSpan.FromSeconds(10))))
     {
       log.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -509,7 +469,7 @@ internal class ApiControllerV0 : GenericController
 
     var now = DateTimeOffset.UtcNow;
     var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
-    p_documentStorage.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
+    p_documentStorage.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
@@ -532,7 +492,7 @@ internal class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       log.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -541,7 +501,7 @@ internal class ApiControllerV0 : GenericController
     log.Info($"Got req to **list points** in room __{_roomId}__");
 
     var entries = new List<ListRoomPointsResData>();
-    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_roomId}.%")))
+    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_roomId}.%")))
       entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
 
     return Results.Json(entries, ControllersJsonCtx.Default.IReadOnlyListListRoomPointsResData);
@@ -559,7 +519,7 @@ internal class ApiControllerV0 : GenericController
     var log = GetLog(_httpRequest);
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new Ax.Fw.TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       log.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -567,10 +527,10 @@ internal class ApiControllerV0 : GenericController
 
     log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
-    foreach (var entry in p_documentStorage.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%")))
+    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%")))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
-        p_documentStorage.DeleteSimpleDocument<GeoPointEntry>(entry.Key);
+        p_documentStorage.GenericData.DeleteSimpleDocument<GeoPointEntry>(entry.Key);
         break;
       }
 
@@ -601,8 +561,8 @@ internal class ApiControllerV0 : GenericController
     while (!_ct.IsCancellationRequested && !roomIdValid)
     {
       roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
-      roomIdValid = !p_documentStorage
-        .ListSimpleDocuments<StorageEntry>(new LikeExpr($"{roomId}.%"))
+      roomIdValid = !p_documentStorage.Paths
+        .ListDocumentsMeta(roomId)
         .Any();
     }
 

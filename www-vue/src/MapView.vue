@@ -274,7 +274,7 @@ function setupDataFlow(_map: L.Map) {
         timeout: 30000,
       };
 
-      const onUpdate = (_pos: GeolocationPosition) => updateCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy);
+      const onUpdate = (_pos: GeolocationPosition) => updateCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy, _pos.coords.heading);
       navigator.geolocation.watchPosition(onUpdate, undefined, options);
       console.log(`Subscribed to geolocation updates`);
     } else {
@@ -657,18 +657,28 @@ function updateSelectedPath(_user: string | null, _log: boolean = true) {
 }
 (window as any).updateSelectedPath = updateSelectedPath;
 
-function updateCurrentLocation(_lat: number, _lng: number, _accuracy: number): boolean {
+function updateCurrentLocation(
+  _lat: number, 
+  _lng: number, 
+  _accuracy: number, 
+  _arc: number | null
+): boolean {
   if (p_appCtx.currentLocation === null) {
     p_appCtx.currentLocation = new CurrentLocationControl(p_map.value!);
     console.log("Created current location marker");
   }
 
-  p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy);
+  p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy, _arc, p_map.value?.getBounds());
 
-  console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}`)
+  console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}; heading: ${_arc}`)
   return true;
 }
-(window as any).updateCurrentLocation = updateCurrentLocation;
+(window as any).updateCurrentLocation = (
+  _lat: number, 
+  _lng: number, 
+  _accuracy: number
+) => updateCurrentLocation(_lat, _lng, _accuracy, null);
+(window as any).updateCurrentLocation2 = updateCurrentLocation;
 
 </script>
 

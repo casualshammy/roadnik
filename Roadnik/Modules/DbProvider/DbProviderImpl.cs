@@ -62,6 +62,7 @@ internal class DbProviderImpl : IDbProvider
             var roomId = split[0];
             var timestamp = split[1];
             Paths.WriteDocument(roomId, timestamp, entry.Data);
+            GenericData.DeleteDocuments(entry.Namespace, entry.Key);
             ++convertedCount;
           }
           if (convertedCount > 0)

@@ -199,6 +199,24 @@ public partial class MainPage : CContentPage
       .Where(_ => !_)
       .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
 
+    p_pageIsVisible
+      .Subscribe(_visible =>
+      {
+        if (_visible)
+          Compass.Default.Start(SensorSpeed.UI, true);
+        else
+          Compass.Default.Stop();
+      }, p_lifetime);
+
+    var compassProp = Observable
+      .FromEventPattern<CompassChangedEventArgs>(_ => Compass.Default.ReadingChanged += _, _ => Compass.Default.ReadingChanged -= _)
+      .Select(_ =>
+      {
+        var reading = _.EventArgs.Reading.HeadingMagneticNorth;
+        return reading;
+      })
+      .ToProperty(p_lifetime, default);
+
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj
       .CombineLatest(p_pageIsVisible)
@@ -242,10 +260,11 @@ public partial class MainPage : CContentPage
                   var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
                   var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
                   var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
+                  var arc = compassProp.Value.ToString(CultureInfo.InvariantCulture);
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {
-                    var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation({lat},{lng},{acc})");
+                    var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation2({lat},{lng},{acc},{arc})");
                     if (result == null)
                       p_log.Warn($"Can't send current location to web app: js code returned false");
                   });

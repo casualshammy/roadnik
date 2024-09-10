@@ -661,16 +661,16 @@ function updateCurrentLocation(
   _lat: number, 
   _lng: number, 
   _accuracy: number, 
-  _arc: number | null
+  _directionDeg: number | null
 ): boolean {
   if (p_appCtx.currentLocation === null) {
     p_appCtx.currentLocation = new CurrentLocationControl(p_map.value!);
     console.log("Created current location marker");
   }
 
-  p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy, _arc, p_map.value?.getBounds());
+  p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy, _directionDeg, p_map.value?.getBounds());
 
-  console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}; heading: ${_arc}`)
+  console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}; heading: ${_directionDeg?.toFixed(0)}`);
   return true;
 }
 (window as any).updateCurrentLocation = (

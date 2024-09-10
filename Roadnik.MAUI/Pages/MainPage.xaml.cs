@@ -202,20 +202,21 @@ public partial class MainPage : CContentPage
     p_pageIsVisible
       .Subscribe(_visible =>
       {
+        if (!Compass.Default.IsSupported)
+          return;
+
         if (_visible)
           Compass.Default.Start(SensorSpeed.UI, true);
         else
           Compass.Default.Stop();
       }, p_lifetime);
 
-    var compassProp = Observable
+    var compassHeadingFlow = Observable
       .FromEventPattern<CompassChangedEventArgs>(_ => Compass.Default.ReadingChanged += _, _ => Compass.Default.ReadingChanged -= _)
-      .Select(_ =>
-      {
-        var reading = _.EventArgs.Reading.HeadingMagneticNorth;
-        return reading;
-      })
-      .ToProperty(p_lifetime, default);
+      .Select(_ => (float?)_.EventArgs.Reading.HeadingMagneticNorth)
+      .StartWith((float?)null)
+      .Replay(1)
+      .RefCount();
 
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj
@@ -244,14 +245,18 @@ public partial class MainPage : CContentPage
 
             webAppLocationProvider.Location
               .Buffer(TimeSpan.FromSeconds(1))
-              .SelectAsync(async (_locs, _ct) =>
+              .CombineLatest(compassHeadingFlow)
+              .Sample(TimeSpan.FromMilliseconds(250))
+              .SelectAsync(async (_tuple, _ct) =>
               {
                 if (_ct.IsCancellationRequested)
                   return;
-                if (_locs.Count == 0)
+
+                var (locations, compassHeading) = _tuple;
+                if (locations.Count == 0)
                   return;
 
-                var loc = _locs
+                var loc = locations
                   .OrderBy(_ => _.Accuracy)
                   .First();
 
@@ -260,7 +265,7 @@ public partial class MainPage : CContentPage
                   var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
                   var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
                   var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
-                  var arc = compassProp.Value.ToString(CultureInfo.InvariantCulture);
+                  var arc = compassHeading?.ToString(CultureInfo.InvariantCulture) ?? "null";
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {

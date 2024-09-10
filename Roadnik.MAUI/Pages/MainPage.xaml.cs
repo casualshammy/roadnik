@@ -199,25 +199,7 @@ public partial class MainPage : CContentPage
       .Where(_ => !_)
       .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
 
-    p_pageIsVisible
-      .Subscribe(_visible =>
-      {
-        if (!Compass.Default.IsSupported)
-          return;
-
-        if (_visible)
-          Compass.Default.Start(SensorSpeed.UI, true);
-        else
-          Compass.Default.Stop();
-      }, p_lifetime);
-
-    var compassHeadingFlow = Observable
-      .FromEventPattern<CompassChangedEventArgs>(_ => Compass.Default.ReadingChanged += _, _ => Compass.Default.ReadingChanged -= _)
-      .Select(_ => (float?)_.EventArgs.Reading.HeadingMagneticNorth)
-      .StartWith((float?)null)
-      .Replay(1)
-      .RefCount();
-
+    var compassProvider = Container.Locate<ICompassProvider>();
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj
       .CombineLatest(p_pageIsVisible)
@@ -245,8 +227,8 @@ public partial class MainPage : CContentPage
 
             webAppLocationProvider.Location
               .Buffer(TimeSpan.FromSeconds(1))
-              .CombineLatest(compassHeadingFlow)
-              .Sample(TimeSpan.FromMilliseconds(250))
+              .CombineLatest(compassProvider.Values)
+              .Sample(TimeSpan.FromMilliseconds(100))
               .SelectAsync(async (_tuple, _ct) =>
               {
                 if (_ct.IsCancellationRequested)

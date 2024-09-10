@@ -4,6 +4,7 @@ using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Modules.CompassProvider;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using Roadnik.MAUI.Modules.HttpClientProvider;
 using Roadnik.MAUI.Modules.LocationReporter;
@@ -68,6 +69,7 @@ public static partial class MauiProgram
       .AddModule<PushMessagesControllerImpl, IPushMessagesController>()
       .AddModule<TelephonyMgrProviderImpl, ITelephonyMgrProvider>()
       .AddModule<WebDataCacheImpl, IWebDataCache>()
+      .AddModule<CompassProviderImpl, ICompassProvider>()
       .ActivateOnStart<IPushMessagesController>();
 
     Container = appDeps;

@@ -368,6 +368,9 @@ internal class ApiControllerV0 : GenericController
     if (sessionDoc == null || sessionDoc.Data.SessionId != _req.SessionId)
     {
       log.Info($"New session {_req.SessionId} is started, username '{_req.Username}', wipe: '{_req.WipeOldPath}'");
+
+      p_documentStorage.GenericData.WriteSimpleDocument(sessionKey, new RoomUserSession(_req.SessionId));
+
       if (_req.WipeOldPath == true)
         p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
 

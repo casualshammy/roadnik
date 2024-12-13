@@ -244,7 +244,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     p_enableFlow
       .WithLatestFrom(prefsFlow)
       .ObserveOn(locationProviderStateScheduler)
-      .HotAlive(_lifetime, (_tuple, _life) =>
+      .HotAlive(_lifetime, locationProviderStateScheduler, (_tuple, _life) =>
       {
         var (enabled, conf) = _tuple;
         if (!enabled)

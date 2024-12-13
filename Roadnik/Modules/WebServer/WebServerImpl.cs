@@ -8,6 +8,7 @@ using Roadnik.Server.Modules.WebServer.Controllers;
 using Roadnik.Server.Modules.WebServer.Middlewares;
 using Roadnik.Server.Toolkit;
 using System.Net;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
@@ -72,9 +73,11 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_fCMPublisher = _fCMPublisher;
     p_httpClientProvider = _httpClientProvider;
 
+    var confScheduler = new EventLoopScheduler();
+
     _settingsController.Settings
       .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind))
-      .HotAlive(_lifetime, (_conf, _life) =>
+      .HotAlive(_lifetime, confScheduler, (_conf, _life) =>
       {
         if (_conf == null)
           return;

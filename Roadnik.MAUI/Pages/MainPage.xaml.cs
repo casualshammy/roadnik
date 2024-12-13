@@ -203,7 +203,7 @@ public partial class MainPage : CContentPage
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj
       .CombineLatest(p_pageIsVisible)
-      .HotAlive(p_lifetime, (_tuple, _life) =>
+      .HotAlive(p_lifetime, null, (_tuple, _life) =>
       {
         var (webAppTracksReady, pageIsVisible) = _tuple;
         if (!webAppTracksReady || !pageIsVisible)

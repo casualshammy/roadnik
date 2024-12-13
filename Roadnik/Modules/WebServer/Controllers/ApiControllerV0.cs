@@ -305,6 +305,7 @@ internal class ApiControllerV0 : GenericController
     }
 
     var now = DateTimeOffset.UtcNow;
+    var nowUnixMs = now.ToUnixTimeMilliseconds();
 
     var record = new StorageEntry(
       _username ?? _roomId,
@@ -316,9 +317,9 @@ internal class ApiControllerV0 : GenericController
       (_battery ?? 0) / 100,
       (_gsmSignal ?? 0) / 100,
       _bearing);
-    p_documentStorage.Paths.WriteDocument(_roomId, now.ToUnixTimeMilliseconds().ToString(), record);
+    p_documentStorage.Paths.WriteDocument(_roomId, nowUnixMs, record);
 
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
 
     if (room?.MaxPointsPerPath > 0)
       p_roomsController.EnqueuePathTruncate(_roomId, _username ?? _roomId);
@@ -362,6 +363,7 @@ internal class ApiControllerV0 : GenericController
     }
 
     var now = DateTimeOffset.UtcNow;
+    var nowUnixMs = now.ToUnixTimeMilliseconds();
 
     var sessionKey = $"{_req.RoomId}/{_req.Username}";
     var sessionDoc = p_documentStorage.GenericData.ReadSimpleDocument<RoomUserSession>(sessionKey);
@@ -372,7 +374,7 @@ internal class ApiControllerV0 : GenericController
       p_documentStorage.GenericData.WriteSimpleDocument(sessionKey, new RoomUserSession(_req.SessionId));
 
       if (_req.WipeOldPath == true)
-        p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, now.ToUnixTimeMilliseconds());
+        p_roomsController.EnqueueUserWipe(_req.RoomId, _req.Username, nowUnixMs);
 
       var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgNewTrackStarted(_req.Username), AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
       var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
@@ -380,9 +382,9 @@ internal class ApiControllerV0 : GenericController
     }
 
     var record = new StorageEntry(_req.Username, _req.Lat, _req.Lng, _req.Alt, _req.Speed, _req.Acc, _req.Battery, _req.GsmSignal, _req.Bearing);
-    p_documentStorage.Paths.WriteDocument(_req.RoomId, now.ToUnixTimeMilliseconds().ToString(), record);
+    p_documentStorage.Paths.WriteDocument(_req.RoomId, nowUnixMs, record);
 
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(now.ToUnixTimeMilliseconds()), _ct);
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
 
     if (room?.MaxPointsPerPath > 0)
       p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.Username);

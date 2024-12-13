@@ -35,9 +35,11 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     IHttpClientProvider _httpClientProvider,
     ILog _log)
   {
+    var confPropScheduler = new EventLoopScheduler();
+
     p_cacheProp = _settingsController.Settings
       .WhereNotNull()
-      .Alive(_lifetime, (_conf, _life) =>
+      .Alive(_lifetime, confPropScheduler, (_conf, _life) =>
       {
         if (_conf.MapTilesCacheSize == null || _conf.MapTilesCacheSize <= 0)
         {

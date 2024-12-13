@@ -9,6 +9,7 @@ using Roadnik.Server.Data;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -44,10 +45,11 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     var log = _log["rooms-controller"];
 
     var semaphore = new SemaphoreSlim(1, 1);
+    var cleanerScheduler = new EventLoopScheduler();
 
     _settingsController.Settings
       .WhereNotNull()
-      .HotAlive(_lifetime, (_conf, _life) =>
+      .HotAlive(_lifetime, cleanerScheduler, (_conf, _life) =>
       {
         Observable
           .Interval(TimeSpan.FromHours(1))

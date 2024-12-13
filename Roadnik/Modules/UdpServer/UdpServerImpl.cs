@@ -6,6 +6,7 @@ using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Server.Interfaces;
 using System.Net;
 using System.Net.Sockets;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 
 namespace Roadnik.Server.Modules.UdpServer;
@@ -27,9 +28,11 @@ internal class UdpServerImpl : IUdpServer, IAppModule<IUdpServer>
     IReadOnlyLifetime _lifetime,
     ILog _log)
   {
+    var confScheduler = new EventLoopScheduler();
+
     _settingsController.Settings
       .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind, _?.UdpTransportPublicKeyPath, _?.UdpTransportPrivateKeyPath, _?.UdpTransportPrivateKeyPassphrase))
-      .HotAlive(_lifetime, (_conf, _life) =>
+      .HotAlive(_lifetime, confScheduler, (_conf, _life) =>
       {
         if (_conf == null)
           return;

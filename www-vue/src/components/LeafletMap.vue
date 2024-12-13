@@ -3,6 +3,10 @@
 </template>
 
 <script setup lang="ts">
+import markerIconUrl from "../../node_modules/leaflet/dist/images/marker-icon.png";
+import markerIconRetinaUrl from "../../node_modules/leaflet/dist/images/marker-icon-2x.png";
+import markerShadowUrl from "../../node_modules/leaflet/dist/images/marker-shadow.png";
+
 import 'leaflet/dist/leaflet.css';
 import { computed, nextTick, onMounted, shallowRef, watch } from 'vue';
 import L from 'leaflet';
@@ -21,6 +25,11 @@ const map = shallowRef<L.Map>();
 const location = computed(() => props.location);
 
 onMounted(() => {
+  L.Icon.Default.prototype.options.iconUrl = markerIconUrl;
+  L.Icon.Default.prototype.options.iconRetinaUrl = markerIconRetinaUrl;
+  L.Icon.Default.prototype.options.shadowUrl = markerShadowUrl;
+  L.Icon.Default.imagePath = "";
+
   nextTick(() => {
     initLeafletMap();
   })

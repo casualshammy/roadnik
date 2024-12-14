@@ -1,99 +1,35 @@
-name: Build and Publish
-
+name: Build & Publish Server in Docker + Build & Publish MAUI App
 on:
   push:
     branches:
       - 'dev/**'
 
 jobs:
-  windows-server:
-
-    runs-on: windows-latest
+  backend-docker:
+    runs-on: ubuntu-latest
     permissions: write-all
-      
+
     steps:
-    - name: Get dotnet
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
-      
     - name: Install Python3   
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
         architecture: 'x64'
-      
-    - name: Install Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: '>=18.16.0'
-      
-    - uses: actions/checkout@v3
+
+    - name: Checkout
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
 
-    - name: Build Server Windows x64
-      run: python build-server.py --platform win-x64
+    - name: Build Docker Images
+      run: python build-server.py --platform linux-amd64
+      env:
+        DOCKER_REPO: ${{ secrets.DOCKER_REPO }} 
+        DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }} 
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
 
-    - name: Create Github Release
-      uses: softprops/action-gh-release@v1
-      with:
-        draft: false
-        prerelease: false
-        files: |
-          artifacts/*.zip
-        name: "Release ${{ env.tag }}"
-        tag_name: "${{ env.tag }}"
-        fail_on_unmatched_files: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        generate_release_notes: false
-
-  linux-server:
-
-    runs-on: ubuntu-20.04
-    permissions: write-all
-      
-    steps:
-    - name: Get dotnet
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '8.0.x'
-      
-    - name: Install Python3   
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        architecture: 'x64'
-      
-    - name: Install Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: '>=18.16.0'
-      
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-        fetch-depth: 0
-
-    - name: Build Server Ubuntu 18.04 x64
-      run: python build-server.py --platform linux-x64
-
-    - name: Create Github Release
-      uses: softprops/action-gh-release@v1
-      with:
-        draft: false
-        prerelease: false
-        files: |
-          artifacts/*.zip
-        name: "Release ${{ env.tag }}"
-        tag_name: "${{ env.tag }}"
-        fail_on_unmatched_files: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        generate_release_notes: false
-
-  android-client:
-
+  app-android:
     runs-on: windows-latest
     permissions: write-all
       

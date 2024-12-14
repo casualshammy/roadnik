@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-dotnet
 WORKDIR /app
 RUN apt-get update && apt-get -y install clang zlib1g-dev
 COPY ./ ./
-RUN dotnet publish -r linux-x64 -o out Roadnik
+RUN dotnet publish -r linux-x64 -o out Roadnik && chmod +x /app/out/roadnik-server
 
 FROM node:20-alpine AS build-node
 WORKDIR /app
@@ -16,6 +16,5 @@ EXPOSE 8080
 WORKDIR /app
 COPY --from=build-dotnet /app/out ./bin
 COPY --from=build-node /app/dist ./www
-RUN chmod +x /app/bin/roadnik-server
 
 ENTRYPOINT ["/app/bin/roadnik-server"]

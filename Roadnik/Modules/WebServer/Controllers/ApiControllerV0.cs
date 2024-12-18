@@ -1,8 +1,6 @@
 ﻿using Ax.Fw;
-using Ax.Fw.Cache;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
-using Ax.Fw.Storage.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.ReqRes.PushMessages;
@@ -217,6 +215,7 @@ internal class ApiControllerV0 : GenericController
     {
       Consts.TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       Consts.TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+      Consts.TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
       Consts.TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
       Consts.TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",

@@ -13,30 +13,36 @@ export function GetMapLayers(): L.Control.LayersObject {
 	const apiUrl = import.meta.env.MODE === "development" ? "http://localhost:5544" : "..";
 
 	// OpenStreetMap
-	const osmUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-		osmAttribution = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)',
-		osm = new L.TileLayer(osmUrl, { maxZoom: 18, attribution: osmAttribution });
+	const osmAttr = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)';
+	const osm = new L.TileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: osmAttr, noWrap: true });
 	// OpenCycleMap
 	const cyclemapUrl = `${apiUrl}/map-tile?type=opencyclemap&x={x}&y={y}&z={z}`,
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
-		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
+		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
 	// Outdoors Map
 	const outdoorsMapUrl = `${apiUrl}/map-tile?type=tf-outdoors&x={x}&y={y}&z={z}`,
-		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution });
+		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
+
+	// Thunderstorm Transport
+	const transportLayer = new L.TileLayer(
+		`${apiUrl}/map-tile?type=tf-transport&x={x}&y={y}&z={z}`, 
+		{ maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
+	
 	// CartoDb Dark
 	const cartoDbDarkUrl = `${apiUrl}/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
 		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
-		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution });
-	// Googly Hybrid
-	const googleUrl = "https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-		googleAttribution = "© Google",
-		google = new L.TileLayer(googleUrl, { maxZoom: 28, attribution: googleAttribution });
+		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution, noWrap: true });
+	// Google Hybrid
+	const google = new L.TileLayer(
+		"https://mts.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+		{ maxZoom: 28, attribution: "© Google", noWrap: true });
 
 	const result = {
 		[DEFAULT_MAP_LAYER]: osm,
 		"OpenCycleMap": cyclemap,
 		//"Landscape": landscapeMap,
 		"Outdoors": outdoorsMap,
+		"Transport": transportLayer,
 		"Carto Dark": cartoDbDark,
 		"Google Hybrid": google,
 	};

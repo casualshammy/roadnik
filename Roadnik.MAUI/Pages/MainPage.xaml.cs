@@ -247,7 +247,7 @@ public partial class MainPage : CContentPage
                   var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
                   var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
                   var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
-                  var arc = compassHeading?.ToString(CultureInfo.InvariantCulture) ?? "null";
+                  var arc = loc.Course?.ToString(CultureInfo.InvariantCulture) ?? compassHeading?.ToString(CultureInfo.InvariantCulture) ?? "null";
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {

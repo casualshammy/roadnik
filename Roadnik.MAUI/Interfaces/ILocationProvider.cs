@@ -9,6 +9,6 @@ internal interface ILocationProvider
   IObservable<string> ProviderEnabled { get; }
 
   void StopLocationWatcher();
-  void StartLocationWatcher(IReadOnlyList<string> _providers, out IReadOnlySet<string> _providersEnabled);
+  void StartLocationWatcher(IReadOnlyList<string> _providers);
   static abstract Task<LocationData?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
 }

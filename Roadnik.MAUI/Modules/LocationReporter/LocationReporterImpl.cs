@@ -281,7 +281,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider] :
           [Android.Locations.LocationManager.GpsProvider]);
 
-        locationProvider.StartLocationWatcher(providers, out var locProvidersEnabled);
+        locationProvider.StartLocationWatcher(providers);
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });

@@ -49,66 +49,59 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(IReadOnlyList<string> _providers, out IReadOnlySet<string> _providersEnabled)
+  public void StartLocationWatcher(IReadOnlyList<string> _providers)
   {
-    var result = new HashSet<string>();
-    _providersEnabled = result;
-
     if (!p_locationService.IsLocationEnabled)
       return;
 
-    lock (p_startStopLock)
+    MainThread.BeginInvokeOnMainThread(() =>
     {
-      p_logger.Info($"Starting updates, desired providers: '{string.Join(", ", _providers)}'");
-      foreach (var provider in _providers.Distinct())
+      lock (p_startStopLock)
       {
-        if (!p_locationService.IsProviderEnabled(provider))
-          continue;
+        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'...");
+        var result = new HashSet<string>();
 
-        result.Add(provider);
-
-        var success = MainThreadExt.Invoke(() =>
+        foreach (var provider in _providers.Distinct())
         {
+          if (!p_locationService.IsProviderEnabled(provider))
+            continue;
+
           try
           {
             p_locationService.RequestLocationUpdates(provider, 1000L, 0f, this);
+            result.Add(provider);
             p_logger.Info($"Subscribed to '{provider}' provider");
           }
           catch (Exception ex)
           {
             p_logger.Error($"Can't subscribe to provider '{provider}'", ex);
           }
-        });
+        }
 
-        if (!success)
-          p_logger.Error($"Subscription routine is timed out");
+        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'");
       }
-      p_logger.Info($"Updates are requested, providers: '{string.Join(", ", result)}'");
-    }
+    });
   }
 
   public void StopLocationWatcher()
   {
-    lock (p_startStopLock)
-    {
-      p_logger.Info($"Stopping updates...");
+    p_logger.Info($"Unsubscribing from location updates...");
 
-      var success = MainThreadExt.Invoke(() =>
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+      lock (p_startStopLock)
       {
         try
         {
           p_locationService.RemoveUpdates(this);
-          p_logger.Info($"Updates are stopped");
+          p_logger.Info($"Unsubscribed from location updates");
         }
         catch (Exception ex)
         {
-          p_logger.Error($"Can't remove updates!", ex);
+          p_logger.Error($"Can't unsubscribe from location updates!", ex);
         }
-      }, TimeSpan.FromSeconds(5));
-
-      if (!success)
-        p_logger.Error($"Un-subscription routine is timed out");
-    }
+      }
+    });
   }
 
   public void OnLocationChanged(Android.Locations.Location _location)

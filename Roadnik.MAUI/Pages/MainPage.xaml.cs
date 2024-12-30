@@ -9,9 +9,9 @@ using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
 using QRCoder;
 using Roadnik.Common.ReqRes;
-using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.JsonBridge;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
@@ -23,12 +23,11 @@ using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text.Json;
-using L = Roadnik.MAUI.Resources.Strings.AppResources;
-using static Roadnik.MAUI.Data.Consts;
-using Roadnik.MAUI.Data.JsonBridge;
-using System.Web;
 using System.Text;
+using System.Text.Json;
+using System.Web;
+using static Roadnik.MAUI.Data.Consts;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Pages;
 
@@ -222,7 +221,7 @@ public partial class MainPage : CContentPage
             else
               providers = [Android.Locations.LocationManager.GpsProvider, Android.Locations.LocationManager.NetworkProvider];
 
-            webAppLocationProvider.StartLocationWatcher(providers, out _);
+            webAppLocationProvider.StartLocationWatcher(providers);
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
             webAppLocationProvider.Location

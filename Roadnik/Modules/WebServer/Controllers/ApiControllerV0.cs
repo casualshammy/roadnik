@@ -18,6 +18,7 @@ using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Toolkit;
 using System.Collections.Frozen;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
@@ -71,6 +72,7 @@ internal class ApiControllerV0 : GenericController
   public override void RegisterPaths(WebApplication _app)
   {
     _app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
+    _app.MapGet(ReqPaths.GET_VERSION, GetVersion);
     _app.MapGet("/", GetIndexFile);
     _app.MapGet("{**path}", GetStaticFile);
     _app.MapGet("/ping", () => Results.Ok());
@@ -108,6 +110,8 @@ internal class ApiControllerV0 : GenericController
 
     return Task.FromResult(adminApiKey == apiKeyStr);
   }
+
+  public IResult GetVersion() => Json(Consts.AppVersion);
 
   //[HttpGet("/")]
   public IResult GetIndexFile(HttpRequest _httpRequest) => GetStaticFile(_httpRequest, "/");

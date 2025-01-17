@@ -14,6 +14,7 @@ using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.Settings;
 using Roadnik.Modules.TilesCache;
 using Roadnik.Modules.WebSocketController;
+using Roadnik.Server.Data;
 using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
@@ -120,7 +121,7 @@ public partial class Program
       .ActivateOnStart<IUdpServer>()
       .Build();
 
-    var version = new SerializableVersion(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
+    var version = Consts.AppVersion;
     log.Info($"\n" +
       $"-------------------------------------------\n" +
       $"**Roadnik Server Started**\n" +

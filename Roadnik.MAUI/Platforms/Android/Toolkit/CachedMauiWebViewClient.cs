@@ -3,6 +3,7 @@ using Ax.Fw;
 using Ax.Fw.SharedTypes.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Frozen;
 using System.Text.RegularExpressions;
@@ -51,9 +52,17 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     if (url == null)
       return base.ShouldInterceptRequest(_view, _request);
 
+    string? overrideCacheKey = null;
+    var indexFileMatch = GetIndexRegex().Match(url);
+    if (indexFileMatch.Success)
+    {
+      var version = indexFileMatch.Groups[1].Value;
+      overrideCacheKey = $"index-page.{version}";
+    }
+
     try
     {
-      if (p_webDataCache.TryGetStream(url, out var cachedStream, out var mime))
+      if (p_webDataCache.TryGetStream(overrideCacheKey ?? url, out var cachedStream, out var mime))
       {
         if (mime == MimeTypes.Bin)
           mime = null;
@@ -66,10 +75,10 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
       p_log?.Error($"Can't get cached resource for url '{url}'", ex);
     }
 
-    if (p_cacheRegexes.All(_ => !_.IsMatch(url)))
+    if (p_cacheRegexes.All(_ => !_.IsMatch(url)) && !indexFileMatch.Success)
       return base.ShouldInterceptRequest(_view, _request);
 
-    p_webDataCache.EnqueueDownload(url);
+    p_webDataCache.EnqueueDownload(url, overrideCacheKey);
     return base.ShouldInterceptRequest(_view, _request);
   }
 
@@ -85,5 +94,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex CacheRegexOsm();
   [GeneratedRegex(@"://unpkg\.com/.+?\.png$")]
   private static partial Regex GetUnpkgPngRegex();
+  [GeneratedRegex(@"/r/\?id=.+?&" + Consts.INDEX_URL_VERSION_QUERY_NAME + @"=(\d+\.\d+\.\d+)")]
+  private static partial Regex GetIndexRegex();
 
 }

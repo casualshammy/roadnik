@@ -1,4 +1,7 @@
-﻿namespace Roadnik.Server.Data;
+﻿using Ax.Fw;
+using System.Reflection;
+
+namespace Roadnik.Server.Data;
 
 internal static class Consts
 {
@@ -8,4 +11,7 @@ internal static class Consts
   public const string TILE_TYPE_TF_OUTDOORS = "tf-outdoors";
   public const string TILE_TYPE_TF_TRANSPORT = "tf-transport";
   public const string TILE_TYPE_CARTO_DARK = "carto-dark";
+
+  public static SerializableVersion AppVersion { get; } = new(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
+
 }

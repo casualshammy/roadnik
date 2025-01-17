@@ -1,4 +1,5 @@
-﻿using Roadnik.Common.ReqRes;
+﻿using Ax.Fw;
+using Roadnik.Common.ReqRes;
 using Roadnik.Data;
 using Roadnik.Server.Data.ReqRes;
 using System.Text.Json.Serialization;
@@ -16,4 +17,5 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(DeleteRoomReq))]
 [JsonSerializable(typeof(IReadOnlyList<RoomInfo>))]
 [JsonSerializable(typeof(IsUdpTransportAvailableRes))]
+[JsonSerializable(typeof(SerializableVersion))]
 internal partial class ControllersJsonCtx : JsonSerializerContext { }

@@ -1,6 +1,7 @@
 ﻿using Android.OS;
 using Android.Provider;
 using AndroidX.Core.App;
+using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
@@ -9,6 +10,7 @@ using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
 using QRCoder;
 using Roadnik.Common.ReqRes;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.JsonBridge;
@@ -18,6 +20,7 @@ using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -111,9 +114,9 @@ public partial class MainPage : CContentPage
         var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
         var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
         var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
-        var url = GetMapAddress(serverAddress, roomId, mapState);
-        if (url == null)
+        if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
         {
+          p_log.Warn("Remote server url is null");
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           bindingCtx.IsRemoteServerNotResponding = true;
           return;
@@ -123,11 +126,23 @@ public partial class MainPage : CContentPage
 
         try
         {
+          var versionUrl = $"{serverAddress!.TrimEnd('/')}{ReqPaths.GET_VERSION}";
+          p_log.Info($"Probing remote server {versionUrl}...");
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
           using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
-          using var req = new HttpRequestMessage(HttpMethod.Get, url);
+          using var req = new HttpRequestMessage(HttpMethod.Get, versionUrl);
           using var res = await p_httpClient.Value.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
           res.EnsureSuccessStatusCode();
+
+          var remoteVersion = await res.Content.ReadFromJsonAsync<SerializableVersion>(_ct);
+          p_log.Info($"Remote server {versionUrl} is online; version: {remoteVersion}");
+          if (remoteVersion == null)
+            throw new InvalidDataException("Can't parse version of remote server!");
+
+          var url = GetMapAddress(serverAddress, roomId, mapState, remoteVersion.ToString());
+          if (url == null)
+            throw new InvalidDataException("Remote server url is null");
+
           p_bindingCtx.WebViewUrl = url;
           bindingCtx.IsRemoteServerNotResponding = false;
         }
@@ -588,7 +603,8 @@ public partial class MainPage : CContentPage
   private static string? GetMapAddress(
     string? _serverAddress,
     string? _roomId,
-    HostMsgMapStateData? _mapState = null)
+    HostMsgMapStateData? _mapState = null,
+    string? _version = null)
   {
     if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
       return null;
@@ -618,7 +634,10 @@ public partial class MainPage : CContentPage
     if (_mapState?.SelectedPathWindowLeft != null)
       query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
     if (_mapState?.SelectedPathWindowBottom != null)
-      query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture); ;
+      query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture);
+
+    if (!_version.IsNullOrEmpty())
+      query[INDEX_URL_VERSION_QUERY_NAME] = _version;
 
     urlBuilder.Query = query.ToString();
 

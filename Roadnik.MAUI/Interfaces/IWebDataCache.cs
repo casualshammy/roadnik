@@ -7,7 +7,10 @@ public interface IWebDataCache
 {
   FileCache Cache { get; }
 
-  void EnqueueDownload(string _url);
+  void EnqueueDownload(
+    string _url, 
+    string? _key = null);
+
   bool TryGetStream(
     string _url,
     [NotNullWhen(true)] out Stream? _stream,

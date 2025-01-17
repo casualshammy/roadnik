@@ -33,4 +33,7 @@ internal static class Consts
   public const int PUSH_MSG_NEW_POINT = 10000;
   public const int PUSH_MSG_NEW_TRACK = 10001;
 
+
+  public const string INDEX_URL_VERSION_QUERY_NAME = "backend-version";
+
 }

@@ -12,6 +12,8 @@ namespace Roadnik.MAUI.Modules.MapDataCache;
 
 internal class WebDataCacheImpl : IWebDataCache, IAppModule<IWebDataCache>
 {
+  record DownloadTask(string Url, string? Key);
+
   public static IWebDataCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
@@ -20,7 +22,7 @@ internal class WebDataCacheImpl : IWebDataCache, IAppModule<IWebDataCache>
       ILog _logger) => new WebDataCacheImpl(_lifetime, _httpClientProvider, _logger));
   }
 
-  private readonly Subject<string> p_workFlow = new();
+  private readonly Subject<DownloadTask> p_workFlow = new();
   private readonly ILog p_log;
 
   private WebDataCacheImpl(
@@ -55,27 +57,28 @@ internal class WebDataCacheImpl : IWebDataCache, IAppModule<IWebDataCache>
           p_log.Warn($"Work in queue: '{workRemain}'");
       })
       .ObserveOn(scheduler)
-      .SelectAsync(async (_url, _ct) =>
+      .SelectAsync(async (_task, _ct) =>
       {
-        if (_url == null)
+        var (url, key) = _task;
+        if (url == null)
           return;
-        if (cache.IsKeyExists(_url, out _, out _))
+        if (cache.IsKeyExists(key ?? url, out _, out _))
           return;
 
         try
         {
-          using var res = await _httpClientProvider.Value.GetAsync(_url, _ct);
+          using var res = await _httpClientProvider.Value.GetAsync(url, _ct);
           res.EnsureSuccessStatusCode();
 
           using var stream = await res.Content.ReadAsStreamAsync(_ct);
           var mime = res.Content.Headers.ContentType?.ToString();
-          await cache.StoreAsync(_url, stream, mime, true, _ct);
+          await cache.StoreAsync(key ?? url, stream, mime, true, _ct);
 
-          p_log.Info($"Url is downloaded: '{_url}'");
+          p_log.Info($"Url is downloaded: '{url}' (key: {key})");
         }
         catch (Exception ex)
         {
-          p_log.Error($"Can't download '{_url}'", ex);
+          p_log.Error($"Can't download '{url}' (key: {key})", ex);
         }
       }, scheduler)
       .Do(_ => Interlocked.Decrement(ref workCounter))
@@ -86,10 +89,12 @@ internal class WebDataCacheImpl : IWebDataCache, IAppModule<IWebDataCache>
 
   public FileCache Cache { get; }
 
-  public void EnqueueDownload(string _url)
+  public void EnqueueDownload(
+    string _url,
+    string? _key = null)
   {
-    p_log.Info($"New url for downloading: '{_url}'");
-    p_workFlow.OnNext(_url);
+    p_log.Info($"New url for downloading: '{_url}' (key: {_key})");
+    p_workFlow.OnNext(new (_url, _key));
   }
 
   public bool TryGetStream(

@@ -11,7 +11,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 
-namespace Roadnik.Modules.TilesCache;
+namespace Roadnik.Server.Modules.TilesCache;
 
 internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 {
@@ -57,7 +57,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 
         return cache;
       })
-      .ToProperty(_lifetime, null);
+      .ToNullableProperty(_lifetime, null);
 
     var downloadScheduler = new EventLoopScheduler();
     p_downloadTaskSubj

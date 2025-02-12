@@ -59,7 +59,7 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
           return null;
         }
       })
-      .ToProperty(_lifetime);
+      .ToNullableProperty(_lifetime);
   }
 
   public async Task<bool> SendDataAsync(string _topic, PushMsg _pushMsg, CancellationToken _ct)

@@ -33,7 +33,7 @@ public static partial class MauiProgram
     if (!Directory.Exists(logsFolder))
       Directory.CreateDirectory(logsFolder);
 
-    var log = lifetime.ToDisposeOnEnded(new GenericLog(null));
+    var log = lifetime.ToDisposeOnEnded(new GenericLog());
     log.AttachFileLog(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1));
     log.AttachAndroidLog("roadnik");
 

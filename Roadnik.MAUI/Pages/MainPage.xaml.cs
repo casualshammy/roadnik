@@ -475,7 +475,7 @@ public partial class MainPage : CContentPage
     var latLng = _msg.Data.Deserialize<LatLng>(GenericSerializationOptions.CaseInsensitive);
     if (latLng == null)
     {
-      p_log.ErrorJson($"Tried to create new point, but could not parse location!", _msg.Data);
+      p_log.Error($"Tried to create new point, but could not parse location!\n{_msg.Data}");
       return;
     }
 

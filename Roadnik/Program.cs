@@ -1,35 +1,27 @@
 ﻿using Ax.Fw;
-using Ax.Fw.App;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
-using Ax.Fw.Storage;
-using Ax.Fw.Storage.Data;
-using Ax.Fw.Storage.Interfaces;
 using FluentArgs;
 using Roadnik.Interfaces;
 using Roadnik.Modules.ReqRateLimiter;
 using Roadnik.Modules.RoomsController;
-using Roadnik.Modules.Settings;
-using Roadnik.Modules.TilesCache;
 using Roadnik.Modules.WebSocketController;
 using Roadnik.Server.Data;
-using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
+using Roadnik.Server.Modules.Settings;
+using Roadnik.Server.Modules.TilesCache;
 using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
-namespace Roadnik;
+namespace Roadnik.Server;
 
 public partial class Program
 {
@@ -77,7 +69,7 @@ public partial class Program
     //  }, false, )
 
     var lifetime = new Lifetime();
-    using var log = new GenericLog(null);
+    using var log = new GenericLog();
     log.AttachConsoleLog();
 
     var settingsController = new SettingsController(configFilePath, log["settings-ctrl"], lifetime);

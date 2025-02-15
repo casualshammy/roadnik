@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Roadnik.MAUI.Controls.OptionsHeader">
+
+    <Grid
+        Margin="0, 20, 0, 0"
+        HeightRequest="40"
+        ColumnDefinitions="*"
+        RowDefinitions="*, 2">
+        <Label 
+            x:Name="TitleLabel"
+            Margin="20, 0"
+            FontAttributes="Bold"
+            FontSize="Medium"
+            VerticalOptions="Center"
+            TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
+        <Rectangle 
+            Grid.Column="0"
+            Grid.Row="1"
+            Grid.ColumnSpan="2"
+            VerticalOptions="End"
+            Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+            Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
+            HeightRequest="2"/>
+    </Grid>
+</ContentView>

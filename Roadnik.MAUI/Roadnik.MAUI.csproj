@@ -69,6 +69,18 @@
 				<Compile Update="Controls\AgreementsPopup.xaml.cs">
 						<DependentUpon>AgreementsPopup.xaml</DependentUpon>
 				</Compile>
+				<Compile Update="Controls\OptionsHeader.xaml.cs">
+				  <DependentUpon>OptionsHeader.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Controls\OptionsHorizontalLine.xaml.cs">
+				  <DependentUpon>OptionsHorizontalLine.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Controls\OptionsSwitch.xaml.cs">
+				  <DependentUpon>OptionsSwitch.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Controls\OptionsTextItem.xaml.cs">
+				  <DependentUpon>OptionsTextItem.xaml</DependentUpon>
+				</Compile>
 				<Compile Update="Pages\MainPage.xaml.cs">
 						<DependentUpon>MainPage.xaml</DependentUpon>
 				</Compile>
@@ -99,7 +111,16 @@
 				<MauiXaml Update="Controls\AgreementsPopup.xaml">
 						<Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
-				<MauiXaml Update="Controls\OptionsItem.xaml">
+				<MauiXaml Update="Controls\OptionsHeader.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\OptionsHorizontalLine.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\OptionsTextItem.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\OptionsSwitch.xaml">
 						<Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
 				<MauiXaml Update="Pages\MainPage.xaml">

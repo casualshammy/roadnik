@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Roadnik.MAUI.Controls.OptionsTextItem">
+
+    <VerticalStackLayout 
+        VerticalOptions="Center"
+        Margin="20, 0, 20, 0">
+        <VerticalStackLayout.GestureRecognizers>
+            <TapGestureRecognizer x:Name="TapCommandHandler" />
+        </VerticalStackLayout.GestureRecognizers>
+        <Label 
+            x:Name="TitleLabel"/>
+        <Label
+            x:Name="DetailsTextLabel"
+            TextColor="{StaticResource Secondary}"
+            FontSize="14"/>
+    </VerticalStackLayout>
+</ContentView>

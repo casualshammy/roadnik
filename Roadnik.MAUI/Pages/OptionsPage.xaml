@@ -15,153 +15,72 @@
     <ScrollView>
         <VerticalStackLayout>
             <!-- SERVER SETTINGS  -->
-            <Grid
-                Margin="20, 0"
-                HeightRequest="40">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="2" />
-                </Grid.RowDefinitions>
-                <Label 
-                    Text="{x:Static l:AppResources.page_options_connection_settings}"
-                    FontAttributes="Bold"
-                    FontSize="Medium"
-                    VerticalOptions="Center"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
-                <Rectangle 
-                    Grid.Column="0"
-                    Grid.Row="1"
-                    Grid.ColumnSpan="2"
-                    VerticalOptions="End"
-                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                    Margin="-20, 0"
-                    HeightRequest="2"/>
-            </Grid>
-            <controls:OptionsItem
-                Grid.Row="1"
-                Title="{x:Static l:AppResources.page_options_username}"
+            <controls:OptionsHeader
+                Title="{x:Static l:AppResources.page_options_connection_settings}" />
+            <controls:OptionsTextItem
+                Title="{x:Static l:AppResources.page_options_serverAddress}"
                 DetailsText="{Binding ServerName}"
                 TapCommand="{Binding ServerAddressCommand}"/>
-            <controls:OptionsItem
-                Grid.Row="2"
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextItem
                 Title="{x:Static l:AppResources.page_options_roomId}"
                 DetailsText="{Binding RoomId}"
                 TapCommand="{Binding RoomIdCommand}"/>
-            <controls:OptionsItem
-                Grid.Row="3"
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextItem
                 Title="{x:Static l:AppResources.page_options_username}"
                 DetailsText="{Binding Nickname}"
-                TapCommand="{Binding UsernameCommand}"
-                ShowBottomLine="False"/>
+                TapCommand="{Binding UsernameCommand}"/>
 
             <!-- TRACKING SETTINGS  -->
-            <Grid Margin="20, 0"
-                  HeightRequest="40">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="2" />
-                </Grid.RowDefinitions>
-                <Label 
-                Text="{x:Static l:AppResources.page_options_tracking}"
-                    FontAttributes="Bold"
-                    FontSize="Medium"
-                VerticalOptions="Center"
-                TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
-                <Rectangle 
-                Grid.Column="0"
-                Grid.Row="1"
-                Grid.ColumnSpan="2"
-                VerticalOptions="End"
-                Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                Margin="-20, 0"
-                HeightRequest="2"/>
-            </Grid>
-            <controls:OptionsItem
-                Grid.Row="5"
+            <controls:OptionsHeader
+                Title="{x:Static l:AppResources.page_options_tracking}" />
+            <controls:OptionsTextItem
                 Title="Time interval between reported trackpoints"
                 DetailsText="{Binding MinimumTime}"
-                TapCommand="{Binding MinimumIntervalCommand }"/>
-            <controls:OptionsItem
-                Grid.Row="6"
+                TapCommand="{Binding MinimumIntervalCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextItem
                 Title="Distance between reported trackpoints"
                 DetailsText="{Binding MinimumDistance}"
-                TapCommand="{Binding MinimumDistanceCommand }"/>
-            <controls:OptionsItem
-                Grid.Row="7"
+                TapCommand="{Binding MinimumDistanceCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextItem
                 Title="Trackpoint reporting condition"
                 DetailsText="{Binding TrackpointReportingConditionText}"
-                TapCommand="{Binding TrackpointReportingConditionCommand }"/>
-            <controls:OptionsItem
-                Grid.Row="8"
+                TapCommand="{Binding TrackpointReportingConditionCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextItem
                 Title="{x:Static l:AppResources.page_options_tracking_required_accuracy}"
                 DetailsText="{Binding MinAccuracy}"
-                TapCommand="{Binding MinAccuracyCommand }"/>
-            <controls:OptionsItem
+                TapCommand="{Binding MinAccuracyCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsSwitch
                 x:Name="p_lowPowerMode"
-                Grid.Row="9"
                 Title="{x:Static l:AppResources.page_options_low_power_mode}"
                 DetailsText="{x:Static l:AppResources.page_options_low_power_mode_hint}"
-                ShowSwitch="True"
                 SwitchTapped="{Binding LowPowerModeCommand}"/>
-            <controls:OptionsItem
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsSwitch
                 x:Name="p_deleteOldRouteOnNew"
-                Grid.Row="10"
                 Title="{x:Static l:AppResources.page_options_delete_old_route_title}"
                 DetailsText="{x:Static l:AppResources.page_options_delete_old_route_desc}"
-                ShowSwitch="True"
-                SwitchTapped="{Binding WipeOldTrackOnNewCommand}"
-                ShowBottomLine="False"/>
+                SwitchTapped="{Binding WipeOldTrackOnNewCommand}"/>
 
             <!-- NOTIFICATIONS -->
-            <Grid Margin="20, 0"
-                  HeightRequest="40">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="2" />
-                </Grid.RowDefinitions>
-                <Label 
-                    Text="{x:Static l:AppResources.page_options_notifications}"
-                    FontAttributes="Bold"
-                    FontSize="Medium"
-                    VerticalOptions="Center"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
-                <Rectangle 
-                    Grid.Column="0"
-                    Grid.Row="1"
-                    Grid.ColumnSpan="2"
-                    VerticalOptions="End"
-                    Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                    Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-                    Margin="-20, 0"
-                    HeightRequest="2"/>
-            </Grid>
-            <controls:OptionsItem
+            <controls:OptionsHeader
+                Title="{x:Static l:AppResources.page_options_notifications}" />
+            <controls:OptionsSwitch
                 x:Name="p_notifyNewTrack"
-                Grid.Row="14"
                 Title="{x:Static l:AppResources.page_options_notifications_new_track_title}"
                 DetailsText="{x:Static l:AppResources.page_options_notifications_new_track_desc}"
-                ShowSwitch="True"
-                SwitchTapped="{Binding NotifyNewTrackCommand}"
-                ShowBottomLine="True"/>
-            <controls:OptionsItem
+                SwitchTapped="{Binding NotifyNewTrackCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsSwitch
                 x:Name="p_notifyNewPoint"
-                Grid.Row="15"
                 Title="{x:Static l:AppResources.page_options_notifications_new_point_title}"
                 DetailsText="{x:Static l:AppResources.page_options_notifications_new_point_desc}"
-                ShowSwitch="True"
-                SwitchTapped="{Binding NotifyNewPointCommand}"
-                ShowBottomLine="False"/>
+                SwitchTapped="{Binding NotifyNewPointCommand}"/>
         </VerticalStackLayout>
 
     </ScrollView>

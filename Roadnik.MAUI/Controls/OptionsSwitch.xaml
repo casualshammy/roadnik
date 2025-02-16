@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Roadnik.MAUI.Controls.OptionsSwitch">
+
+    <Grid 
+        Margin="20, 0, 20, 0"
+        ColumnDefinitions="*, 50"
+        RowDefinitions="*">
+        <Grid.GestureRecognizers>
+            <TapGestureRecognizer x:Name="TapCommandHandler" />
+        </Grid.GestureRecognizers>
+        <VerticalStackLayout
+            Grid.Column="0"
+            Grid.Row="0"
+            VerticalOptions="Center">
+            <Label x:Name="TitleLabel"/>
+            <Label
+                x:Name="DetailsTextLabel"
+                TextColor="{StaticResource Secondary}"
+                FontSize="14"/>
+        </VerticalStackLayout>
+        <Switch
+            Grid.Column="1"
+            Grid.Row="0"
+            x:Name="Switch"
+            Toggled="Switch_Toggled"
+            HorizontalOptions="End"
+            VerticalOptions="Center"/>
+    </Grid>
+</ContentView>

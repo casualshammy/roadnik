@@ -17,22 +17,23 @@ internal class DebugCorsMiddleware
 
   public async Task Invoke(HttpContext _httpCtx)
   {
-#if !DEBUG
-    await p_next(_httpCtx);
-    return;
-#endif
-
-    var remoteAddress = _httpCtx.Connection.RemoteIpAddress?.ToString();
-    if (remoteAddress != "localhost" && remoteAddress != "127.0.0.1")
+    var req = _httpCtx.Request;
+    var originHeader = req.Headers.Origin.FirstOrDefault();
+    if (originHeader == default)
     {
       await p_next(_httpCtx);
       return;
     }
 
-    var req = _httpCtx.Request;
+    if (!originHeader.StartsWith("http://localhost") && !originHeader.StartsWith("https://webapp.local"))
+    {
+      await p_next(_httpCtx);
+      return;
+    }
+
     if (req.Method == "OPTIONS")
     {
-      _httpCtx.Response.Headers.Append("Access-Control-Allow-Origin", "http://localhost:5173");
+      _httpCtx.Response.Headers.Append("Access-Control-Allow-Origin", $"{originHeader}");
       _httpCtx.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
       _httpCtx.Response.Headers.Append("Access-Control-Allow-Headers", "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization");
       _httpCtx.Response.Headers.Append("Access-Control-Allow-Credentials", "true");
@@ -44,7 +45,7 @@ internal class DebugCorsMiddleware
       return;
     }
 
-    _httpCtx.Response.Headers.Append("Access-Control-Allow-Origin", "http://localhost:5173");
+    _httpCtx.Response.Headers.Append("Access-Control-Allow-Origin", $"{originHeader}");
     _httpCtx.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     _httpCtx.Response.Headers.Append("Access-Control-Allow-Headers", "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization");
     _httpCtx.Response.Headers.Append("Access-Control-Allow-Credentials", "true");

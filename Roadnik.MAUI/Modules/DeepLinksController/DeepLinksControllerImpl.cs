@@ -1,6 +1,7 @@
 ﻿using Ax.Fw.DependencyInjection;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Platforms.Android;
 using System.Text.RegularExpressions;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -14,9 +15,6 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
       IPagesController _pagesController, 
       IPreferencesStorage _preferencesStorage) => new DeepLinksControllerImpl(_pagesController, _preferencesStorage));
   }
-
-  public const string AndroidExtraKey = "open-link";
-  private static readonly Regex p_urlRegex = UrlRegex();
 
   private readonly IPagesController p_pagesController;
   private readonly IPreferencesStorage p_preferencesStorage;
@@ -32,7 +30,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
 
   public async Task NewDeepLinkAsync(string _url, CancellationToken _ct = default)
   {
-    var match = p_urlRegex.Match(_url);
+    var match = UrlRegex().Match(_url);
     if (!match.Success)
     {
       await Toast
@@ -47,7 +45,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
       p_mainPageStarted = true;
       var intent = new Android.Content.Intent(Android.App.Application.Context, typeof(MainActivity));
       intent.SetFlags(Android.Content.ActivityFlags.ClearTask | Android.Content.ActivityFlags.NewTask);
-      intent.PutExtra(AndroidExtraKey, _url);
+      intent.PutExtra(DEEP_LINK_INTENT_KEY, _url);
       Android.App.Application.Context.StartActivity(intent);
       return;
     }

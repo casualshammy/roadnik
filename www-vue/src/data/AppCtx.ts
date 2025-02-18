@@ -7,6 +7,7 @@ import Cookies from "js-cookie";
 import { ref, type Ref } from 'vue';
 
 export type AppCtx = {
+  readonly apiUrl: string;
   readonly isRoadnikApp: boolean;
   readonly roomId: string | null;
   readonly userColors: Map<string, string>;
@@ -22,7 +23,19 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
 
+  let apiUrlParam = urlParams.get('api_url');
+  let apiUrl: string;
+  if (import.meta.env.MODE === "development")
+    apiUrl = "http://localhost:5544";
+  else if (apiUrlParam !== null)
+    apiUrl = apiUrlParam;
+  else
+    apiUrl = window.document.location.origin.replace(/\/+$/, "");
+    
+  console.log(`API url: ${apiUrl}`);
+
   const isRoadnikApp = navigator.userAgent.includes("RoadnikApp");
+  console.log(`Is Roadnik app: ${isRoadnikApp}`);
 
   const cookieLatLngZoom = !isRoadnikApp ? MapToolkit.GetMapStateFromCookie(Cookies.get(Consts.COOKIE_MAP_STATE)) : null;
   let lat = parseFloat(urlParams.get('lat') ?? "");
@@ -119,6 +132,7 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
   }
 
   return {
+    apiUrl: apiUrl,
     isRoadnikApp: isRoadnikApp,
     roomId: urlParams.get('id'),
     lastTracksOffset: 0,

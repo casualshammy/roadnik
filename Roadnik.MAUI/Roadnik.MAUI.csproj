@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
 				<TargetFramework>net8.0-android</TargetFramework>
@@ -50,6 +50,7 @@
 				<PackageReference Include="CommunityToolkit.Maui" Version="[2.0.0]" />
 				<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
 				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.100" />
+				<PackageReference Include="MimeLut" Version="1.1.3" />
 				<PackageReference Include="QRCoder" Version="1.6.0" />
 
 				<PackageReference Include="Xamarin.Firebase.Iid" Version="[121.1.0]" />
@@ -69,6 +70,9 @@
 				<Compile Update="Controls\AgreementsPopup.xaml.cs">
 						<DependentUpon>AgreementsPopup.xaml</DependentUpon>
 				</Compile>
+				<Compile Update="Controls\Spinner.xaml.cs">
+				  <DependentUpon>Spinner.xaml</DependentUpon>
+				</Compile>
 				<Compile Update="Controls\OptionsHeader.xaml.cs">
 				  <DependentUpon>OptionsHeader.xaml</DependentUpon>
 				</Compile>
@@ -86,6 +90,9 @@
 				</Compile>
 				<Compile Update="Pages\BookmarksPage.xaml.cs">
 						<DependentUpon>BookmarksPage.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Pages\LocationPermissionPage.xaml.cs">
+				  <DependentUpon>LocationPermissionPage.xaml</DependentUpon>
 				</Compile>
 				<Compile Update="Pages\OptionsPage.xaml.cs">
 						<DependentUpon>OptionsPage.xaml</DependentUpon>
@@ -111,6 +118,9 @@
 				<MauiXaml Update="Controls\AgreementsPopup.xaml">
 						<Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
+				<MauiXaml Update="Controls\Spinner.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
 				<MauiXaml Update="Controls\OptionsHeader.xaml">
 				  <Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
@@ -129,6 +139,17 @@
 				<MauiXaml Update="Pages\BookmarksPage.xaml">
 						<Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
+				<MauiXaml Update="Pages\LocationPermissionPage.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
 		</ItemGroup>
+
+		<ItemGroup>
+		  <Folder Include="Resources\Raw\webApp\" />
+		</ItemGroup>
+
+		<Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(Configuration)' == 'Debug'">
+		  <Exec Command="call _prebuild_webapp.bat" />
+		</Target>
 
 </Project>

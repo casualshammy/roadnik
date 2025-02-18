@@ -1,13 +1,14 @@
 import os
 import re
 import shutil
-import build_common.packages
-import build_common.git as git
+from build_common import web, packages, git, utils
 import argparse
 
 signingPassword = os.environ['ANDROID_SIGNING_KEY_PASSWORD']
 
 sourceDirName = "Roadnik.MAUI"
+webAppSrcDir = os.path.join(os.getcwd(), "www-vue")
+webAppTargetDir = os.path.join(os.getcwd(), sourceDirName, "Resources\\Raw\\webApp")
 
 argParser = argparse.ArgumentParser()
 argParser.add_argument('--framework', type=str, default= "net8.0-android", required=False, help='Target framework of server')
@@ -40,14 +41,19 @@ print(f"===========================================", flush=True)
 print(f"===========================================", flush=True)
 print(f"Adjusting csproj version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
-build_common.packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version, "ApplicationDisplayVersion")
-build_common.packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), str(commitIndex), "ApplicationVersion")
+packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version, "ApplicationDisplayVersion")
+packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), str(commitIndex), "ApplicationVersion")
+
+print(f"===========================================", flush=True)
+print(f"Building web app using node...", flush=True)
+print(f"===========================================", flush=True)
+web.npm_build(webAppSrcDir, webAppTargetDir, "build", "room")
 
 print(f"===========================================", flush=True)
 print(f"Compiling client for framework '{framework}'...", flush=True)
 print(f"===========================================", flush=True)
-build_common.packages.callThrowIfError("dotnet workload install maui")
-build_common.packages.callThrowIfError(f"dotnet publish {sourceDirName} -c Release -p:AndroidSigningKeyPass={signingPassword} -p:AndroidSigningStorePass={signingPassword} -f {framework} -o \"{outputDir}\"")
+utils.callThrowIfError("dotnet workload install maui")
+utils.callThrowIfError(f"dotnet publish {sourceDirName} -c Release -p:AndroidSigningKeyPass={signingPassword} -p:AndroidSigningStorePass={signingPassword} -f {framework} -o \"{outputDir}\"")
 
 print(f"===========================================", flush=True)
 print(f"Creating pkg...", flush=True)
@@ -65,5 +71,5 @@ print(f"Done!", flush=True)
 print(f"===========================================", flush=True)
 
 git.create_tag_and_push(version)
-build_common.packages.callThrowIfError("git stash")
+utils.callThrowIfError("git stash")
 git.merge("main", git.get_current_branch_name(), True, "casualshammy", True)

@@ -2,17 +2,17 @@
 
 namespace Roadnik.Server.Modules.WebServer.Middlewares;
 
-internal class DebugCorsMiddleware
+internal class CorsMiddleware
 {
   private readonly RequestDelegate p_next;
   private readonly ILog p_log;
 
-  public DebugCorsMiddleware(
+  public CorsMiddleware(
     RequestDelegate _next,
     ILog _log)
   {
     p_next = _next;
-    p_log = _log["debug-cors"];
+    p_log = _log["cors"];
   }
 
   public async Task Invoke(HttpContext _httpCtx)
@@ -25,7 +25,7 @@ internal class DebugCorsMiddleware
       return;
     }
 
-    if (!originHeader.StartsWith("http://localhost") && !originHeader.StartsWith("https://webapp.local"))
+    if (!originHeader.StartsWith("http://localhost") && originHeader != "https://webapp.local" && originHeader != "http://webapp.local:5544")
     {
       await p_next(_httpCtx);
       return;
@@ -41,7 +41,7 @@ internal class DebugCorsMiddleware
       _httpCtx.Response.Headers.Append("Content-Type", "text/plain; charset=utf-8");
       _httpCtx.Response.Headers.ContentLength = 0;
       _httpCtx.Response.StatusCode = 204;
-      p_log.Info($"__OPTIONS__ request is **handled**");
+      p_log.Info($"__OPTIONS__ request is **handled** for origin __'{originHeader}'__");
       return;
     }
 
@@ -50,7 +50,7 @@ internal class DebugCorsMiddleware
     _httpCtx.Response.Headers.Append("Access-Control-Allow-Headers", "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization");
     _httpCtx.Response.Headers.Append("Access-Control-Allow-Credentials", "true");
     _httpCtx.Response.Headers.Append("Access-Control-Expose-Headers", "Content-Length,Content-Range");
-    p_log.Info($"__CORS headers__ were **injected**");
+    p_log.Info($"__CORS headers__ were **injected** for origin __'{originHeader}'__");
     await p_next(_httpCtx);
   }
 }

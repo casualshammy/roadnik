@@ -8,6 +8,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using System.Text.Json;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI;
 
@@ -44,7 +45,7 @@ public class MainActivity : MauiAppCompatActivity
         p_pushMsgCtrl?.AddPushMsg(@event);
     }
 
-    var url = Intent?.Extras?.GetString(DeepLinksControllerImpl.AndroidExtraKey);
+    var url = Intent?.Extras?.GetString(DEEP_LINK_INTENT_KEY);
     if (!string.IsNullOrWhiteSpace(url))
       app.Container.Locate<IDeepLinksController>().NewDeepLinkAsync(url);
   }

@@ -1,7 +1,8 @@
 ﻿using Android.Webkit;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.MAUI.Toolkit;
 
-namespace Roadnik.MAUI.Toolkit;
+namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 class ConsoleWebChromeClient : WebChromeClient
 {

@@ -28,7 +28,7 @@ public partial class InteractableWebView
         else if (!handlerRef.TryGetTarget(out var handler))
           p_log?.Error($"Can't get the instance of {typeof(WebViewHandler)}: ref target is null");
         else
-          nativeWebView.SetWebViewClient(new CachedMauiWebViewClient(handler, p_tilesCache, p_log, p_storage));
+          nativeWebView.SetWebViewClient(new CachedMauiWebViewClient(handler, p_tilesCache, p_log));
       }
     }
 

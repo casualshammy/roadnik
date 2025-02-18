@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
     xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+    xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
+    xmlns:converters="clr-namespace:Roadnik.MAUI.Converters"
     x:Class="Roadnik.MAUI.Pages.MainPage"
     Title="{Binding Title}"
     Shell.NavBarIsVisible="False">
@@ -11,6 +13,9 @@
     <ContentPage.BindingContext>
         <views:MainPageViewModel />
     </ContentPage.BindingContext>
+    <ContentPage.Resources>
+        <converters:MultiBoolConverter x:Key="MultiBoolConverter" />
+    </ContentPage.Resources>
 
     <AbsoluteLayout>
         <!--CanShowRegilarView-->
@@ -23,12 +28,16 @@
             Navigating="MainWebView_Navigating"
             Navigated="MainWebView_Navigated">
         </tookit:InteractableWebView>
-        <ActivityIndicator 
-            IsVisible="{Binding CanShowRegilarView}"
-            Color="{StaticResource Primary}"
-            AbsoluteLayout.LayoutFlags="All"
-            AbsoluteLayout.LayoutBounds="0.5, 0.5, .30, .30"
-            IsRunning="{Binding IsSpinnerRequired}" />
+        <controls:Spinner
+            AbsoluteLayout.LayoutFlags="PositionProportional"
+            AbsoluteLayout.LayoutBounds="0.5, 0.1, 50, 50">
+            <controls:Spinner.IsVisible>
+                <MultiBinding Converter="{StaticResource MultiBoolConverter}">
+                    <Binding Path="CanShowRegilarView" />
+                    <Binding Path="IsSpinnerRequired" />
+                </MultiBinding>
+            </controls:Spinner.IsVisible>
+        </controls:Spinner>
 
         <Grid
             IsVisible="{Binding CanShowRegilarView}"

@@ -1,5 +1,6 @@
 ﻿using Ax.Fw;
 using Ax.Fw.Extensions;
+using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.ReqRes;
@@ -18,10 +19,8 @@ using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Toolkit;
 using System.Collections.Frozen;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.WebServer.Controllers;
 
@@ -91,7 +90,6 @@ internal class ApiControllerV0 : GenericController
     _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
     _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
     _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
-    _app.MapGet(ReqPaths.IS_UDP_AVAILABLE, IsUdpTransportAvailableAsync);
   }
 
   public override Task<bool> AuthAsync(HttpRequest _req, CancellationToken _ct)
@@ -632,22 +630,6 @@ internal class ApiControllerV0 : GenericController
   {
     var valid = ReqResUtil.IsRoomIdValid(_roomId);
     return valid ? Results.Ok() : Results.StatusCode((int)HttpStatusCode.NotAcceptable);
-  }
-
-  //[HttpGet(ReqPaths.IS_UDP_AVAILABLE)]
-  public async Task<IResult> IsUdpTransportAvailableAsync(CancellationToken _ct)
-  {
-    var publicKeyPath = p_settingsCtrl.Settings.Value?.UdpTransportPublicKeyPath;
-    if (publicKeyPath == null || !File.Exists(publicKeyPath))
-      return Results.StatusCode((int)HttpStatusCode.NotImplemented);
-
-    var port = p_settingsCtrl.Settings.Value?.PortBind;
-    if (port == null)
-      return Results.StatusCode((int)HttpStatusCode.NotImplemented);
-
-    var hashString = await ReqResUtil.GetUdpPublicKeyHashAsync(publicKeyPath, _ct);
-    var ipAddress = await p_httpClientProvider.Value.GetStringAsync("https://api.ipify.org/?format=text");
-    return Json(new IsUdpTransportAvailableRes($"{ipAddress}:{port}", hashString));
   }
 
   //[HttpGet("/ws")]

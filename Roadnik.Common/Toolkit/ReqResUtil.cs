@@ -1,11 +1,7 @@
-﻿using Ax.Fw.Extensions;
+﻿using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Web;
 
 namespace Roadnik.Common.Toolkit;
 
@@ -25,7 +21,7 @@ public static partial class ReqResUtil
 
   public static string UserAgent { get; } = "RoadnikApp";
 
-  public static HashSet<string> ValidMapTypes { get; } = ["cycle", "transport", "landscape", "outdoors"];
+  public static FrozenSet<string> ValidMapTypes { get; } = new[] { "cycle", "transport", "landscape", "outdoors" }.ToFrozenSet();
 
   public static bool IsRoomIdValid([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_roomIdRegex.IsMatch(_data);
   public static bool IsUsernameSafe([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinUsernameLength && _data.Length <= MaxUsernameLength && p_safeUsernameRegex.IsMatch(_data);
@@ -44,14 +40,6 @@ public static partial class ReqResUtil
         sb.Append(c);
     }
     return sb.ToString();
-  }
-
-  public static async Task<string> GetUdpPublicKeyHashAsync(string _path, CancellationToken _ct)
-  {
-    using var fileStream = File.Open(_path, FileMode.Open, FileAccess.Read);
-    var hash = await SHA256.HashDataAsync(fileStream, _ct);
-    var hashString = BitConverter.ToString(hash);
-    return hashString;
   }
 
   [GeneratedRegex(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled)]

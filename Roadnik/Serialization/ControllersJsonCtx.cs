@@ -16,6 +16,5 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(RoomInfo))]
 [JsonSerializable(typeof(DeleteRoomReq))]
 [JsonSerializable(typeof(IReadOnlyList<RoomInfo>))]
-[JsonSerializable(typeof(IsUdpTransportAvailableRes))]
 [JsonSerializable(typeof(SerializableVersion))]
 internal partial class ControllersJsonCtx : JsonSerializerContext { }

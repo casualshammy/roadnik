@@ -3,10 +3,10 @@ using Ax.Fw;
 using Ax.Fw.SharedTypes.Interfaces;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
-using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Frozen;
 using System.Text.RegularExpressions;
+using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
@@ -19,7 +19,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
 
   private static readonly Regex[] p_cacheRegexes = [
     CacheRegexMapTiles(),
-    CacheRegexFavicon(),
     CacheRegexJs(),
     CacheRegexCss(),
     CacheRegexOsm(),
@@ -27,17 +26,14 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   ];
 
   private readonly IWebDataCache? p_webDataCache;
-  private readonly IPreferencesStorage? p_storage;
   private readonly ILog? p_log;
 
   public CachedMauiWebViewClient(
     WebViewHandler _handler,
     IWebDataCache? _tilesCache,
-    ILog? _log,
-    IPreferencesStorage? _storage) : base(_handler)
+    ILog? _log) : base(_handler)
   {
     p_webDataCache = _tilesCache;
-    p_storage = _storage;
     p_log = _log?["cached-web-view-client"];
   }
 
@@ -52,17 +48,30 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     if (url == null)
       return base.ShouldInterceptRequest(_view, _request);
 
-    string? overrideCacheKey = null;
-    var indexFileMatch = GetIndexRegex().Match(url);
-    if (indexFileMatch.Success)
+    if (GetLocalIndexRegex().IsMatch(url))
     {
-      var version = indexFileMatch.Groups[1].Value;
-      overrideCacheKey = $"index-page.{version}";
+      var context = global::Android.App.Application.Context;
+      var stream = context.Assets?.Open("webApp/index.html");
+      return new WebResourceResponse(MimeTypes.Html, null, 200, "OK", p_corsAllowAllHeaders, stream);
+    }
+
+    var localFileMatch = GetLocalFileRegex().Match(url);
+    if (localFileMatch.Success)
+    {
+      var relativePath = localFileMatch.Groups[1].Value;
+      var ext = Path.GetExtension(relativePath)?.TrimStart('.');
+
+      var context = global::Android.App.Application.Context;
+      var stream = context.Assets?.Open($"webApp/{relativePath}");
+      if (MimeLut.MimeLutTable.TryFindMimeTypeByExtension(ext, out var mime))
+        return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, stream);
+      else
+        return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, stream);
     }
 
     try
     {
-      if (p_webDataCache.TryGetStream(overrideCacheKey ?? url, out var cachedStream, out var mime))
+      if (p_webDataCache.TryGetStream(url, out var cachedStream, out var mime))
       {
         if (mime == MimeTypes.Bin)
           mime = null;
@@ -75,17 +84,15 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
       p_log?.Error($"Can't get cached resource for url '{url}'", ex);
     }
 
-    if (p_cacheRegexes.All(_ => !_.IsMatch(url)) && !indexFileMatch.Success)
+    if (p_cacheRegexes.All(_ => !_.IsMatch(url)))
       return base.ShouldInterceptRequest(_view, _request);
 
-    p_webDataCache.EnqueueDownload(url, overrideCacheKey);
+    p_webDataCache.EnqueueDownload(url);
     return base.ShouldInterceptRequest(_view, _request);
   }
 
   [GeneratedRegex(@"map-tile\?type=[\w\-]+?&x=\d+&y=\d+&z=\d+$")]
   private static partial Regex CacheRegexMapTiles();
-  [GeneratedRegex(@"favicon\.ico$")]
-  private static partial Regex CacheRegexFavicon();
   [GeneratedRegex(@"\.js$")]
   private static partial Regex CacheRegexJs();
   [GeneratedRegex(@"\.css$")]
@@ -94,7 +101,10 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex CacheRegexOsm();
   [GeneratedRegex(@"://unpkg\.com/.+?\.png$")]
   private static partial Regex GetUnpkgPngRegex();
-  [GeneratedRegex(@"/r/\?id=.+?&" + Consts.INDEX_URL_VERSION_QUERY_NAME + @"=(\d+\.\d+\.\d+)")]
-  private static partial Regex GetIndexRegex();
+
+  [GeneratedRegex($@"^https?\://{WEBAPP_HOST}\:?\d*/r/\?id=.+?")]
+  private static partial Regex GetLocalIndexRegex();
+  [GeneratedRegex($@"^https?\://{WEBAPP_HOST}\:?\d*/r/(.+)$")]
+  private static partial Regex GetLocalFileRegex();
 
 }

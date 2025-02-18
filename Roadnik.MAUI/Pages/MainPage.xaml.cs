@@ -126,25 +126,10 @@ public partial class MainPage : CContentPage
 
         try
         {
-          var versionUrl = $"{serverAddress!.TrimEnd('/')}{ReqPaths.GET_VERSION}";
-          p_log.Info($"Probing remote server {versionUrl}...");
-          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-          using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, _ct);
-          using var req = new HttpRequestMessage(HttpMethod.Get, versionUrl);
-          using var res = await p_httpClient.Value.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
-          res.EnsureSuccessStatusCode();
-
-          var remoteVersion = await res.Content.ReadFromJsonAsync<SerializableVersion>(_ct);
-          p_log.Info($"Remote server {versionUrl} is online; version: {remoteVersion}");
-          if (remoteVersion == null)
-            throw new InvalidDataException("Can't parse version of remote server!");
-
-          var url = GetMapAddress(serverAddress, roomId, mapState, remoteVersion.ToString());
-          if (url == null)
-            throw new InvalidDataException("Remote server url is null");
-
+          var url = GetWebAppAddress(serverAddress, roomId, mapState);
           p_bindingCtx.WebViewUrl = url;
           bindingCtx.IsRemoteServerNotResponding = false;
+          //_ = MainThread.InvokeOnMainThreadAsync(async () => await Navigation.PushModalAsync(new LocationPermissionPage()));
         }
         catch (Exception ex)
         {
@@ -408,7 +393,7 @@ public partial class MainPage : CContentPage
   {
     var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
-    var url = GetMapAddress(serverAddress, roomId);
+    var url = GetMapShareAddress(serverAddress, roomId);
     if (url == null)
     {
       await DisplayAlert("Server address or room id is invalid", null, "Ok");
@@ -600,20 +585,28 @@ public partial class MainPage : CContentPage
     context.StartActivity(intent);
   }
 
-  private static string? GetMapAddress(
+  private static string? GetMapShareAddress(
     string? _serverAddress,
-    string? _roomId,
-    HostMsgMapStateData? _mapState = null,
-    string? _version = null)
+    string? _roomId)
   {
     if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
       return null;
 
-    var urlBuilder = new UriBuilder(_serverAddress);
-    urlBuilder.Path = "/r/";
+    var url = $"{_serverAddress.TrimEnd('/')}/r/?id={_roomId}";
+    return url;
+  }
+
+  private static string GetWebAppAddress(
+    string _serverAddress,
+    string? _roomId,
+    HostMsgMapStateData? _mapState = null)
+  {
+    var serverUri = new Uri(_serverAddress);
+    var urlBuilder = new UriBuilder($"{serverUri.Scheme}://{WEBAPP_HOST}:{serverUri.Port}/r/");
 
     var query = HttpUtility.ParseQueryString(urlBuilder.Query);
     query["id"] = _roomId;
+    query["api_url"] = _serverAddress;
     if (_mapState?.Lat != null)
       query["lat"] = _mapState.Lat.ToString(CultureInfo.InvariantCulture);
     if (_mapState?.Lng != null)
@@ -635,9 +628,6 @@ public partial class MainPage : CContentPage
       query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
     if (_mapState?.SelectedPathWindowBottom != null)
       query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture);
-
-    if (!_version.IsNullOrEmpty())
-      query[INDEX_URL_VERSION_QUERY_NAME] = _version;
 
     urlBuilder.Query = query.ToString();
 

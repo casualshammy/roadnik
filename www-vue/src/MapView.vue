@@ -58,7 +58,7 @@ const p_mapLocation = ref<LatLngZoom>({
   zoom: p_mapState.value.zoom
 });
 
-const p_backendApi = new BackendApi();
+const p_backendApi = new BackendApi(p_appCtx.apiUrl);
 const p_hostApi = new HostApi(p_appCtx, p_mapLocation);
 
 const p_markers = new Map<string, L.Marker>();

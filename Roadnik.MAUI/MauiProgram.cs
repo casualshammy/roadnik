@@ -1,6 +1,9 @@
-﻿using Ax.Fw;
+﻿using Android.Nfc;
+using Android.Util;
+using Ax.Fw;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Log;
+using Ax.Fw.SharedTypes.Data.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
 using Roadnik.MAUI.Interfaces;
@@ -34,8 +37,17 @@ public static partial class MauiProgram
       Directory.CreateDirectory(logsFolder);
 
     var log = lifetime.ToDisposeOnEnded(new GenericLog());
-    log.AttachFileLog(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1));
-    log.AttachAndroidLog("roadnik");
+    log
+      .AttachFileLog(() => Path.Combine(logsFolder, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(1))
+      .AttachCustomLog(_entry =>
+      {
+        if (_entry.Type == LogEntryType.INFO)
+          Log.Info(nameof(Roadnik), _entry.Text);
+        else if (_entry.Type == LogEntryType.WARN)
+          Log.Warn(nameof(Roadnik), _entry.Text);
+        else if (_entry.Type == LogEntryType.ERROR)
+          Log.Error(nameof(Roadnik), _entry.Text);
+      });
 
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
     var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());

@@ -26,18 +26,13 @@ type CreateNewPointReq = {
 export class BackendApi {
   private readonly p_apiUrl: string;
 
-  constructor() {
-    if (import.meta.env.MODE === "development")
-      this.p_apiUrl = "http://localhost:5544";
-    else
-    this.p_apiUrl = "..";
+  constructor(_apiUrl: string) {
+    this.p_apiUrl = _apiUrl;
   }
 
   public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => Promise<void>): Websocket {
-    const host = window.document.location.host.replace(/\/+$/, "");
-    const path = window.document.location.pathname.replace(/\/+$/, "");
-    const protocol = window.document.location.protocol === "https:" ? "wss:" : "ws:";
-    const url = import.meta.env.MODE === "development" ? `ws://localhost:5544/ws?roomId=${_roomId}` : `${protocol}//${host}${path}/../ws?roomId=${_roomId}`
+    const wsApiUrl = this.p_apiUrl.replace(/^http/, "ws");
+    const url = `${wsApiUrl}/ws?roomId=${_roomId}`
     const ws = new WebsocketBuilder(url)
       .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
       .withBackoff(new ConstantBackoff(1000))

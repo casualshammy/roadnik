@@ -2,6 +2,9 @@
 
 internal static class Consts
 {
+  public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
+  public const string WEBAPP_HOST = "webapp.local";
+
   public const string PREF_DB_VERSION = "settings.db-version";
   public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";
 
@@ -24,8 +27,6 @@ internal static class Consts
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
   public const string HOST_MSG_MAP_STATE = "host-msg-map-state";
 
-  public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
-
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
   public const int NOTIFICATION_ID_RECORDING = 100;
   public const int NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED = 101;
@@ -33,7 +34,6 @@ internal static class Consts
   public const int PUSH_MSG_NEW_POINT = 10000;
   public const int PUSH_MSG_NEW_TRACK = 10001;
 
-
-  public const string INDEX_URL_VERSION_QUERY_NAME = "backend-version";
+  public const string DEEP_LINK_INTENT_KEY = "open-link";
 
 }

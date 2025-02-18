@@ -246,7 +246,14 @@ public partial class MainPage : CContentPage
                   var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
                   var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
                   var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
-                  var arc = loc.Course?.ToString(CultureInfo.InvariantCulture) ?? compassHeading?.ToString(CultureInfo.InvariantCulture) ?? "null";
+
+                  string arc;
+                  if (loc.Course != null && loc.Speed > 0.55f) // 2 km/h
+                    arc = loc.Course.Value.ToString(CultureInfo.InvariantCulture);
+                  else if (compassHeading != null)
+                    arc = compassHeading.Value.ToString(CultureInfo.InvariantCulture);
+                  else
+                    arc = "null";
 
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {

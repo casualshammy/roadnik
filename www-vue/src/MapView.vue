@@ -40,16 +40,17 @@ import { type LatLngZoom } from './data/LatLngZoom';
 import * as MapToolkit from './toolkit/mapToolkit';
 import { BackendApi } from './api/backendApi';
 import { HostApi } from './api/hostApi';
-import { CreateAppCtx } from './data/AppCtx';
+import { CreateAppCtx, GetApiUrl } from './data/AppCtx';
 import type { TimedStorageEntry, GetPathResData, WsMsgHello, WsMsgPathWiped, WsMsgPathTruncated } from '@/data/backend';
 import * as Consts from './data/Consts';
 import * as CommonToolkit from './toolkit/commonToolkit';
 import { TimeSpan } from './toolkit/timespan';
 import { Pool } from './toolkit/Pool';
 
-const p_mapsData = MapToolkit.GetMapLayers();
-const p_mapOverlays = MapToolkit.GetMapOverlayLayers();
-const p_appCtx = CreateAppCtx(p_mapsData, p_mapOverlays);
+const apiUrl = GetApiUrl();
+const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
+const p_mapOverlays = MapToolkit.GetMapOverlayLayers(apiUrl);
+const p_appCtx = CreateAppCtx(apiUrl, p_mapsData, p_mapOverlays);
 const p_selectedUserState = ref<SelectedUserPopupState>();
 const p_mapState = computed(() => p_appCtx.mapState.value);
 const p_mapLocation = ref<LatLngZoom>({

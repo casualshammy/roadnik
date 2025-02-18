@@ -19,20 +19,28 @@ export type AppCtx = {
   maxTrackPoints: number;
 }
 
-export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Control.LayersObject): AppCtx {
+export function GetApiUrl() {
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+  let apiUrlParam = urlParams.get('api_url');
+
+  if (import.meta.env.MODE === "development")
+    return "http://localhost:5544";
+  else if (apiUrlParam !== null)
+    return apiUrlParam;
+  else
+  return window.document.location.origin.replace(/\/+$/, "");
+}
+
+export function CreateAppCtx(
+  _apiUrl: string,
+  _layers: L.Control.LayersObject,
+  _overlays: L.Control.LayersObject
+): AppCtx {
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
 
-  let apiUrlParam = urlParams.get('api_url');
-  let apiUrl: string;
-  if (import.meta.env.MODE === "development")
-    apiUrl = "http://localhost:5544";
-  else if (apiUrlParam !== null)
-    apiUrl = apiUrlParam;
-  else
-    apiUrl = window.document.location.origin.replace(/\/+$/, "");
-    
-  console.log(`API url: ${apiUrl}`);
+  console.log(`API url: ${_apiUrl}`);
 
   const isRoadnikApp = navigator.userAgent.includes("RoadnikApp");
   console.log(`Is Roadnik app: ${isRoadnikApp}`);
@@ -132,7 +140,7 @@ export function CreateAppCtx(_layers: L.Control.LayersObject, _overlays: L.Contr
   }
 
   return {
-    apiUrl: apiUrl,
+    apiUrl: _apiUrl,
     isRoadnikApp: isRoadnikApp,
     roomId: urlParams.get('id'),
     lastTracksOffset: 0,

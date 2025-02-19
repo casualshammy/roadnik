@@ -13,7 +13,7 @@
             x:Name="TitleLabel"/>
         <Label
             x:Name="DetailsTextLabel"
-            TextColor="{StaticResource Secondary}"
+            TextColor="{StaticResource Gray300}"
             FontSize="14"/>
     </VerticalStackLayout>
 </ContentView>

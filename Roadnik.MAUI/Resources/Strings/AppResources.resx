@@ -174,6 +174,22 @@ Last successful report: %last-successful-report</value>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Username</value>
   </data>
+  <data name="page.location_permission.always" xml:space="preserve">
+    <value>To allow the app to broadcast your location even when the app is minimized or the device screen is off, the app needs your permission.
+
+Please select "Allow all the time" for location permission in the next window.</value>
+  </data>
+  <data name="page.location_permission.app_in_use" xml:space="preserve">
+    <value>To display your location on the map, the app needs your permission.
+
+Please click "Allow" in the next window.</value>
+  </data>
+  <data name="page.location_permission.cancel_btn" xml:space="preserve">
+    <value>I'll pass</value>
+  </data>
+  <data name="page.location_permission.ok_btn" xml:space="preserve">
+    <value>OK, I'm in!</value>
+  </data>
   <data name="page.main.battery_optimization.body" xml:space="preserve">
     <value>To ensure the proper functioning of the Roadnik app, it is necessary to disable battery optimization.</value>
   </data>
@@ -243,5 +259,18 @@ This option also affects the accuracy of the current location displayed on the m
   </data>
   <data name="shell.settings" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="page.options_error.incorrect_server_address" xml:space="preserve">
+    <value>Invalid server address!
+
+Please specify a valid address in the settings.</value>
+  </data>
+  <data name="page.options_error.incorrect_room_id" xml:space="preserve">
+    <value>Invalid room ID!
+
+Please specify the room ID in the settings.</value>
+  </data>
+  <data name="page.options_error.open_settings" xml:space="preserve">
+    <value>Open settings</value>
   </data>
 </root>

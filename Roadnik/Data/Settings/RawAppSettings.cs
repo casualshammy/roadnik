@@ -13,8 +13,5 @@ public record RawAppSettings(
   double? MaxPathPointAgeHours,
   uint? MinPathPointIntervalMs,
   string? FCMServiceAccountJsonPath,
-  string? FCMProjectId,
-  string? UdpTransportPublicKeyPath,
-  string? UdpTransportPrivateKeyPath,
-  string? UdpTransportPrivateKeyPassphrase
+  string? FCMProjectId
 );

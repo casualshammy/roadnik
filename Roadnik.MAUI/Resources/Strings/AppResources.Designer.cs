@@ -226,6 +226,46 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   To allow the app to broadcast your location even when the app is minimized or the device screen is off, the app needs your permission.
+        ///
+        ///Please select &quot;Allow all the time&quot; for location permission in the next window. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_location_permission_always {
+            get {
+                return ResourceManager.GetString("page.location_permission.always", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   To display your location on the map, the app needs your permission.
+        ///
+        ///Please click &quot;Allow&quot; in the next window. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_location_permission_app_in_use {
+            get {
+                return ResourceManager.GetString("page.location_permission.app_in_use", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   I&apos;ll pass に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_location_permission_cancel_btn {
+            get {
+                return ResourceManager.GetString("page.location_permission.cancel_btn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OK, I&apos;m in! に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_location_permission_ok_btn {
+            get {
+                return ResourceManager.GetString("page.location_permission.ok_btn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   To ensure the proper functioning of the Roadnik app, it is necessary to disable battery optimization. に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_main_battery_optimization_body {
@@ -267,6 +307,37 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_delete_old_route_title {
             get {
                 return ResourceManager.GetString("page.options.delete_old_route.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid room ID!
+        ///
+        ///Please specify the room ID in the settings. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_error_incorrect_room_id {
+            get {
+                return ResourceManager.GetString("page.options_error.incorrect_room_id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Invalid server address!
+        ///
+        ///Please specify a valid address in the settings. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_error_incorrect_server_address {
+            get {
+                return ResourceManager.GetString("page.options_error.incorrect_server_address", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open settings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_error_open_settings {
+            get {
+                return ResourceManager.GetString("page.options_error.open_settings", resourceCulture);
             }
         }
         

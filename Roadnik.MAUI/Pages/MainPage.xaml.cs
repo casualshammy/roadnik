@@ -1,7 +1,6 @@
 ﻿using Android.OS;
 using Android.Provider;
 using AndroidX.Core.App;
-using Ax.Fw;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
@@ -10,7 +9,6 @@ using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
 using QRCoder;
 using Roadnik.Common.ReqRes;
-using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.JsonBridge;
@@ -20,7 +18,6 @@ using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -111,32 +108,36 @@ public partial class MainPage : CContentPage
         }
 
         var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
-        var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
-        var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
-        if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
+        if (serverAddress.IsNullOrWhiteSpace())
         {
-          p_log.Warn("Remote server url is null");
           p_bindingCtx.WebViewUrl = p_loadingPageUrl;
-          bindingCtx.IsRemoteServerNotResponding = true;
+          _ = MainThread.InvokeOnMainThreadAsync(async () =>
+          {
+            var page = new OptionsErrorPage(L.page_options_error_incorrect_server_address, L.page_options_error_open_settings);
+            await Navigation.PushModalAsync(page);
+          });
           return;
         }
 
+        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
+        if (roomId.IsNullOrWhiteSpace())
+        {
+          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
+          _ = MainThread.InvokeOnMainThreadAsync(async () =>
+          {
+            var page = new OptionsErrorPage(L.page_options_error_incorrect_room_id, L.page_options_error_open_settings);
+            await Navigation.PushModalAsync(page);
+          });
+          return;
+        }
+
+        var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
+        var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
+
         _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Long).Show(_ct));
 
-        try
-        {
-          var url = GetWebAppAddress(serverAddress, roomId, mapState);
-          p_bindingCtx.WebViewUrl = url;
-          bindingCtx.IsRemoteServerNotResponding = false;
-          //_ = MainThread.InvokeOnMainThreadAsync(async () => await Navigation.PushModalAsync(new LocationPermissionPage()));
-        }
-        catch (Exception ex)
-        {
-          p_log.Error($"Remote server probe returned error", ex);
-          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
-          bindingCtx.IsRemoteServerNotResponding = true;
-        }
+        var url = GetWebAppAddress(serverAddress, roomId, mapState);
+        p_bindingCtx.WebViewUrl = url;
       }, scheduler)
       .Subscribe(p_lifetime);
 
@@ -212,7 +213,8 @@ public partial class MainPage : CContentPage
         {
           try
           {
-            if (!await MainThread.InvokeOnMainThreadAsync(() => IsLocationPermissionOkAsync()))
+            var permissionGranted = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+            if (permissionGranted != PermissionStatus.Granted)
               return;
 
             string[] providers;
@@ -330,8 +332,17 @@ public partial class MainPage : CContentPage
 
     if (!await locationReporter.IsEnabledAsync())
     {
-      if (!await IsLocationPermissionOkAsync())
+      var permissionGranted = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
+      if (permissionGranted != PermissionStatus.Granted)
+      {
+        await Navigation.PushModalAsync(new LocationPermissionPage(true, _ok =>
+        {
+          p_log.Info($"Location permissions dialog result: {_ok}");
+          return Task.CompletedTask;
+        }));
+
         return;
+      }
 
       await RequestIgnoreBattaryOptimizationAsync(p_lifetime.Token);
       locationReporter.SetState(true);
@@ -352,8 +363,18 @@ public partial class MainPage : CContentPage
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
   {
-    if (!await IsLocationPermissionOkAsync())
+    var permissionGranted = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
+    if (permissionGranted != PermissionStatus.Granted)
+    {
+      await Navigation.PushModalAsync(new LocationPermissionPage(false, _ok =>
+      {
+        p_log.Info($"Location permissions dialog result: {_ok}");
+        return Task.CompletedTask;
+      }));
+
       return;
+    }
+
     if (_sender is not Button button)
       return;
 
@@ -363,7 +384,7 @@ public partial class MainPage : CContentPage
     {
       animation.Commit(p_goToMyLocationImage, "my-loc-anim", 16, 2000, null, null, () => true);
 
-      var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(10), default);
+      var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(5), default);
       if (location != null)
       {
         var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
@@ -379,33 +400,17 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private void LocationPermissionNo_Clicked(object _sender, EventArgs _e)
-  {
-    p_bindingCtx.IsPermissionWindowShowing = false;
-  }
-
-  private void LocationPermissionYes_Clicked(object _sender, EventArgs _e)
-  {
-    p_bindingCtx.IsPermissionWindowShowing = false;
-    AppInfo.Current.ShowSettingsUI();
-  }
-
-  private void Reload_Clicked(object _sender, EventArgs _e)
-  {
-    p_bindingCtx.IsRemoteServerNotResponding = false;
-    p_pageAppearedChangeFlow.OnNext(true);
-  }
-
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
     var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
     var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
-    var url = GetMapShareAddress(serverAddress, roomId);
-    if (url == null)
+    if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
     {
       await DisplayAlert("Server address or room id is invalid", null, "Ok");
       return;
     }
+
+    var url = $"{serverAddress.TrimEnd('/')}/r/?id={roomId}";
 
     var methodUrlLink = "Share link as text";
     var methodQrCode = "Share link as QR code";
@@ -551,25 +556,6 @@ public partial class MainPage : CContentPage
     Shell.Current.FlyoutIsPresented = true;
   }
 
-  private async Task<bool> IsLocationPermissionOkAsync()
-  {
-    var permission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
-    if (permission == PermissionStatus.Granted)
-      return true;
-
-    var osVersion = DeviceInfo.Current.Version;
-    if (osVersion.Major < 11)
-    {
-      return await Permissions.RequestAsync<Permissions.LocationAlways>() == PermissionStatus.Granted;
-    }
-    else // if (Permissions.ShouldShowRationale<Permissions.LocationAlways>())
-    {
-      p_bindingCtx.IsPermissionWindowShowing = true;
-      return false;
-    }
-    throw new NotImplementedException();
-  }
-
   private async Task RequestIgnoreBattaryOptimizationAsync(CancellationToken _ct)
   {
     var context = global::Android.App.Application.Context;
@@ -590,17 +576,6 @@ public partial class MainPage : CContentPage
     var intent = new Android.Content.Intent(Settings.ActionIgnoreBatteryOptimizationSettings);
     intent.AddFlags(Android.Content.ActivityFlags.NewTask);
     context.StartActivity(intent);
-  }
-
-  private static string? GetMapShareAddress(
-    string? _serverAddress,
-    string? _roomId)
-  {
-    if (string.IsNullOrWhiteSpace(_serverAddress) || string.IsNullOrWhiteSpace(_roomId))
-      return null;
-
-    var url = $"{_serverAddress.TrimEnd('/')}/r/?id={_roomId}";
-    return url;
   }
 
   private static string GetWebAppAddress(

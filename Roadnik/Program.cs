@@ -15,7 +15,6 @@ using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.Settings;
 using Roadnik.Server.Modules.TilesCache;
-using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -50,24 +49,6 @@ public partial class Program
       return;
     }
 
-    //var fallbackLogFilePath = Path.Combine(Path.GetTempPath(), $"roadnik-{DateTimeOffset.UtcNow:yyyy-MM-dd}.log");
-
-    //var app = AppBase.Create()
-    //  .UseConsoleLog()
-    //  .UseConfigFile<RawAppSettings>(configFilePath, SettingsJsonCtx.Default)
-    //  .UseFileLogFromConf<RawAppSettings>(_conf =>
-    //  {
-    //    if (_conf == null || _conf.LogDirPath.IsNullOrWhiteSpace())
-    //      return fallbackLogFilePath;
-
-    //    return Path.Combine(_conf.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log");
-    //  })
-    //  .UseFileLogRotateFromConf< RawAppSettings >(_conf =>
-    //  {
-    //    if (_conf == null || _conf.LogDirPath.IsNullOrWhiteSpace())
-    //      return fallbackLogFilePath;
-    //  }, false, )
-
     var lifetime = new Lifetime();
     using var log = new GenericLog();
     log.AttachConsoleLog();
@@ -92,6 +73,16 @@ public partial class Program
     if (!Directory.Exists(settings.DataDirPath))
       Directory.CreateDirectory(settings.DataDirPath);
 
+    var version = Consts.AppVersion;
+    log.Info($"\n" +
+      $"-------------------------------------------\n" +
+      $"**Roadnik Server Started**\n" +
+      $"Version: __{version}__\n" +
+      $"Address: __{settings.IpBind}:{settings.PortBind}__\n" +
+      $"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}\n" +
+      $"Config file: __{configFilePath}__\n" +
+      $"-------------------------------------------");
+
     var dbProvider = new DbProviderImpl(lifetime, log["db-provider"], settings);
 
     var depMgr = AppDependencyManager
@@ -107,21 +98,9 @@ public partial class Program
       .AddModule<TilesCacheImpl, ITilesCache>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
-      .AddModule<UdpServerImpl, IUdpServer>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .ActivateOnStart<IWebServer>()
-      .ActivateOnStart<IUdpServer>()
       .Build();
-
-    var version = Consts.AppVersion;
-    log.Info($"\n" +
-      $"-------------------------------------------\n" +
-      $"**Roadnik Server Started**\n" +
-      $"Version: __{version}__\n" +
-      $"Address: __{settings.IpBind}:{settings.PortBind}__\n" +
-      $"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}\n" +
-      $"Config file: __{configFilePath}__\n" +
-      $"-------------------------------------------");
 
     lifetime.InstallConsoleCtrlCHook();
 
@@ -144,8 +123,5 @@ public partial class Program
 
   [GeneratedRegex(@".+\.log")]
   private static partial Regex GetLogFilesCleanerRegex();
-
-  [GeneratedRegex(@"roadnik\-.+\.log")]
-  private static partial Regex GetLogFilesFallbackCleanerRegex();
 
 }

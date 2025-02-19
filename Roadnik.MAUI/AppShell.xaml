@@ -26,7 +26,9 @@
         <x:Boolean>false</x:Boolean>
     </Shell.TabBarIsVisible>
 
-    <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
+    <FlyoutItem 
+        FlyoutDisplayOptions="AsMultipleItems"
+        Route="main">
         <ShellContent 
             x:Name="p_mainPageFlyoutItem"
             Title="{x:Static l:AppResources.shell_map}" 
@@ -37,6 +39,7 @@
             Icon="bookmarks.svg"
             ContentTemplate="{DataTemplate pages:BookmarksPage}" />
         <ShellContent 
+            Route="options"
             Title="{x:Static l:AppResources.shell_settings}" 
             Icon="cog_box.svg"
             ContentTemplate="{DataTemplate pages:OptionsPage}" />

@@ -94,6 +94,9 @@
 				<Compile Update="Pages\LocationPermissionPage.xaml.cs">
 				  <DependentUpon>LocationPermissionPage.xaml</DependentUpon>
 				</Compile>
+				<Compile Update="Pages\OptionsErrorPage.xaml.cs">
+				  <DependentUpon>OptionsErrorPage.xaml</DependentUpon>
+				</Compile>
 				<Compile Update="Pages\OptionsPage.xaml.cs">
 						<DependentUpon>OptionsPage.xaml</DependentUpon>
 				</Compile>
@@ -140,6 +143,9 @@
 						<Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
 				<MauiXaml Update="Pages\LocationPermissionPage.xaml">
+				  <Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Pages\OptionsErrorPage.xaml">
 				  <Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
 		</ItemGroup>

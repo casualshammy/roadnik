@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:pages="clr-namespace:Roadnik.MAUI.Pages"
+             x:Class="Roadnik.MAUI.Pages.OptionsErrorPage"
+             x:DataType="pages:OptionsErrorPage">
+
+    <Grid
+        ColumnDefinitions="*"
+        RowDefinitions="Auto, Auto, *">
+
+        <Image 
+            Grid.Row="0"
+            Source="settings_error.png"
+            HorizontalOptions="Center"
+            VerticalOptions="Start"
+            HeightRequest="300"
+            WidthRequest="300"/>
+
+        <Label 
+            Grid.Row="1"
+            HorizontalOptions="Center"
+            VerticalOptions="Start"
+            HorizontalTextAlignment="Center"
+            Margin="10,20,10,10"
+            Text="{Binding Description}" />
+
+        <Button 
+            Grid.Row="2"
+            Background="{StaticResource DangerLowBrush}"
+            HorizontalOptions="Center"
+            VerticalOptions="Start"
+            Margin="20, 10, 20, 0"
+            Text="{Binding ButtonText}"
+            TextColor="Black" 
+            FontSize="Medium"
+            Clicked="OnButtonClicked"/>
+
+    </Grid>
+</ContentPage>

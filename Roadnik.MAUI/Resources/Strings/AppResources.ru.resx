@@ -174,6 +174,22 @@
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Пользователь</value>
   </data>
+  <data name="page.location_permission.always" xml:space="preserve">
+    <value>Для того чтобы приложение могло транслировать ваше местоположение даже тогда, когда приложение свёрнуто или экран устройства выключен, приложению нужно ваше разрешение.
+
+Пожалуйста, выберите "Разрешить всегда" в разрешении на местоположение в следующем окне.</value>
+  </data>
+  <data name="page.location_permission.app_in_use" xml:space="preserve">
+    <value>Для отображения вашего местоположения на карте приложению нужно ваше разрешение.
+
+Пожалуйста, нажмите "Разрешить" в следующем окне.</value>
+  </data>
+  <data name="page.location_permission.cancel_btn" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="page.location_permission.ok_btn" xml:space="preserve">
+    <value>Подтвердить</value>
+  </data>
   <data name="page.main.battery_optimization.body" xml:space="preserve">
     <value>Для обеспечения правильного функционирования Roadnik необходимо отключить оптимизацию батареи.</value>
   </data>
@@ -243,5 +259,18 @@
   </data>
   <data name="shell.settings" xml:space="preserve">
     <value>Настройки</value>
+  </data>
+  <data name="page.options_error.incorrect_server_address" xml:space="preserve">
+    <value>Некорректный адрес сервера!
+
+Пожалуйста, укажите действительный адрес в настройках</value>
+  </data>
+  <data name="page.options_error.incorrect_room_id" xml:space="preserve">
+    <value>Некорректный id комнаты!
+
+Пожалуйста, укажите id комнаты в настройках.</value>
+  </data>
+  <data name="page.options_error.open_settings" xml:space="preserve">
+    <value>Открыть настройки</value>
   </data>
 </root>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
 				<TargetFramework>net8.0-android</TargetFramework>
@@ -30,7 +30,7 @@
 
 		<ItemGroup>
 				<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="CornflowerBlue" />
-				<MauiSplashScreen Include="Resources\Splash\splashscreen.svg" />
+				<MauiSplashScreen Include="Resources\Splash\splashscreen.svg" Color="CornflowerBlue" />
 
 				<MauiImage Include="Resources\Images\*" />
 				<MauiFont Include="Resources\Fonts\*" />

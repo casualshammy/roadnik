@@ -33,7 +33,8 @@ namespace Roadnik.MAUI.Pages;
 
 public partial class MainPage : CContentPage
 {
-  private const string p_loadingPageUrl = "loading.html";
+  private const string p_backgroundPageUrl = "file:///android_asset/background.html";
+
   private readonly IPreferencesStorage p_prefs;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
@@ -62,13 +63,7 @@ public partial class MainPage : CContentPage
     var pushMsgCtrl = Container.Locate<IPushMessagesController>();
     var locationReporter = Container.Locate<ILocationReporter>();
 
-    if (BindingContext is not MainPageViewModel bindingCtx)
-    {
-      p_log.Error($"Can't get binding ctx!");
-      throw new InvalidDataException($"Can't get binding ctx!");
-    }
-
-    p_bindingCtx = bindingCtx;
+    p_bindingCtx = (MainPageViewModel)BindingContext;
 
     p_pageIsVisible = p_pageAppearedChangeFlow
       .CombineLatest(App.WindowActivated)
@@ -99,18 +94,15 @@ public partial class MainPage : CContentPage
       .SelectAsync(async (_entry, _ct) =>
       {
         var (_, pageShown) = _entry;
-
-        bindingCtx.IsInBackground = !pageShown;
         if (!pageShown)
         {
-          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
+          p_bindingCtx.WebViewUrl = p_backgroundPageUrl;
           return;
         }
 
         var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         if (serverAddress.IsNullOrWhiteSpace())
         {
-          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           _ = MainThread.InvokeOnMainThreadAsync(async () =>
           {
             var page = new OptionsErrorPage(L.page_options_error_incorrect_server_address, L.page_options_error_open_settings);
@@ -122,7 +114,6 @@ public partial class MainPage : CContentPage
         var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
         if (roomId.IsNullOrWhiteSpace())
         {
-          p_bindingCtx.WebViewUrl = p_loadingPageUrl;
           _ = MainThread.InvokeOnMainThreadAsync(async () =>
           {
             var page = new OptionsErrorPage(L.page_options_error_incorrect_room_id, L.page_options_error_open_settings);
@@ -359,6 +350,9 @@ public partial class MainPage : CContentPage
   {
     if (_e.Result != WebNavigationResult.Success)
       p_log.Warn($"WebView navigation error '{_e.Result}': {_e.Url}");
+
+    if (_e.Url == p_backgroundPageUrl)
+      p_bindingCtx.IsSpinnerRequired = false;
   }
 
   private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)

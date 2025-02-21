@@ -26,6 +26,7 @@ internal static class Consts
   public const string HOST_MSG_TRACKS_SYNCHRONIZED = "host-msg-tracks-synchronized";
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
   public const string HOST_MSG_MAP_STATE = "host-msg-map-state";
+  public const string HOST_MSG_MAP_DRAG_STARTED = "map-drag-started";
 
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
   public const int NOTIFICATION_ID_RECORDING = 100;

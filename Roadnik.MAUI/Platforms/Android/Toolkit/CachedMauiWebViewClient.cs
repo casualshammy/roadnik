@@ -23,6 +23,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     CacheRegexCss(),
     CacheRegexOsm(),
     GetUnpkgPngRegex(),
+    GetRoomTracksRegex()
   ];
 
   private readonly IWebDataCache? p_webDataCache;
@@ -106,5 +107,8 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex GetLocalIndexRegex();
   [GeneratedRegex($@"^https?\://{WEBAPP_HOST}\:?\d*/r/(.+)$")]
   private static partial Regex GetLocalFileRegex();
+
+  [GeneratedRegex(@"^https?\://.+?/get\?roomId=.+?&offset=\d+$")]
+  private static partial Regex GetRoomTracksRegex();
 
 }

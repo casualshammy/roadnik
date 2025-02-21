@@ -3,7 +3,7 @@ using Roadnik.Interfaces;
 using System.Collections.Concurrent;
 using System.Net;
 
-namespace Roadnik.Modules.ReqRateLimiter;
+namespace Roadnik.Server.Modules.ReqRateLimiter;
 
 internal class ReqRateLimiterImpl : IReqRateLimiter
 {
@@ -31,7 +31,7 @@ internal class ReqRateLimiterImpl : IReqRateLimiter
 
     var dictionary = p_timeWallLimiter.GetOrAdd(_type, new ConcurrentDictionary<IPAddress, TimeWall>());
     if (!dictionary.TryGetValue(_ip, out var timewall))
-      dictionary.TryAdd(_ip, (timewall = _timewallFactory()));
+      dictionary.TryAdd(_ip, timewall = _timewallFactory());
 
     return timewall.TryGetTicket();
   }

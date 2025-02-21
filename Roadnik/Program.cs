@@ -5,7 +5,6 @@ using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using FluentArgs;
 using Roadnik.Interfaces;
-using Roadnik.Modules.ReqRateLimiter;
 using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.WebSocketController;
 using Roadnik.Server.Data;
@@ -13,6 +12,7 @@ using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
+using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.Settings;
 using Roadnik.Server.Modules.TilesCache;
 using Roadnik.Server.Modules.WebServer;
@@ -83,12 +83,10 @@ public partial class Program
       $"Config file: __{configFilePath}__\n" +
       $"-------------------------------------------");
 
-    var dbProvider = new DbProviderImpl(lifetime, log["db-provider"], settings);
-
     var depMgr = AppDependencyManager
       .Create()
       .AddSingleton<ILog>(log)
-      .AddSingleton<IDbProvider>(dbProvider)
+      .AddSingleton<IDbProvider>(new DbProviderImpl(lifetime, log["db-provider"], settings))
       .AddSingleton<ILifetime>(lifetime)
       .AddSingleton<IReadOnlyLifetime>(lifetime)
       .AddSingleton<ISettingsController>(settingsController)

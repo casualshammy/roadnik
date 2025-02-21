@@ -53,10 +53,10 @@ watch(location, _location => {
     return;
 
   if (_location.lat !== undefined && _location.lng !== undefined) {
-    map.value.flyTo([_location.lat, _location.lng], _location.zoom, { animate: true, duration: 1 });
+    map.value.flyTo([_location.lat, _location.lng], _location.zoom, { animate: true, duration: 0.5 });
   }
   else if (_location.zoom !== undefined) {
-    map.value.flyTo(map.value.getCenter(), _location.zoom, { animate: true, duration: 1 });
+    map.value.flyTo(map.value.getCenter(), _location.zoom, { animate: true, duration: 0.5 });
   }
 });
 

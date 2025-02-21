@@ -74,19 +74,20 @@
                 Grid.Row="2"
                 Grid.Column="0">
                 <Button
+                    x:Name="p_goToMyLocationBtn"
                     WidthRequest="50"
                     HeightRequest="50"
                     CornerRadius="45"
                     HorizontalOptions="Center"
                     Background="{StaticResource PrimaryBrush}"
-                    Clicked="GoToMyLocation_Clicked"
+                    Clicked="GoToMyLocation_ClickedAsync"
                     SemanticProperties.Description="{Binding GoToMyLocationButtonDescription}">
                 </Button>
                 <ImageButton 
                     x:Name="p_goToMyLocationImage"
                     WidthRequest="40"
                     HeightRequest="40"
-                    Source="my_location.svg"
+                    Source="{Binding LocationBtnImage}"
                     InputTransparent="True"/>
             </Grid>
 

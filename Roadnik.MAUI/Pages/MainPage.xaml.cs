@@ -16,6 +16,7 @@ using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.LocationProvider;
+using Roadnik.MAUI.Pages.Parts;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Globalization;
@@ -44,6 +45,8 @@ public partial class MainPage : CContentPage
   private readonly Subject<bool> p_webAppTracksSynchonizedSubj = new();
   private readonly MainPageViewModel p_bindingCtx;
   private readonly PowerManager p_powerManager;
+  private readonly MapInteractor p_mapInteractor;
+  private bool p_mapFollowingMe = false;
 
   public MainPage()
   {
@@ -64,6 +67,15 @@ public partial class MainPage : CContentPage
     var locationReporter = Container.Locate<ILocationReporter>();
 
     p_bindingCtx = (MainPageViewModel)BindingContext;
+    p_mapInteractor = new MapInteractor(p_webView);
+
+    App.ButtonLongPressed
+      .SelectAsync(async (_btn, _ct) =>
+      {
+        if (_btn == p_goToMyLocationBtn)
+          await MainThread.InvokeOnMainThreadAsync(async () => await GoToMyLocation_LongClickedAsync(_btn));
+      })
+      .Subscribe(p_lifetime);
 
     p_pageIsVisible = p_pageAppearedChangeFlow
       .CombineLatest(App.WindowActivated)
@@ -236,28 +248,17 @@ public partial class MainPage : CContentPage
 
                 try
                 {
-                  var lat = loc.Latitude.ToString(CultureInfo.InvariantCulture);
-                  var lng = loc.Longitude.ToString(CultureInfo.InvariantCulture);
-                  var acc = loc.Accuracy.ToString(CultureInfo.InvariantCulture);
-
-                  string arc;
-                  if (loc.Course != null && loc.Speed > 0.55f) // 2 km/h
-                    arc = loc.Course.Value.ToString(CultureInfo.InvariantCulture);
-                  else if (compassHeading != null)
-                    arc = compassHeading.Value.ToString(CultureInfo.InvariantCulture);
-                  else
-                    arc = "null";
-
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {
-                    var result = await p_webView.EvaluateJavaScriptAsync($"updateCurrentLocation2({lat},{lng},{acc},{arc})");
-                    if (result == null)
-                      p_log.Warn($"Can't send current location to web app: js code returned false");
+                    await p_mapInteractor.SetCurrentLocationAsync(loc, compassHeading, _ct);
+
+                    if (p_mapFollowingMe)
+                      await p_mapInteractor.SetMapCenterAsync((float)loc.Latitude, (float)loc.Longitude, _ct: _ct);
                   });
                 }
                 catch (Exception ex)
                 {
-                  p_log.Error($"Can't send current location to web app: {ex}");
+                  p_log.Error($"Can't handle current location change: {ex}");
                 }
               })
               .Subscribe(_life);
@@ -282,22 +283,6 @@ public partial class MainPage : CContentPage
   {
     base.OnDisappearing();
     p_pageAppearedChangeFlow.OnNext(false);
-  }
-
-  private async Task OnMsgFromWebAppAsync((JsToCSharpMsg?, bool) _tuple, CancellationToken _ct)
-  {
-    var (msg, isPageVisible) = _tuple;
-    if (msg == null)
-      return;
-    if (!isPageVisible)
-      return;
-
-    if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
-      OnHostMsgTracksSynchronized(msg);
-    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
-      await OnJsMsgPointAddStartedAsync(msg);
-    else if (msg.MsgType == HOST_MSG_MAP_STATE)
-      OnWebAppMsgMapState(msg);
   }
 
   private async void FAB_Clicked(object _sender, EventArgs _e)
@@ -355,7 +340,15 @@ public partial class MainPage : CContentPage
       p_bindingCtx.IsSpinnerRequired = false;
   }
 
-  private async void GoToMyLocation_Clicked(object _sender, EventArgs _e)
+  private async void GoToMyLocation_ClickedAsync(object _sender, EventArgs _e)
+    => await OnGoToMyLocationBtnClick((Button)_sender, false);
+
+  private async Task GoToMyLocation_LongClickedAsync(IButton _btn)
+    => await OnGoToMyLocationBtnClick(_btn, true);
+
+  private async Task OnGoToMyLocationBtnClick(
+    IButton _btn,
+    bool _followMyLocation)
   {
     var permissionGranted = await Permissions.CheckStatusAsync<Permissions.LocationWhenInUse>();
     if (permissionGranted != PermissionStatus.Granted)
@@ -369,7 +362,7 @@ public partial class MainPage : CContentPage
       return;
     }
 
-    if (_sender is not Button button)
+    if (_btn is not Button button)
       return;
 
     button.IsEnabled = false;
@@ -378,19 +371,26 @@ public partial class MainPage : CContentPage
     {
       animation.Commit(p_goToMyLocationImage, "my-loc-anim", 16, 2000, null, null, () => true);
 
+      if (_followMyLocation)
+      {
+        p_mapFollowingMe = true;
+        p_bindingCtx.LocationBtnImage = "location.svg";
+        await p_mapInteractor.SetObservedUserAsync(null, true, p_lifetime.Token);
+      }
+
       var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(5), default);
       if (location != null)
       {
         var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
         var lng = location.Longitude.ToString(CultureInfo.InvariantCulture);
-        await p_webView.EvaluateJavaScriptAsync($"setLocation({lat},{lng})");
+        await p_mapInteractor.SetMapCenterAsync((float)location.Latitude, (float)location.Longitude, null, 500, p_lifetime.Token);
       }
     }
     finally
     {
       animation.Dispose();
       button.IsEnabled = true;
-      p_goToMyLocationImage.Rotation = 0;
+      await p_goToMyLocationImage.RotateTo(0, 250);
     }
   }
 
@@ -432,6 +432,24 @@ public partial class MainPage : CContentPage
 
       await this.ShowPopupAsync(new ImagePopup(pngBytes));
     }
+  }
+
+  private async Task OnMsgFromWebAppAsync((JsToCSharpMsg?, bool) _tuple, CancellationToken _ct)
+  {
+    var (msg, isPageVisible) = _tuple;
+    if (msg == null)
+      return;
+    if (!isPageVisible)
+      return;
+
+    if (msg.MsgType == HOST_MSG_TRACKS_SYNCHRONIZED)
+      OnHostMsgTracksSynchronized(msg);
+    else if (msg.MsgType == JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED)
+      await OnJsMsgPointAddStartedAsync(msg);
+    else if (msg.MsgType == HOST_MSG_MAP_STATE)
+      await OnWebAppMsgMapStateAsync(msg);
+    else if (msg.MsgType == HOST_MSG_MAP_DRAG_STARTED)
+      await OnHostMsgMapDragStartedAsync();
   }
 
   private void OnHostMsgTracksSynchronized(JsToCSharpMsg _msg)
@@ -492,7 +510,7 @@ public partial class MainPage : CContentPage
     }
   }
 
-  private void OnWebAppMsgMapState(JsToCSharpMsg _msg)
+  private async Task OnWebAppMsgMapStateAsync(JsToCSharpMsg _msg)
   {
     try
     {
@@ -504,12 +522,18 @@ public partial class MainPage : CContentPage
       }
 
       p_prefs.SetValue(PREF_WEBAPP_MAP_STATE, data, JsBridgeJsonCtx.Default.HostMsgMapStateData);
+
+      if (data.SelectedPath != null)
+        await CancelFollowCurrentLocationAsync();
     }
     catch (Exception ex)
     {
       p_log.Error($"Cannot deserialize the data of webapp msg of type '{HOST_MSG_MAP_STATE}': {ex}");
     }
   }
+
+  private Task OnHostMsgMapDragStartedAsync()
+    => CancelFollowCurrentLocationAsync();
 
   private async Task OnNotificationAsync(PushNotificationEvent _e, CancellationToken _ct)
   {
@@ -519,13 +543,9 @@ public partial class MainPage : CContentPage
       if (data == default)
         return;
 
-      var command = $"setLocation({data.Lat}, {data.Lng}, {15});";
-
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Command returned an error: '{command}'");
+        await p_mapInteractor.SetMapCenterAsync((float)data.Lat, (float)data.Lng, 15, 500, _ct);
       });
     }
     else if (_e.NotificationId == PUSH_MSG_NEW_TRACK)
@@ -534,13 +554,9 @@ public partial class MainPage : CContentPage
       if (username == null)
         return;
 
-      var command = $"setViewToTrack(\"{username}\", {13}) || setViewToAllTracks();";
-
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
-        var result = await p_webView.EvaluateJavaScriptAsync(command);
-        if (result == null)
-          p_log.Error($"Command returned an error: '{command}'");
+        await p_mapInteractor.SetViewToUserOrFallbackToAllTracksAsync(username, _ct);
       });
     }
   }
@@ -609,6 +625,19 @@ public partial class MainPage : CContentPage
 
     var url = urlBuilder.ToString();
     return url;
+  }
+
+  private async Task CancelFollowCurrentLocationAsync()
+  {
+    await MainThread.InvokeOnMainThreadAsync(() =>
+    {
+      if (!p_mapFollowingMe)
+        return;
+
+      p_mapFollowingMe = false;
+      p_bindingCtx.LocationBtnImage = "location_empty.svg";
+      p_log.Info("Map now is not following device location");
+    });
   }
 
 }

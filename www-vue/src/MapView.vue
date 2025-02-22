@@ -5,13 +5,13 @@
               :layers="[p_mapsData[p_mapState.layer]]" />
 
   <SelectedUserPopup
-                     v-if="p_selectedUserState !== undefined"
-                     :state="p_selectedUserState"
+                     v-if="floatingWindowData !== undefined"
+                     :state="floatingWindowData"
                      :left="p_mapState.selectedPathWindowLeft"
                      :bottom="p_mapState.selectedPathWindowBottom"
                      @onMoved="onSelectedUserPopupMoved"
                      @onDblClick="onSelectedUserPopupDblClick"
-                     @onCloseButton="() => setObservedUser(null)" />
+                     @onCloseButton="() => p_mapInteractor.setObservedUser(null)" />
 
   <ComboBox
             v-if="pathsComboBoxEntries?.length > 0"
@@ -23,8 +23,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComputedRef, type Ref, shallowRef, shallowReactive } from "vue";
-import L, { type LeafletEventHandlerFn, type LeafletMouseEvent } from 'leaflet';
+import { ref, computed, type ComputedRef, type Ref, shallowRef, shallowReactive, watch, onMounted, type WatchHandle, onUnmounted } from "vue";
+import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
@@ -34,7 +34,6 @@ import LeafletMap from './components/LeafletMap.vue';
 import SelectedUserPopup from './components/SelectedUserPopup.vue';
 import ComboBox from './components/ComboBox.vue';
 import { type SelectedUserPopupState } from './components/SelectedUserPopup.vue';
-import { CurrentLocationControl } from './components/CurrentLocationControl';
 
 import { type LatLngZoom } from './data/LatLngZoom';
 import * as MapToolkit from './toolkit/mapToolkit';
@@ -46,12 +45,12 @@ import * as Consts from './data/Consts';
 import * as CommonToolkit from './toolkit/commonToolkit';
 import { TimeSpan } from './toolkit/timespan';
 import { Pool } from './toolkit/Pool';
+import { MapInteractor } from "./parts/mapInteractor";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
 const p_mapOverlays = MapToolkit.GetMapOverlayLayers(apiUrl);
 const p_appCtx = CreateAppCtx(apiUrl, p_mapsData, p_mapOverlays);
-const p_selectedUserState = ref<SelectedUserPopupState>();
 const p_mapState = computed(() => p_appCtx.mapState.value);
 const p_mapLocation = ref<LatLngZoom>({
   lat: p_mapState.value.lat,
@@ -59,17 +58,18 @@ const p_mapLocation = ref<LatLngZoom>({
   zoom: p_mapState.value.zoom
 });
 
-const p_map = shallowRef<L.Map>();
-const p_backendApi = new BackendApi(p_appCtx.apiUrl);
-const p_hostApi = new HostApi(p_appCtx, p_mapLocation, p_map);
-
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = shallowReactive(new Map<string, L.Polyline>());
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
-const p_geoEntries: { [userName: string]: TimedStorageEntry[] } = {};
+const p_gEntries = shallowReactive(new Map<string, TimedStorageEntry[]>());
 const p_tracksUpdateRequired$ = new Subject<void>();
+
+const p_map = shallowRef<L.Map>();
+const p_backendApi = new BackendApi(p_appCtx.apiUrl);
+const p_hostApi = new HostApi(p_appCtx);
+const p_mapInteractor = new MapInteractor(p_appCtx, p_hostApi, p_map, p_paths, p_gEntries);
 
 const pathsComboBoxEntries: ComputedRef<string[]> = computed(() => {
   const array: string[] = [];
@@ -82,6 +82,30 @@ const pathsComboBoxEntries: ComputedRef<string[]> = computed(() => {
   array.unshift('-- Paths --');
 
   return array;
+});
+
+const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = computed(() => {
+  const user = p_mapState.value.selectedPath;
+  if (user === null)
+    return undefined;
+
+  const entries = p_gEntries.get(user);
+  if (entries === undefined || entries.length === 0)
+    return undefined;
+
+  const lastEntry = entries[entries.length - 1];
+  const data: SelectedUserPopupState = {
+    user: user,
+    timestamp: lastEntry.UnixTimeMs,
+    battery: lastEntry.Battery ?? undefined,
+    gsmSignal: lastEntry.GsmSignal ?? undefined,
+    speed: (lastEntry.Speed ?? 0) * 3.6,
+    altitude: lastEntry.Altitude,
+    accuracy: lastEntry.Accuracy ?? undefined,
+    color: p_appCtx.userColors.get(user) ?? 'black',
+  };
+
+  return data;
 });
 
 const pathsComboBoxSelectedEntry: Ref<string | undefined> = ref();
@@ -178,7 +202,7 @@ function setupMap(_map: L.Map) {
         p_backendApi.createPointAsync(p_appCtx.roomId, "", _e.latlng, msg);
     }
   });
-  _map.on('dragstart', (event)=> {
+  _map.on('dragstart', (event) => {
     if (p_appCtx.isRoadnikApp) {
       p_hostApi.sendMapDragStarted();
     }
@@ -230,7 +254,7 @@ function setupDataFlow(_map: L.Map) {
         const path = p_paths.get(user);
         path?.setLatLngs([]);
 
-        const geoEntries = p_geoEntries[user];
+        const geoEntries = p_gEntries.get(user);
         if (geoEntries !== undefined)
           geoEntries.length = 0;
       }
@@ -241,7 +265,7 @@ function setupDataFlow(_map: L.Map) {
       else if (_data.Type == Consts.WS_MSG_PATH_TRUNCATED) {
         const msgData: WsMsgPathTruncated = _data.Payload;
 
-        const geoEntries = p_geoEntries[msgData.Username];
+        const geoEntries = p_gEntries.get(msgData.Username);
         if (geoEntries !== undefined) {
           const entriesToDelete = geoEntries.length - msgData.PathPoints;
           if (entriesToDelete > 0) {
@@ -279,7 +303,7 @@ function setupDataFlow(_map: L.Map) {
         timeout: 30000,
       };
 
-      const onUpdate = (_pos: GeolocationPosition) => p_hostApi.setCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy, _pos.coords.heading);
+      const onUpdate = (_pos: GeolocationPosition) => p_mapInteractor.setCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy, _pos.coords.heading);
       navigator.geolocation.watchPosition(onUpdate, undefined, options);
       console.log(`Subscribed to geolocation updates`);
     } else {
@@ -293,7 +317,7 @@ function setupDataFlow(_map: L.Map) {
     if (selectedPath === null)
       return;
 
-    const geoEntries = p_geoEntries[selectedPath];
+    const geoEntries = p_gEntries.get(selectedPath);
     const lastLocation = geoEntries !== undefined ? geoEntries[geoEntries.length - 1] : undefined;
     if (lastLocation === undefined)
       return;
@@ -319,15 +343,15 @@ function onSelectedUserPopupMoved(_left: number, _bottom: number) {
 function onSelectedUserPopupDblClick() {
   const path = p_mapState.value.selectedPath;
   if (path !== null)
-    setViewToTrack(path);
+    p_mapInteractor.setMapCenterToUser(path);
 }
 
 function onUsersComboBoxChanged(_value: string) {
   const user = p_paths.get(_value) !== undefined ? _value : null;
-  setObservedUser(user, true);
+  p_mapInteractor.setObservedUser(user, true);
 
   if (user !== null)
-    setViewToTrack(user);
+    p_mapInteractor.setMapCenterToUser(user);
 }
 
 async function updatePathsAsync() {
@@ -374,15 +398,14 @@ async function updatePathsAsync() {
     const selectedPath = p_mapState.value.selectedPath;
     if (selectedPath === null) {
       console.log("Initial selected path is not set, setting default view...");
-      //setViewToAllTracks();
     }
-    else if (!setViewToTrack(selectedPath, p_map.value!.getZoom())) {
+    else if (!p_mapInteractor.setMapCenterToUser(selectedPath, p_map.value!.getZoom())) {
       console.log("Initial selected path is set but not found, setting view to all paths...");
-      setViewToAllTracks();
+      p_mapInteractor.setMapCenterToAllUsers();
     }
     else {
       console.log(`Initial selected path is ${selectedPath}`);
-      setObservedUser(selectedPath);
+      p_mapInteractor.setObservedUser(selectedPath);
     }
 
     if (p_appCtx.isRoadnikApp)
@@ -458,7 +481,7 @@ function initControlsForUser(_user: string): void {
     const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
       .addTo(p_map.value!)
       .addEventListener('click', () => {
-        setObservedUser(_user);
+        p_mapInteractor.setObservedUser(_user);
       });
 
     p_markers.set(_user, marker);
@@ -471,7 +494,7 @@ function initControlsForUser(_user: string): void {
       .addTo(p_map.value!)
       .bindPopup("")
       .addEventListener("click", (_ev: LeafletMouseEvent) => {
-        const entries = p_geoEntries[_user];
+        const entries = p_gEntries.get(_user);
         if (entries === undefined)
           return;
 
@@ -508,8 +531,8 @@ function initControlsForUser(_user: string): void {
     p_paths.set(_user, path);
   }
 
-  if (p_geoEntries[_user] === undefined)
-    p_geoEntries[_user] = [];
+  if (!p_gEntries.has(_user))
+    p_gEntries.set(_user, []);
 }
 
 function updateControlsForUser(
@@ -520,7 +543,7 @@ function updateControlsForUser(
   if (lastEntry === undefined)
     return;
 
-  const geoEntries = p_geoEntries[_user];
+  const geoEntries = p_gEntries.get(_user);
   if (geoEntries !== undefined) {
     geoEntries.push(..._entries);
     const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
@@ -544,9 +567,9 @@ function updateControlsForUser(
     marker.setLatLng(lastLocation);
 
   if (p_mapState.value.selectedPath === _user) {
-    setObservedUser(_user);
+    // p_mapInteractor.setObservedUser(_user); // why?
     if (document.hasFocus()) // if we fly to location in background, path position will be uncorrect until next location update
-      p_mapLocation.value = { lat: lastLocation.lat, lng: lastLocation.lng, zoom: p_map.value!.getZoom() };
+      p_mapInteractor.setMapCenter(lastLocation.lat, lastLocation.lng, p_map.value!.getZoom(), 500);
   }
 
   const path = p_paths.get(_user);
@@ -586,81 +609,16 @@ function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
   return popUpText;
 }
 
-function setViewToTrack(_pathName: string, _zoom?: number | undefined): boolean {
-  const latLng = p_markers.get(_pathName)?.getLatLng();
-  if (latLng === undefined)
-    return false;
+let unwatchSelectedUser: WatchHandle;
+onMounted(() => {
+  unwatchSelectedUser = watch(computed(() => p_mapState.value.selectedPath), _newSelectedUser => {
+    pathsComboBoxSelectedEntry.value = _newSelectedUser ?? undefined;
+  }, {immediate: true});
+});
 
-  p_mapLocation.value = { lat: latLng.lat, lng: latLng.lng, zoom: _zoom };
-
-  setObservedUser(_pathName);
-  return true;
-}
-(window as any).setViewToTrack = setViewToTrack;
-
-function setViewToAllTracks(): boolean {
-  if (p_paths.size > 0) {
-    let bounds: L.LatLngBoundsExpression | undefined = undefined;
-    for (let path of p_paths.values())
-      if (bounds === undefined)
-        bounds = path.getBounds();
-      else
-        bounds = bounds.extend(path.getBounds());
-
-    if (bounds !== undefined)
-      p_map.value!.fitBounds(bounds);
-  }
-
-  return true;
-}
-(window as any).setViewToAllTracks = setViewToAllTracks;
-
-function setObservedUser(_user: string | null, _log: boolean = true) {
-  p_mapState.value.selectedPath = _user;
-  pathsComboBoxSelectedEntry.value = _user ?? undefined;
-
-  if (_user === null) {
-    p_selectedUserState.value = undefined;
-
-    if (!p_appCtx.isRoadnikApp)
-      Cookies.remove(Consts.COOKIE_SELECTED_PATH);
-    else
-      p_hostApi.sendMapStateToRoadnikApp();
-
-    if (_log)
-      console.log(`Selected path is cleared`);
-
-    return;
-  }
-
-  if (!p_appCtx.isRoadnikApp)
-    Cookies.set(Consts.COOKIE_SELECTED_PATH, _user);
-  else
-    p_hostApi.sendMapStateToRoadnikApp();
-
-  if (_log)
-    console.log(`Selected path is set to ${_user}`);
-
-  const entries = p_geoEntries[_user];
-  if (entries !== undefined) {
-    const lastEntry = entries[entries.length - 1];
-    if (lastEntry !== undefined) {
-      const data: SelectedUserPopupState = {
-        user: _user,
-        timestamp: lastEntry.UnixTimeMs,
-        battery: lastEntry.Battery ?? undefined,
-        gsmSignal: lastEntry.GsmSignal ?? undefined,
-        speed: (lastEntry.Speed ?? 0) * 3.6,
-        altitude: lastEntry.Altitude,
-        accuracy: lastEntry.Accuracy ?? undefined,
-        color: p_appCtx.userColors.get(_user) ?? 'black',
-      };
-
-      p_selectedUserState.value = data;
-    }
-  }
-}
-(window as any).setObservedUser = setObservedUser;
+onUnmounted(() => {
+  unwatchSelectedUser();
+});
 
 </script>
 

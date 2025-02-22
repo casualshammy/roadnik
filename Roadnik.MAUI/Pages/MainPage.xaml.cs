@@ -556,7 +556,8 @@ public partial class MainPage : CContentPage
 
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
-        await p_mapInteractor.SetViewToUserOrFallbackToAllTracksAsync(username, _ct);
+        if (!await p_mapInteractor.SetMapCenterToUserAsync(username, 13, _ct))
+          await p_mapInteractor.SetMapCenterToAllUsersAsync(_ct);
       });
     }
   }

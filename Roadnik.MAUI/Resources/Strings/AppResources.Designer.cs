@@ -424,6 +424,63 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   GPS consumes the most energy but has the highest accuracy.
+        ///WiFi consumes less energy but has an accuracy of about 100 meters. 
+        ///Cellular consumes the least energy, with an accuracy of kilometers. 
+        ///Passive mode uses data obtained from other applications. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_desc {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   GPS に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_high_accuracy {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.high_accuracy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Cellular に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_low_accuracy {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.low_accuracy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   WiFi/Cellular に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_medium_accuracy {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.medium_accuracy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Passive に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_passive {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.passive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Power mode に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_title {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Room ID に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_roomId {

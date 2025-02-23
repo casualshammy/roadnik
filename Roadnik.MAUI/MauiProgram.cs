@@ -1,5 +1,4 @@
-﻿using Android.Nfc;
-using Android.Util;
+﻿using Android.Util;
 using Ax.Fw;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Log;
@@ -16,7 +15,6 @@ using Roadnik.MAUI.Modules.PageController;
 using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
-using Roadnik.MAUI.Platforms.Android.Toolkit;
 using System.Text.RegularExpressions;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 

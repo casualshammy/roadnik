@@ -73,7 +73,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
-        LowPowerMode = _storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE),
+        PowerMode = _storage.GetValueOrDefault<LocationPriority>(PREF_POWER_MODE),
         WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED)
       })
       .Replay(1)
@@ -111,7 +111,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Select(_tuple =>
       {
         var (location, prefs) = _tuple;
-        if (!prefs.LowPowerMode)
+        if (prefs.PowerMode == LocationPriority.HighAccuracy)
           return location;
 
         var filteredLatLng = kalmanFilter.CalculateNext(
@@ -277,11 +277,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        var providers = (string[])(conf.LowPowerMode ?
-          [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider] :
-          [Android.Locations.LocationManager.GpsProvider]);
-
-        locationProvider.StartLocationWatcher(providers);
+        var locPriority = conf.PowerMode;
+        locationProvider.StartLocationWatcher(locPriority);
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });

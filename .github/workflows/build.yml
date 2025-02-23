@@ -90,5 +90,13 @@ jobs:
     - name: Set up GCP SDK
       uses: google-github-actions/setup-gcloud@v2
 
-    - name: Use gcloud CLI
-      run: gcloud info
+    - name: Run tests in Firebase Test Lab
+      run: |
+        gcloud firebase test android run \
+          --type robo \
+          --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk \
+          --device model=redfin,version=30,locale=en \
+          --device model=MediumPhone.arm,version=34,locale=en \
+          --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
+      env:
+        CLOUDSDK_CORE_PROJECT: roadnik-a647d

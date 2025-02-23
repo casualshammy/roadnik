@@ -1,5 +1,6 @@
 ﻿using Android.OS;
 using Android.Provider;
+using Android.Util;
 using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -220,29 +221,41 @@ public partial class MainPage : CContentPage
             if (permissionGranted != PermissionStatus.Granted)
               return;
 
-            string[] providers;
-            if (p_prefs.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE))
-              providers = [Android.Locations.LocationManager.NetworkProvider, Android.Locations.LocationManager.PassiveProvider];
-            else
-              providers = [Android.Locations.LocationManager.GpsProvider, Android.Locations.LocationManager.NetworkProvider];
-
-            webAppLocationProvider.StartLocationWatcher(providers);
+            webAppLocationProvider.StartLocationWatcher(LocationPriority.HighAccuracy);
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
-            webAppLocationProvider.Location
-              .Buffer(TimeSpan.FromSeconds(1))
-              .CombineLatest(compassProvider.Values)
+            compassProvider.Values
               .Sample(TimeSpan.FromMilliseconds(100))
-              .SelectAsync(async (_tuple, _ct) =>
+              .SelectAsync(async (_heading, _ct) =>
               {
                 if (_ct.IsCancellationRequested)
                   return;
 
-                var (locations, compassHeading) = _tuple;
-                if (locations.Count == 0)
+                try
+                {
+                  await MainThread.InvokeOnMainThreadAsync(async () =>
+                  {
+                    await p_mapInteractor.SetCompassHeadingAsync(_heading, _ct);
+                  });
+                }
+                catch (Exception ex)
+                {
+                  p_log.Error($"Can't handle compass change: {ex}");
+                }
+              })
+              .Subscribe(_life);
+
+            webAppLocationProvider.Location
+              .Buffer(TimeSpan.FromSeconds(1))
+              .SelectAsync(async (_locations, _ct) =>
+              {
+                if (_ct.IsCancellationRequested)
                   return;
 
-                var loc = locations
+                if (_locations.Count == 0)
+                  return;
+
+                var loc = _locations
                   .OrderBy(_ => _.Accuracy)
                   .First();
 
@@ -250,7 +263,7 @@ public partial class MainPage : CContentPage
                 {
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {
-                    await p_mapInteractor.SetCurrentLocationAsync(loc, compassHeading, _ct);
+                    await p_mapInteractor.SetLocationAndHeadingAsync(loc, _ct);
 
                     if (p_mapFollowingMe)
                       await p_mapInteractor.SetMapCenterAsync((float)loc.Latitude, (float)loc.Longitude, _ct: _ct);

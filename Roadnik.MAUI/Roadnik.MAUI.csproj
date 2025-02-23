@@ -57,6 +57,7 @@
 				<PackageReference Include="Xamarin.Firebase.Messaging" Version="[122.0.0]" />
 				<PackageReference Include="Xamarin.Google.Dagger" Version="[2.39.1]" />
 				<PackageReference Include="Xamarin.GooglePlayServices.Base" Version="[118.1.0.1]" />
+				<PackageReference Include="Xamarin.GooglePlayServices.Location" Version="120.0.0.1" />
 		</ItemGroup>
 
 		<ItemGroup>
@@ -69,6 +70,9 @@
 				</Compile>
 				<Compile Update="Controls\AgreementsPopup.xaml.cs">
 						<DependentUpon>AgreementsPopup.xaml</DependentUpon>
+				</Compile>
+				<Compile Update="Controls\OptionsTextValue.xaml.cs">
+				  <DependentUpon>OptionsTextValue.xaml</DependentUpon>
 				</Compile>
 				<Compile Update="Controls\Spinner.xaml.cs">
 				  <DependentUpon>Spinner.xaml</DependentUpon>
@@ -120,6 +124,9 @@
 				</MauiXaml>
 				<MauiXaml Update="Controls\AgreementsPopup.xaml">
 						<Generator>MSBuild:Compile</Generator>
+				</MauiXaml>
+				<MauiXaml Update="Controls\OptionsTextValue.xaml">
+				  <Generator>MSBuild:Compile</Generator>
 				</MauiXaml>
 				<MauiXaml Update="Controls\Spinner.xaml">
 				  <Generator>MSBuild:Compile</Generator>

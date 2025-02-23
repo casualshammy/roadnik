@@ -303,7 +303,10 @@ function setupDataFlow(_map: L.Map) {
         timeout: 30000,
       };
 
-      const onUpdate = (_pos: GeolocationPosition) => p_mapInteractor.setCurrentLocation(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy, _pos.coords.heading);
+      const onUpdate = (_pos: GeolocationPosition) => {
+        p_mapInteractor.setLocationAndHeading(_pos.coords.latitude, _pos.coords.longitude, _pos.coords.accuracy, null);
+        p_mapInteractor.setCompassHeading(_pos.coords.heading);
+      };
       navigator.geolocation.watchPosition(onUpdate, undefined, options);
       console.log(`Subscribed to geolocation updates`);
     } else {

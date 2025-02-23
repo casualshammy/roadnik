@@ -27,7 +27,8 @@ export class MapInteractor {
     this.p_geoEntries = _geoEntries;
 
     (window as any).setMapCenter = this.setMapCenter.bind(this);
-    (window as any).setCurrentLocation = this.setCurrentLocation.bind(this);
+    (window as any).setLocationAndHeading = this.setLocationAndHeading.bind(this);
+    (window as any).setCompassHeading = this.setCompassHeading.bind(this);
     (window as any).setMapCenterToUser = this.setMapCenterToUser.bind(this); // setViewToTrack
     (window as any).setMapCenterToAllUsers = this.setMapCenterToAllUsers.bind(this); // setViewToAllTracks
     (window as any).setObservedUser = this.setObservedUser.bind(this);
@@ -51,11 +52,11 @@ export class MapInteractor {
     return true;
   }
 
-  public setCurrentLocation(
+  public setLocationAndHeading(
     _lat: number,
     _lng: number,
     _accuracy: number,
-    _directionDeg: number | null
+    _heading: number | null
   ): boolean {
     const map = this.p_map.value;
     if (map === undefined)
@@ -66,9 +67,23 @@ export class MapInteractor {
       console.log("Created current location marker");
     }
 
-    this.p_appCtx.currentLocation.updateLocation(_lat, _lng, _accuracy, _directionDeg, map.getBounds());
+    this.p_appCtx.currentLocation.updateLocationAndHeading(_lat, _lng, _accuracy, _heading);
+    return true;
+  }
 
-    //console.log(`New current location: ${_lat},${_lng}; accuracy: ${_accuracy}; heading: ${_directionDeg?.toFixed(0)}`);
+  public setCompassHeading(
+    _heading: number | null
+  ): boolean {
+    const map = this.p_map.value;
+    if (map === undefined)
+      return false;
+
+    if (this.p_appCtx.currentLocation === null) {
+      this.p_appCtx.currentLocation = new CurrentLocationControl(map);
+      console.log("Created current location marker");
+    }
+
+    this.p_appCtx.currentLocation.updateCompass(_heading);
     return true;
   }
 

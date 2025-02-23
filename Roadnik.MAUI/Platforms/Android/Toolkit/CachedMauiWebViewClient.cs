@@ -23,7 +23,10 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     CacheRegexCss(),
     CacheRegexOsm(),
     GetUnpkgPngRegex(),
-    GetRoomTracksRegex()
+    // we can't just cache tracks:
+    //   1. at some point request will return 'MoreEntriesAvailable = false', and this info will be cached, thus web app will not request further data
+    //   2. tracks wiped by client will remain in cache - we should somehow wipe it...
+    //GetRoomTracksRegex() 
   ];
 
   private readonly IWebDataCache? p_webDataCache;

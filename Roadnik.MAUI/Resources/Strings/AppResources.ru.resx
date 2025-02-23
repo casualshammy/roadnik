@@ -273,4 +273,25 @@
   <data name="page.options_error.open_settings" xml:space="preserve">
     <value>Открыть настройки</value>
   </data>
+  <data name="page.options.power_mode.high_accuracy" xml:space="preserve">
+    <value>GPS</value>
+  </data>
+  <data name="page.options.power_mode.medium_accuracy" xml:space="preserve">
+    <value>WiFi/соты</value>
+  </data>
+  <data name="page.options.power_mode.low_accuracy" xml:space="preserve">
+    <value>Соты</value>
+  </data>
+  <data name="page.options.power_mode.passive" xml:space="preserve">
+    <value>Пассивный</value>
+  </data>
+  <data name="page.options.power_mode.title" xml:space="preserve">
+    <value>Потребление энергии</value>
+  </data>
+  <data name="page.options.power_mode.desc" xml:space="preserve">
+    <value>GPS потребляет больше всего энергии, но и точность у него наивысшая.
+WiFi потребляет меньше энергии, но его точность ~100 метров. 
+Сотовый потребляет меньше всего энергии, его точность - километры.
+Пассивный режим пользуется данными, полученными от других приложений.</value>
+  </data>
 </root>

@@ -273,4 +273,25 @@ Please specify the room ID in the settings.</value>
   <data name="page.options_error.open_settings" xml:space="preserve">
     <value>Open settings</value>
   </data>
+  <data name="page.options.power_mode.high_accuracy" xml:space="preserve">
+    <value>GPS</value>
+  </data>
+  <data name="page.options.power_mode.medium_accuracy" xml:space="preserve">
+    <value>WiFi/Cellular</value>
+  </data>
+  <data name="page.options.power_mode.low_accuracy" xml:space="preserve">
+    <value>Cellular</value>
+  </data>
+  <data name="page.options.power_mode.passive" xml:space="preserve">
+    <value>Passive</value>
+  </data>
+  <data name="page.options.power_mode.title" xml:space="preserve">
+    <value>Power mode</value>
+  </data>
+  <data name="page.options.power_mode.desc" xml:space="preserve">
+    <value>GPS consumes the most energy but has the highest accuracy.
+WiFi consumes less energy but has an accuracy of about 100 meters. 
+Cellular consumes the least energy, with an accuracy of kilometers. 
+Passive mode uses data obtained from other applications.</value>
+  </data>
 </root>

@@ -61,6 +61,12 @@
                 DetailsText="{x:Static l:AppResources.page_options_low_power_mode_hint}"
                 SwitchTapped="{Binding LowPowerModeCommand}"/>
             <controls:OptionsHorizontalLine />
+            <controls:OptionsTextValue
+                Title="{x:Static l:AppResources.page_options_power_mode_title}"
+                DetailsText="{x:Static l:AppResources.page_options_power_mode_desc}"
+                ValueText="{Binding PowerMode}"
+                TapCommand="{Binding PowerModeCommand}"/>
+            <controls:OptionsHorizontalLine />
             <controls:OptionsSwitch
                 x:Name="p_deleteOldRouteOnNew"
                 Title="{x:Static l:AppResources.page_options_delete_old_route_title}"

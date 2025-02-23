@@ -105,7 +105,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
-    SetValue(PREF_LOW_POWER_MODE, false);
+    SetValue(PREF_POWER_MODE, LocationPriority.HighAccuracy);
   }
 
   private void MigratePreferences()
@@ -160,6 +160,11 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
       var reportingCondition = GetValueOrDefault<int>(PREF_TRACKPOINT_REPORTING_CONDITION);
       if (reportingCondition == default)
         SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+    });
+    migrations.Add(270, () =>
+    {
+      SetValue(PREF_POWER_MODE, LocationPriority.HighAccuracy);
+      RemoveValue("settings.report.low-power-mode");
     });
 
     return migrations;

@@ -34,9 +34,8 @@ internal class MapInteractor
     return result;
   }
 
-  public async Task<bool> SetCurrentLocationAsync(
+  public async Task<bool> SetLocationAndHeadingAsync(
     LocationData _loc,
-    float? _compassHeading,
     CancellationToken _ct)
   {
     _ct.ThrowIfCancellationRequested();
@@ -44,16 +43,23 @@ internal class MapInteractor
     var lat = _loc.Latitude.ToString(CultureInfo.InvariantCulture);
     var lng = _loc.Longitude.ToString(CultureInfo.InvariantCulture);
     var acc = _loc.Accuracy.ToString(CultureInfo.InvariantCulture);
+    var heading = (_loc.Course != null && _loc.Speed > 0.55f) ? _loc.Course.Value.ToString(CultureInfo.InvariantCulture) : "null";
 
-    string arc;
-    if (_loc.Course != null && _loc.Speed > 0.55f) // 2 km/h
-      arc = _loc.Course.Value.ToString(CultureInfo.InvariantCulture);
-    else if (_compassHeading != null)
-      arc = _compassHeading.Value.ToString(CultureInfo.InvariantCulture);
-    else
-      arc = "null";
+    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setLocationAndHeading({lat},{lng},{acc},{heading})");
+    if (rawResult == null || !bool.TryParse(rawResult, out var result))
+      throw new InvalidOperationException($"Can't set current location - js code returned null");
 
-    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setCurrentLocation({lat},{lng},{acc},{arc})");
+    return result;
+  }
+
+  public async Task<bool> SetCompassHeadingAsync(
+    float? _heading,
+    CancellationToken _ct)
+  {
+    _ct.ThrowIfCancellationRequested();
+
+    var heading = _heading?.ToString(CultureInfo.InvariantCulture) ?? "null";
+    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setCompassHeading({heading})");
     if (rawResult == null || !bool.TryParse(rawResult, out var result))
       throw new InvalidOperationException($"Can't set current location - js code returned null");
 

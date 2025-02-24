@@ -205,18 +205,12 @@
   <data name="page.options.delete_old_route.title" xml:space="preserve">
     <value>Удалять старые треки</value>
   </data>
-  <data name="page.options.low_power_mode" xml:space="preserve">
-    <value>Режим низкого энергопотребления</value>
+  <data name="page.options.power_mode.accuracy_warning" xml:space="preserve">
+    <value>Пожалуйста, обратите внимание: источники местоположения с низким потреблением энергии имеют низкую точность (100м - 10000м).
+Если реальная точность измерения местоположения будет ниже, чем значение опции '%min-location-accuracy%', то местоположение не будет передано.</value>
   </data>
-  <data name="page.options.low_power_mode.accuracy_warning" xml:space="preserve">
-    <value>Пожалуйста, обратите внимание: источники местоположения с низким потреблением энергии имеют низкую точность (10м - 1000м). Если точность измерения местоположения ниже, чем значение опции '%min-location-accuracy', то местоположение не будет записано.</value>
-  </data>
-  <data name="page.options.low_power_mode.accuracy_warning_title" xml:space="preserve">
+  <data name="page.options.power_mode.accuracy_warning_title" xml:space="preserve">
     <value>Предупреждение о точности</value>
-  </data>
-  <data name="page.options.low_power_mode_hint" xml:space="preserve">
-    <value>Использовать только источники местоположения от Wi-Fi, Bluetooth, и сотовой сети
-Эта опция также влияет на точность отображаемого на карте текущего местоположения</value>
   </data>
   <data name="page.options.notifications" xml:space="preserve">
     <value>Уведомления</value>
@@ -286,12 +280,24 @@
     <value>Пассивный</value>
   </data>
   <data name="page.options.power_mode.title" xml:space="preserve">
-    <value>Потребление энергии</value>
+    <value>Провайдер местоположения</value>
   </data>
   <data name="page.options.power_mode.desc" xml:space="preserve">
     <value>GPS потребляет больше всего энергии, но и точность у него наивысшая.
 WiFi потребляет меньше энергии, но его точность ~100 метров. 
 Сотовый потребляет меньше всего энергии, его точность - километры.
 Пассивный режим пользуется данными, полученными от других приложений.</value>
+  </data>
+  <data name="page.options.time_interval" xml:space="preserve">
+    <value>Интервал времени</value>
+  </data>
+  <data name="page.options.time_interval.hint" xml:space="preserve">
+    <value>Минимальное аремя между отправкой местоположения</value>
+  </data>
+  <data name="page.options.distance" xml:space="preserve">
+    <value>Дистанция</value>
+  </data>
+  <data name="page.options.distance.hint" xml:space="preserve">
+    <value>Минимальное расстояние между отправкой местоположения</value>
   </data>
 </root>

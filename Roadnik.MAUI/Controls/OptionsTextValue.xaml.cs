@@ -1,3 +1,4 @@
+using Ax.Fw.Extensions;
 using System.Windows.Input;
 
 namespace Roadnik.MAUI.Controls;
@@ -26,7 +27,9 @@ public partial class OptionsTextValue : ContentView
     propertyChanged: (_bindable, _old, _new) =>
     {
       var control = (OptionsTextValue)_bindable;
-      control.DetailsTextLabel.Text = _new as string;
+      var text = _new as string;
+      control.DetailsTextLabel.Text = text;
+      control.DetailsTextLabel.IsVisible = !text.IsNullOrEmpty();
     });
 
   public static readonly BindableProperty ValueTextProperty = BindableProperty.Create(
@@ -36,7 +39,8 @@ public partial class OptionsTextValue : ContentView
     propertyChanged: (_bindable, _old, _new) =>
     {
       var control = (OptionsTextValue)_bindable;
-      control.ValueTextLabel.Text = _new as string;
+      var text = _new as string;
+      control.ValueTextLabel.Text = text;//!text.IsNullOrEmpty() ? $" {text} " : text;
     });
 
   public static readonly BindableProperty TapCommandProperty = BindableProperty.Create(

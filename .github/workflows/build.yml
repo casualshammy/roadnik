@@ -5,82 +5,82 @@ on:
       - 'dev/**'
 
 jobs:
-  # backend-docker:
-  #   runs-on: ubuntu-latest
-  #   permissions: write-all
+  backend-docker:
+    runs-on: ubuntu-latest
+    permissions: write-all
 
-  #   steps:
-  #   - name: Install Python3   
-  #     uses: actions/setup-python@v4
-  #     with:
-  #       python-version: '3.11'
-  #       architecture: 'x64'
+    steps:
+    - name: Install Python3   
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        architecture: 'x64'
 
-  #   - name: Checkout
-  #     uses: actions/checkout@v3
-  #     with:
-  #       submodules: true
-  #       fetch-depth: 0
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
 
-  #   - name: Build Docker Images
-  #     run: python build-server.py --platform linux-amd64
-  #     env:
-  #       DOCKER_REPO: ${{ secrets.DOCKER_REPO }} 
-  #       DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }} 
-  #       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
+    - name: Build Docker Images
+      run: python build-server.py --platform linux-amd64
+      env:
+        DOCKER_REPO: ${{ secrets.DOCKER_REPO }} 
+        DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }} 
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }} 
 
   app-android:
     runs-on: windows-latest
     permissions: write-all
       
     steps:
-    # - name: Install dotnet
-    #   uses: actions/setup-dotnet@v3
-    #   with:
-    #     dotnet-version: '8.0.x'
+    - name: Install dotnet
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
       
-    # - name: Install python3   
-    #   uses: actions/setup-python@v4
-    #   with:
-    #     python-version: '3.11'
-    #     architecture: 'x64'
+    - name: Install python3   
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        architecture: 'x64'
 
-    # - name: Install node
-    #   uses: actions/setup-node@v4
-    #   with:
-    #     node-version: '>=22.11.0'
+    - name: Install node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '>=22.11.0'
       
-    # - uses: actions/checkout@v3
-    #   with:
-    #     submodules: true
-    #     fetch-depth: 0
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+        fetch-depth: 0
 
-    # - name: Build Client Android
-    #   run: python build-client.py --framework net8.0-android
-    #   env:
-    #     ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
+    - name: Build Client Android
+      run: python build-client.py --framework net8.0-android
+      env:
+        ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
 
-    # - name: Create Github Release
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     draft: false
-    #     prerelease: false
-    #     files: |
-    #       artifacts/*.apk
-    #     name: "Release ${{ env.tag }}"
-    #     tag_name: "${{ env.tag }}"
-    #     fail_on_unmatched_files: true
-    #     token: ${{ secrets.GITHUB_TOKEN }}
-    #     generate_release_notes: false
+    - name: Create Github Release
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/*.apk
+        name: "Release ${{ env.tag }}"
+        tag_name: "${{ env.tag }}"
+        fail_on_unmatched_files: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+        generate_release_notes: false
     
-    # - name: Upload Google Console Release
-    #   uses: r0adkll/upload-google-play@v1
-    #   with:
-    #     serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-    #     packageName: com.axiolab.roadnik
-    #     releaseFiles: artifacts/*.aab
-    #     track: internal
-    #     whatsNewDirectory: whats-new
+    - name: Upload Google Console Release
+      uses: r0adkll/upload-google-play@v1
+      with:
+        serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        packageName: com.axiolab.roadnik
+        releaseFiles: artifacts/*.aab
+        track: internal
+        whatsNewDirectory: whats-new
 
     - name: GCP Auth
       uses: google-github-actions/auth@v2
@@ -91,6 +91,6 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
 
     - name: Run tests in Firebase Test Lab
-      run: gcloud firebase test android models list #gcloud firebase test android run --type robo --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk --device model=redfin,version=30,locale=en --device model=MediumPhone.arm,version=34,locale=en --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
+      run: gcloud firebase test android run --type robo --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk --device model=redfin,version=30 --device model=MediumPhone.arm,version=34 --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
       env:
         CLOUDSDK_CORE_PROJECT: roadnik-a647d

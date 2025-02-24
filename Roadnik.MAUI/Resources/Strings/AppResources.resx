@@ -205,18 +205,12 @@ Please click "Allow" in the next window.</value>
   <data name="page.options.delete_old_route.title" xml:space="preserve">
     <value>Purge old tracks</value>
   </data>
-  <data name="page.options.low_power_mode" xml:space="preserve">
-    <value>Low power mode</value>
+  <data name="page.options.power_mode.accuracy_warning" xml:space="preserve">
+    <value>Please pay attention: low-power location providers have poor accuracy (100m - 10000m).
+If the actual location accuracy will be less than the value of the '%min-location-accuracy%' option, the location will not be shared</value>
   </data>
-  <data name="page.options.low_power_mode.accuracy_warning" xml:space="preserve">
-    <value>Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the '%min-location-accuracy' option, the location will not be recorded</value>
-  </data>
-  <data name="page.options.low_power_mode.accuracy_warning_title" xml:space="preserve">
+  <data name="page.options.power_mode.accuracy_warning_title" xml:space="preserve">
     <value>Accuracy warning</value>
-  </data>
-  <data name="page.options.low_power_mode_hint" xml:space="preserve">
-    <value>Use only Wi-Fi, Bluetooth, and cellular network location providers
-This option also affects the accuracy of the current location displayed on the map</value>
   </data>
   <data name="page.options.notifications" xml:space="preserve">
     <value>Notifications</value>
@@ -286,12 +280,24 @@ Please specify the room ID in the settings.</value>
     <value>Passive</value>
   </data>
   <data name="page.options.power_mode.title" xml:space="preserve">
-    <value>Power mode</value>
+    <value>Location provider</value>
   </data>
   <data name="page.options.power_mode.desc" xml:space="preserve">
     <value>GPS consumes the most energy but has the highest accuracy.
 WiFi consumes less energy but has an accuracy of about 100 meters. 
 Cellular consumes the least energy, with an accuracy of kilometers. 
 Passive mode uses data obtained from other applications.</value>
+  </data>
+  <data name="page.options.time_interval" xml:space="preserve">
+    <value>Time interval</value>
+  </data>
+  <data name="page.options.time_interval.hint" xml:space="preserve">
+    <value>Minimum time interval between sending location</value>
+  </data>
+  <data name="page.options.distance" xml:space="preserve">
+    <value>Distance</value>
+  </data>
+  <data name="page.options.distance.hint" xml:space="preserve">
+    <value>Minimum distance between sending location</value>
   </data>
 </root>

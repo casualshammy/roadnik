@@ -73,7 +73,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
-        PowerMode = _storage.GetValueOrDefault<LocationPriority>(PREF_POWER_MODE),
+        LocationProvider = _storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER),
         WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED)
       })
       .Replay(1)
@@ -111,7 +111,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Select(_tuple =>
       {
         var (location, prefs) = _tuple;
-        if (prefs.PowerMode == LocationPriority.HighAccuracy)
+        if (prefs.LocationProvider == LocationPriority.HighAccuracy)
           return location;
 
         var filteredLatLng = kalmanFilter.CalculateNext(
@@ -277,8 +277,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        var locPriority = conf.PowerMode;
-        locationProvider.StartLocationWatcher(locPriority);
+        locationProvider.StartLocationWatcher(conf.LocationProvider);
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });

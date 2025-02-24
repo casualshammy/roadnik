@@ -17,55 +17,51 @@
             <!-- SERVER SETTINGS  -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_connection_settings}" />
-            <controls:OptionsTextItem
+            <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_serverAddress}"
-                DetailsText="{Binding ServerName}"
+                ValueText="{Binding ServerName}"
                 TapCommand="{Binding ServerAddressCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextItem
+            <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_roomId}"
-                DetailsText="{Binding RoomId}"
+                ValueText="{Binding RoomId}"
                 TapCommand="{Binding RoomIdCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextItem
+            <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_username}"
-                DetailsText="{Binding Nickname}"
+                ValueText="{Binding Nickname}"
                 TapCommand="{Binding UsernameCommand}"/>
 
             <!-- TRACKING SETTINGS  -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_tracking}" />
-            <controls:OptionsTextItem
-                Title="Time interval between reported trackpoints"
-                DetailsText="{Binding MinimumTime}"
+            <controls:OptionsTextValue
+                Title="{x:Static l:AppResources.page_options_time_interval}"
+                DetailsText="{x:Static l:AppResources.page_options_time_interval_hint}"
+                ValueText="{Binding MinimumTime, StringFormat='{0} s'}"
                 TapCommand="{Binding MinimumIntervalCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextItem
-                Title="Distance between reported trackpoints"
-                DetailsText="{Binding MinimumDistance}"
+            <controls:OptionsTextValue
+                Title="{x:Static l:AppResources.page_options_distance}"
+                DetailsText="{x:Static l:AppResources.page_options_distance_hint}"
+                ValueText="{Binding MinimumDistance, StringFormat='{0} m'}"
                 TapCommand="{Binding MinimumDistanceCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextItem
+            <controls:OptionsTextValue
                 Title="Trackpoint reporting condition"
-                DetailsText="{Binding TrackpointReportingConditionText}"
+                ValueText="{Binding TrackpointReportingConditionText}"
                 TapCommand="{Binding TrackpointReportingConditionCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextItem
+            <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_tracking_required_accuracy}"
-                DetailsText="{Binding MinAccuracy}"
+                ValueText="{Binding MinAccuracy, StringFormat='{0} m'}"
                 TapCommand="{Binding MinAccuracyCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsSwitch
-                x:Name="p_lowPowerMode"
-                Title="{x:Static l:AppResources.page_options_low_power_mode}"
-                DetailsText="{x:Static l:AppResources.page_options_low_power_mode_hint}"
-                SwitchTapped="{Binding LowPowerModeCommand}"/>
             <controls:OptionsHorizontalLine />
             <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_power_mode_title}"
                 DetailsText="{x:Static l:AppResources.page_options_power_mode_desc}"
-                ValueText="{Binding PowerMode}"
-                TapCommand="{Binding PowerModeCommand}"/>
+                ValueText="{Binding LocationProvider}"
+                TapCommand="{Binding LocationProviderCommand}"/>
             <controls:OptionsHorizontalLine />
             <controls:OptionsSwitch
                 x:Name="p_deleteOldRouteOnNew"

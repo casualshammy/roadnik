@@ -311,6 +311,24 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Distance に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_distance {
+            get {
+                return ResourceManager.GetString("page.options.distance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Minimum distance between sending location に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_distance_hint {
+            get {
+                return ResourceManager.GetString("page.options.distance.hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Invalid room ID!
         ///
         ///Please specify the room ID in the settings. に類似しているローカライズされた文字列を検索します。
@@ -338,43 +356,6 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_error_open_settings {
             get {
                 return ResourceManager.GetString("page.options_error.open_settings", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Low power mode に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_options_low_power_mode {
-            get {
-                return ResourceManager.GetString("page.options.low_power_mode", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Please pay attention: low-power location providers have poor accuracy (10m - 1000m). If the location accuracy is less than the value of the &apos;%min-location-accuracy&apos; option, the location will not be recorded に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_options_low_power_mode_accuracy_warning {
-            get {
-                return ResourceManager.GetString("page.options.low_power_mode.accuracy_warning", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Accuracy warning に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_options_low_power_mode_accuracy_warning_title {
-            get {
-                return ResourceManager.GetString("page.options.low_power_mode.accuracy_warning_title", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Use only Wi-Fi, Bluetooth, and cellular network location providers
-        ///This option also affects the accuracy of the current location displayed on the map に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_options_low_power_mode_hint {
-            get {
-                return ResourceManager.GetString("page.options.low_power_mode_hint", resourceCulture);
             }
         }
         
@@ -420,6 +401,25 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_notifications_new_track_title {
             get {
                 return ResourceManager.GetString("page.options.notifications.new_track.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Please pay attention: low-power location providers have poor accuracy (100m - 10000m).
+        ///If the actual location accuracy will be less than the value of the &apos;%min-location-accuracy%&apos; option, the location will not be shared に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_accuracy_warning {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.accuracy_warning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Accuracy warning に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_power_mode_accuracy_warning_title {
+            get {
+                return ResourceManager.GetString("page.options.power_mode.accuracy_warning_title", resourceCulture);
             }
         }
         
@@ -472,7 +472,7 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Power mode に類似しているローカライズされた文字列を検索します。
+        ///   Location provider に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_power_mode_title {
             get {
@@ -495,6 +495,24 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_serverAddress {
             get {
                 return ResourceManager.GetString("page.options.serverAddress", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Time interval に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_time_interval {
+            get {
+                return ResourceManager.GetString("page.options.time_interval", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Minimum time interval between sending location に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_time_interval_hint {
+            get {
+                return ResourceManager.GetString("page.options.time_interval.hint", resourceCulture);
             }
         }
         

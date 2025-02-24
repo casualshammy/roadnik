@@ -26,7 +26,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
   private bool p_lowPowerModeEnabled;
-  private string? p_powerMode;
+  private string? p_locationProvider;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
@@ -45,8 +45,7 @@ internal class OptionsPageViewModel : BaseViewModel
     MinimumDistanceCommand = new Command(OnMinimumDistance);
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
-    LowPowerModeCommand = new Command(OnLowPowerMode);
-    PowerModeCommand = new Command(OnPowerMode);
+    LocationProviderCommand = new Command(OnLocationProvider);
     WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
@@ -64,22 +63,21 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL), nameof(MinimumDistance));
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
-        //SetProperty(ref p_lowPowerModeEnabled, p_storage.GetValueOrDefault<bool>(PREF_LOW_POWER_MODE), nameof(LowPowerModeEnabled));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
 
-        var powerMode = p_storage.GetValueOrDefault<LocationPriority>(PREF_POWER_MODE);
+        var powerMode = p_storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
         if (powerMode == LocationPriority.HighAccuracy)
-          SetProperty(ref p_powerMode, L.page_options_power_mode_high_accuracy, nameof(PowerMode));
+          SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));
         else if (powerMode == LocationPriority.BalancedPowerAccuracy)
-          SetProperty(ref p_powerMode, L.page_options_power_mode_medium_accuracy, nameof(PowerMode));
+          SetProperty(ref p_locationProvider, L.page_options_power_mode_medium_accuracy, nameof(LocationProvider));
         else if (powerMode == LocationPriority.LowPower)
-          SetProperty(ref p_powerMode, L.page_options_power_mode_low_accuracy, nameof(PowerMode));
+          SetProperty(ref p_locationProvider, L.page_options_power_mode_low_accuracy, nameof(LocationProvider));
         else if (powerMode == LocationPriority.Passive)
-          SetProperty(ref p_powerMode, L.page_options_power_mode_passive, nameof(PowerMode));
+          SetProperty(ref p_locationProvider, L.page_options_power_mode_passive, nameof(LocationProvider));
         else
-          SetProperty(ref p_powerMode, L.page_options_power_mode_high_accuracy, nameof(PowerMode));
+          SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));
       }, lifetime);
   }
 
@@ -164,31 +162,21 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
-  public bool LowPowerModeEnabled
+  public string LocationProvider
   {
-    get => p_lowPowerModeEnabled;
+    get => p_locationProvider ?? L.page_options_power_mode_high_accuracy;
     set
     {
-      SetProperty(ref p_lowPowerModeEnabled, value);
-      //p_storage.SetValue(PREF_LOW_POWER_MODE, p_lowPowerModeEnabled);
-    }
-  }
-
-  public string PowerMode
-  {
-    get => p_powerMode ?? L.page_options_power_mode_high_accuracy;
-    set
-    {
-      SetProperty(ref p_powerMode, value);
+      SetProperty(ref p_locationProvider, value);
 
       if (value == L.page_options_power_mode_high_accuracy)
-        p_storage.SetValue(PREF_POWER_MODE, LocationPriority.HighAccuracy);
+        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
       else if (value == L.page_options_power_mode_medium_accuracy)
-        p_storage.SetValue(PREF_POWER_MODE, LocationPriority.BalancedPowerAccuracy);
+        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.BalancedPowerAccuracy);
       else if (value == L.page_options_power_mode_low_accuracy)
-        p_storage.SetValue(PREF_POWER_MODE, LocationPriority.LowPower);
+        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.LowPower);
       else if (value == L.page_options_power_mode_passive)
-        p_storage.SetValue(PREF_POWER_MODE, LocationPriority.Passive);
+        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.Passive);
       else
         p_log.Error($"Unknown power mode: '{value}'");
     }
@@ -230,8 +218,7 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinimumDistanceCommand { get; }
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
-  public ICommand LowPowerModeCommand { get; }
-  public ICommand PowerModeCommand { get; }
+  public ICommand LocationProviderCommand { get; }
   public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
@@ -404,34 +391,14 @@ internal class OptionsPageViewModel : BaseViewModel
     MinAccuracy = minAccuracy;
   }
 
-  private async void OnLowPowerMode(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
-    LowPowerModeEnabled = toggled;
-
-    var currentPage = p_pagesController.CurrentPage;
-    if (currentPage != null && toggled)
-    {
-      var body = L.page_options_low_power_mode_accuracy_warning
-        .Replace("%min-location-accuracy", L.page_options_tracking_required_accuracy);
-
-      await currentPage.DisplayAlert(
-      L.page_options_low_power_mode_accuracy_warning_title,
-      body,
-      "OK");
-    }
-  }
-
-  private async void OnPowerMode()
+  private async void OnLocationProvider()
   {
     var currentPage = p_pagesController.CurrentPage;
     if (currentPage == null)
       return;
 
     var result = await currentPage.DisplayActionSheet(
-      "Power mode:",
+      $"{L.page_options_power_mode_title}:",
       null,
       null,
       L.page_options_power_mode_high_accuracy,
@@ -442,7 +409,24 @@ internal class OptionsPageViewModel : BaseViewModel
     if (result == null)
       return;
 
-    PowerMode = result;
+    LocationProvider = result;
+
+    var lowPowerProviders = new HashSet<string>()
+    {
+      L.page_options_power_mode_medium_accuracy,
+      L.page_options_power_mode_low_accuracy,
+      L.page_options_power_mode_passive
+    };
+    if (lowPowerProviders.Contains(result))
+    {
+      var body = L.page_options_power_mode_accuracy_warning
+        .Replace("%min-location-accuracy%", L.page_options_tracking_required_accuracy);
+
+      await currentPage.DisplayAlert(
+        L.page_options_power_mode_accuracy_warning_title,
+        body,
+        "OK");
+    }
   }
 
   private void OnWipeOldTrackOnNew(object? _arg)

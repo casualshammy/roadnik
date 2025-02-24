@@ -105,7 +105,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
-    SetValue(PREF_POWER_MODE, LocationPriority.HighAccuracy);
+    SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
   }
 
   private void MigratePreferences()
@@ -163,8 +163,13 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     });
     migrations.Add(270, () =>
     {
-      SetValue(PREF_POWER_MODE, LocationPriority.HighAccuracy);
+      SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
       RemoveValue("settings.report.low-power-mode");
+    });
+    migrations.Add(272, () =>
+    {
+      SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
+      RemoveValue("settings.report.power-mode");
     });
 
     return migrations;

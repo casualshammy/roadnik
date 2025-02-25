@@ -15,7 +15,8 @@
             Margin="20, 0, 5, 0"
             MinimumWidthRequest="100">
             <Label 
-                x:Name="TitleLabel"/>
+                x:Name="TitleLabel"
+                FontSize="15"/>
             <Label
                 x:Name="DetailsTextLabel"
                 IsVisible="False"

@@ -10,7 +10,8 @@
             <TapGestureRecognizer x:Name="TapCommandHandler" />
         </VerticalStackLayout.GestureRecognizers>
         <Label 
-            x:Name="TitleLabel"/>
+            x:Name="TitleLabel"
+            FontSize="15"/>
         <Label
             x:Name="DetailsTextLabel"
             TextColor="{StaticResource Gray300}"

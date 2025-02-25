@@ -91,6 +91,6 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
 
     - name: Run tests in Firebase Test Lab
-      run: gcloud firebase test android run --type robo --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk --device model=redfin,version=30 --device model=MediumPhone.arm,version=34 --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
+      run: gcloud firebase test android run --type robo --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
       env:
         CLOUDSDK_CORE_PROJECT: roadnik-a647d

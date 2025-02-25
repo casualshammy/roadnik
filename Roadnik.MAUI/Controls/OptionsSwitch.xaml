@@ -14,7 +14,9 @@
             Grid.Column="0"
             Grid.Row="0"
             VerticalOptions="Center">
-            <Label x:Name="TitleLabel"/>
+            <Label 
+                x:Name="TitleLabel"
+                FontSize="15"/>
             <Label
                 x:Name="DetailsTextLabel"
                 TextColor="{StaticResource Gray300}"

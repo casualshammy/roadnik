@@ -14,6 +14,7 @@
 
     <ScrollView>
         <VerticalStackLayout>
+            
             <!-- SERVER SETTINGS  -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_connection_settings}" />
@@ -48,7 +49,8 @@
                 TapCommand="{Binding MinimumDistanceCommand}"/>
             <controls:OptionsHorizontalLine />
             <controls:OptionsTextValue
-                Title="Trackpoint reporting condition"
+                Title="{x:Static l:AppResources.page_options_share_condition}"
+                DetailsText="{x:Static l:AppResources.page_options_share_condition_hint}"
                 ValueText="{Binding TrackpointReportingConditionText}"
                 TapCommand="{Binding TrackpointReportingConditionCommand}"/>
             <controls:OptionsHorizontalLine />

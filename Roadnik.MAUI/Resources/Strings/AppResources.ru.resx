@@ -300,4 +300,10 @@ WiFi потребляет меньше энергии, но его точнос�
   <data name="page.options.distance.hint" xml:space="preserve">
     <value>Минимальное расстояние между отправкой местоположения</value>
   </data>
+  <data name="page.options.share_condition" xml:space="preserve">
+    <value>Условия отправки местоположения</value>
+  </data>
+  <data name="page.options.share_condition.hint" xml:space="preserve">
+    <value>Ваше местоположение будет отправлено при следующей комбинации вышеуказанных условий</value>
+  </data>
 </root>

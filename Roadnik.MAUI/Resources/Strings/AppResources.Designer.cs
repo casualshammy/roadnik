@@ -499,6 +499,24 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Location share condition に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_share_condition {
+            get {
+                return ResourceManager.GetString("page.options.share_condition", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Your location will be sent when the following combination of the above conditions is met に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_share_condition_hint {
+            get {
+                return ResourceManager.GetString("page.options.share_condition.hint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Time interval に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_time_interval {

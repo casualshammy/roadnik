@@ -1,4 +1,6 @@
-﻿using Android.OS;
+﻿using Android.Gms.Auth.Api.SignIn.Internal;
+using Android.Locations;
+using Android.OS;
 using Android.Provider;
 using Android.Util;
 using AndroidX.Core.App;
@@ -18,10 +20,12 @@ using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Pages.Parts;
+using Roadnik.MAUI.Platforms.Android.Toolkit;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -318,7 +322,6 @@ public partial class MainPage : CContentPage
 
     // check permissions and run
     var locationReporter = Container.Locate<ILocationReporter>();
-
     if (!await locationReporter.IsEnabledAsync())
     {
       var permissionGranted = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
@@ -335,6 +338,16 @@ public partial class MainPage : CContentPage
 
       await RequestIgnoreBattaryOptimizationAsync(p_lifetime.Token);
       locationReporter.SetState(true);
+
+      var locProvider = p_prefs.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
+      if (locProvider == LocationPriority.HighAccuracy)
+        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_high_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
+      else if (locProvider == LocationPriority.BalancedPowerAccuracy)
+        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_medium_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
+      else if (locProvider == LocationPriority.LowPower)
+        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_low_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
+      else if (locProvider == LocationPriority.Passive)
+        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_passive}", ToastDuration.Short).Show(p_lifetime.Token);
     }
     else
     {

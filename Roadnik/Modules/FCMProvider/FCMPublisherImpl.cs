@@ -100,7 +100,7 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
 #endif
 
     message.Headers.Add("Authorization", $"Bearer {token}");
-    using var content = new StringContent(json, Encoding.UTF8, "application/json");
+    using var content = new StringContent(json, Encoding.UTF8, Ax.Fw.MimeTypes.Json);
     message.Content = content;
 
     using var response = await p_httpClient.SendAsync(message, _ct);

@@ -72,11 +72,11 @@ public class BackgroundService : CAndroidService
             L.notification_location_sharing_body_never;
 
           var text = L.notification_location_sharing_body
-            .Replace("%last-location-fix-accuracy", _info.LastLocationFixAccuracy.ToString())
-            .Replace("%last-successful-report", lastSuccessfulReportTime)
-            .Replace("%last-location-fix", lastLocationFixTime)
-            .Replace("%success", _info.Successful.ToString())
-            .Replace("%total", _info.Total.ToString());
+            .Replace("%last-location-fix-accuracy%", _info.LastLocationFixAccuracy.ToString())
+            .Replace("%last-successful-report%", lastSuccessfulReportTime)
+            .Replace("%last-location-fix%", lastLocationFixTime)
+            .Replace("%success%", _info.Successful.ToString())
+            .Replace("%total%", _info.Total.ToString());
 
           GetRecordingNotification(L.notification_location_sharing_title, text, true);
         }, p_lifetime);

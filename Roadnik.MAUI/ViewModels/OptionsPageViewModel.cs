@@ -67,14 +67,14 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
 
-        var powerMode = p_storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
-        if (powerMode == LocationPriority.HighAccuracy)
+        var locProvider = p_storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
+        if (locProvider == LocationPriority.HighAccuracy)
           SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));
-        else if (powerMode == LocationPriority.BalancedPowerAccuracy)
+        else if (locProvider == LocationPriority.BalancedPowerAccuracy)
           SetProperty(ref p_locationProvider, L.page_options_power_mode_medium_accuracy, nameof(LocationProvider));
-        else if (powerMode == LocationPriority.LowPower)
+        else if (locProvider == LocationPriority.LowPower)
           SetProperty(ref p_locationProvider, L.page_options_power_mode_low_accuracy, nameof(LocationProvider));
-        else if (powerMode == LocationPriority.Passive)
+        else if (locProvider == LocationPriority.Passive)
           SetProperty(ref p_locationProvider, L.page_options_power_mode_passive, nameof(LocationProvider));
         else
           SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));

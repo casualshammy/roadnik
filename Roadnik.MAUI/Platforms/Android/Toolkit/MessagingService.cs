@@ -1,10 +1,22 @@
 ﻿using Android.Gms.Common;
+using Ax.Fw.SharedTypes.Interfaces;
 using Firebase.Messaging;
+using Roadnik.MAUI.Toolkit;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 
 public static class MessagingService
 {
+  static MessagingService()
+  {
+    var app = Firebase.FirebaseApp.InitializeApp(global::Android.App.Application.Context);
+    if (app == null)
+    {
+      var log = MauiProgram.Container?.Locate<ILog>();
+      log?.Error("Could not initialize Firebase app: init method returned null!");
+    }
+  }
+
   public static bool IsMessagingAvailable()
   {
     var result = GoogleApiAvailability.Instance.IsGooglePlayServicesAvailable(global::Android.App.Application.Context);
@@ -13,7 +25,7 @@ public static class MessagingService
 
   public static async Task<string?> GetTokenAsync()
   {
-    var token = await Task.Run(() => (string?)FirebaseMessaging.Instance.GetToken().Result);
+    var token = (string?)await FirebaseMessaging.Instance.GetToken().AsAsyncTask();
     return token;
   }
 

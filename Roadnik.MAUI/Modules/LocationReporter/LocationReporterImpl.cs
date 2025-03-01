@@ -44,8 +44,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
   private readonly ReplaySubject<bool> p_enableFlow = new(1);
   private readonly ILog p_log;
-  private readonly IPreferencesStorage p_storage;
-  private readonly IHttpClientProvider p_httpClientProvider;
 
   private LocationReporterImpl(
     IReadOnlyLifetime _lifetime,
@@ -55,8 +53,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     ITelephonyMgrProvider _telephonyMgrProvider)
   {
     p_log = _log;
-    p_storage = _storage;
-    p_httpClientProvider = _httpClientProvider;
 
     var locationProvider = new AndroidLocationProvider(p_log, _lifetime);
     _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var reportScheduler));
@@ -206,7 +202,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           };
 
           var reqDataJson = JsonSerializer.Serialize(reqData);
-          using var content = new StringContent(reqDataJson, Encoding.UTF8, "application/json");
+          using var content = new StringContent(reqDataJson, Encoding.UTF8, Ax.Fw.MimeTypes.Json);
           using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, _lifetime.Token);
           res.EnsureSuccessStatusCode();
 
@@ -283,53 +279,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       });
 
     p_enableFlow.OnNext(false);
-
-    //locationProvider.ProviderDisabled
-    //  .WithLatestFrom(p_enableFlow, (_providerDisabled, _enabled) => (ProviderDisabled: _providerDisabled, Enabled: _enabled))
-    //  .Where(_ => _.Enabled && _.ProviderDisabled == Android.Locations.LocationManager.GpsProvider)
-    //  .ToUnit()
-    //  .Subscribe(_unit =>
-    //  {
-    //    var context = Android.App.Application.Context;
-    //    var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
-    //    var activity = PendingIntent.GetActivity(
-    //      context,
-    //      0,
-    //      new Intent(Android.Provider.Settings.ActionLocationSourceSettings),
-    //      PendingIntentFlags.Immutable);
-
-    //    var channelId = "LocationProviderIsDisabled";
-    //    var channel = new NotificationChannel(channelId, "Notify when location provider is disabled", NotificationImportance.Max);
-    //    notificationMgr.CreateNotificationChannel(channel);
-    //    var notification = new Notification.Builder(context, channelId)
-    //      .SetContentTitle("Location provider is disabled")
-    //      .SetContentText("Please enable location provider in your phone's settings")
-    //      .SetContentIntent(activity)
-    //      .SetSmallIcon(Resource.Drawable.letter_r)
-    //      .SetAutoCancel(true)
-    //      .Build();
-
-    //    notificationMgr.Notify(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED, notification);
-
-    //    var page = Shell.Current.CurrentPage;
-    //    if (page != null && page.IsVisible)
-    //    {
-    //      _ = page.DisplayAlert(
-    //        "Location provider is disabled",
-    //        "Please enable location provider in your phone's settings\n\nYou can click notification in the notification drawer to open location settings",
-    //        "Okay");
-    //    }
-    //  }, _lifetime);
-
-    //locationProvider.ProviderEnabled
-    //  .Where(_ => _ == Android.Locations.LocationManager.GpsProvider)
-    //  .ToUnit()
-    //  .Subscribe(_unit =>
-    //  {
-    //    var context = Android.App.Application.Context;
-    //    var notificationMgr = (NotificationManager)context.GetSystemService(Context.NotificationService)!;
-    //    notificationMgr.Cancel(NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED);
-    //  }, _lifetime);
   }
 
   public IObservable<LocationReporterSessionStats> Stats => p_statsFlow;

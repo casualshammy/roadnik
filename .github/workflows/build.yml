@@ -81,16 +81,3 @@ jobs:
         releaseFiles: artifacts/*.aab
         track: internal
         whatsNewDirectory: whats-new
-
-    - name: GCP Auth
-      uses: google-github-actions/auth@v2
-      with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-    
-    - name: Set up GCP SDK
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Run tests in Firebase Test Lab
-      run: gcloud firebase test android run --type robo --app artifacts/com.axiolab.roadnik-${{ env.tag }}.apk --client-details matrixLabel="GitHub Run For Tag ${{ env.tag }}"
-      env:
-        CLOUDSDK_CORE_PROJECT: roadnik-a647d

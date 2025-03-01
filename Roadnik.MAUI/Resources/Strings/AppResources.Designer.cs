@@ -106,10 +106,8 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Success rate: %success/%total
-        ///Last location fix: %last-location-fix
-        ///Last location fix accuracy: %last-location-fix-accuracym
-        ///Last successful report: %last-successful-report に類似しているローカライズされた文字列を検索します。
+        ///   Success: %success%/%total% (last: %last-successful-report%)
+        ///Last location fix: %last-location-fix% (%last-location-fix-accuracy%m) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string notification_location_sharing_body {
             get {

@@ -133,10 +133,8 @@
     <value>сек.</value>
   </data>
   <data name="notification.location_sharing.body" xml:space="preserve">
-    <value>Успешно: %success из %total
-Последнее местоположение: %last-location-fix
-Точность последнего местоположения: %last-location-fix-accuracyм
-Последняя успешная передача местоположения: %last-successful-report</value>
+    <value>Успешно: %success%/%total% (посл.: %last-successful-report%)
+Последнее местоположение: %last-location-fix% (%last-location-fix-accuracy%m)</value>
   </data>
   <data name="notification.location_sharing.body_never" xml:space="preserve">
     <value>никогда</value>

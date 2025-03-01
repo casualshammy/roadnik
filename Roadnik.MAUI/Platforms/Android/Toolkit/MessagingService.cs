@@ -9,12 +9,14 @@ public static class MessagingService
 {
   static MessagingService()
   {
+    var log = MauiProgram.Container?.Locate<ILog>()["firebase"];
+    log?.Info("Initializing Firebase app...");
+
     var app = Firebase.FirebaseApp.InitializeApp(global::Android.App.Application.Context);
     if (app == null)
-    {
-      var log = MauiProgram.Container?.Locate<ILog>();
       log?.Error("Could not initialize Firebase app: init method returned null!");
-    }
+    else
+      log?.Info("Firebase app initialized successfully.");
   }
 
   public static bool IsMessagingAvailable()

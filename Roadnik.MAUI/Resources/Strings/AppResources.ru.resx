@@ -228,9 +228,6 @@
   <data name="page.options.roomId" xml:space="preserve">
     <value>ID комнаты</value>
   </data>
-  <data name="page.options.serverAddress" xml:space="preserve">
-    <value>Адрес сервера</value>
-  </data>
   <data name="page.options.tracking" xml:space="preserve">
     <value>Настройки трекинга</value>
   </data>

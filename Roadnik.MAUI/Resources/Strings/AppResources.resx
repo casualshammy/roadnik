@@ -228,9 +228,6 @@ If the actual location accuracy will be less than the value of the '%min-locatio
   <data name="page.options.roomId" xml:space="preserve">
     <value>Room ID</value>
   </data>
-  <data name="page.options.serverAddress" xml:space="preserve">
-    <value>Server address</value>
-  </data>
   <data name="page.options.tracking" xml:space="preserve">
     <value>Tracking settings</value>
   </data>

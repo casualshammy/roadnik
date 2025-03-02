@@ -19,11 +19,6 @@
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_connection_settings}" />
             <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_serverAddress}"
-                ValueText="{Binding ServerName}"
-                TapCommand="{Binding ServerAddressCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
                 Title="{x:Static l:AppResources.page_options_roomId}"
                 ValueText="{Binding RoomId}"
                 TapCommand="{Binding RoomIdCommand}"/>

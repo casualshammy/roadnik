@@ -1,7 +1,6 @@
 ﻿using Ax.Fw.DependencyInjection;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Interfaces;
-using Roadnik.MAUI.Platforms.Android;
 using System.Text.RegularExpressions;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -59,7 +58,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
     if (p_pagesController.CurrentPage == null)
       return;
 
-    var oldServerAddress = p_preferencesStorage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var oldServerAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
     var oldRoomId = p_preferencesStorage.GetValueOrDefault<string>(PREF_ROOM);
 
     var newServerAddress = match.Groups[1].Value;
@@ -82,7 +81,6 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
 
     if (result)
     {
-      p_preferencesStorage.SetValue(PREF_SERVER_ADDRESS, newServerAddress);
       p_preferencesStorage.SetValue(PREF_ROOM, newRoomId);
 
       await Toast

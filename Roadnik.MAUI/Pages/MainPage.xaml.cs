@@ -94,25 +94,24 @@ public partial class MainPage : CContentPage
     p_prefs.PreferencesChanged
       .Select(_ =>
       {
-        var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+        var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
         var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
 
         return (serverAddress, roomId);
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
       //.Sample(TimeSpan.FromSeconds(1), scheduler)
-      .CombineLatest(p_pageIsVisible)
+      .CombineLatest(p_pageIsVisible, (_prefs, _pageVisible) => (ServerAddress: _prefs.serverAddress, RoomId: _prefs.roomId, PageVisible: _pageVisible))
       .ObserveOn(scheduler)
       .SelectAsync(async (_entry, _ct) =>
       {
-        var (_, pageShown) = _entry;
+        var (serverAddress, roomId, pageShown) = _entry;
         if (!pageShown)
         {
           p_bindingCtx.WebViewUrl = p_backgroundPageUrl;
           return;
         }
 
-        var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
         if (serverAddress.IsNullOrWhiteSpace())
         {
           _ = MainThread.InvokeOnMainThreadAsync(async () =>
@@ -123,7 +122,6 @@ public partial class MainPage : CContentPage
           return;
         }
 
-        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
         if (roomId.IsNullOrWhiteSpace())
         {
           _ = MainThread.InvokeOnMainThreadAsync(async () =>
@@ -300,19 +298,14 @@ public partial class MainPage : CContentPage
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
     // privacy policy
-    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
-    if (serverAddress != null && serverAddress.StartsWith(ROADNIK_APP_ADDRESS))
+    var version = p_prefs.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
+    if (version < PRIVACY_POLICY_VERSION)
     {
-      const int currentVersion = 3;
-      var version = p_prefs.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
-      if (version < currentVersion)
-      {
-        var result = await this.ShowPopupAsync(new AgreementsPopup());
-        if (result is not bool agreed || !agreed)
-          return;
+      var result = await this.ShowPopupAsync(new AgreementsPopup());
+      if (result is not bool agreed || !agreed)
+        return;
 
-        p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, currentVersion);
-      }
+      p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, PRIVACY_POLICY_VERSION);
     }
 
     // check permissions and run
@@ -417,11 +410,11 @@ public partial class MainPage : CContentPage
 
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
-    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
     var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
     if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
     {
-      await DisplayAlert("Server address or room id is invalid", null, "Ok");
+      await DisplayAlert("Room id is invalid", null, "Ok");
       return;
     }
 
@@ -490,7 +483,7 @@ public partial class MainPage : CContentPage
 
   private async Task OnJsMsgPointAddStartedAsync(JsToCSharpMsg _msg)
   {
-    var serverAddress = p_prefs.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
     if (serverAddress.IsNullOrWhiteSpace())
       return;
 

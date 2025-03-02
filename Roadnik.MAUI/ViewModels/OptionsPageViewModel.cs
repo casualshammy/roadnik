@@ -18,14 +18,12 @@ internal class OptionsPageViewModel : BaseViewModel
   private readonly IPagesController p_pagesController;
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILog p_log;
-  private string? p_serverName;
   private string? p_roomId;
   private string? p_username;
   private int p_minimumTime;
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
-  private bool p_lowPowerModeEnabled;
   private string? p_locationProvider;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
@@ -38,7 +36,6 @@ internal class OptionsPageViewModel : BaseViewModel
     p_httpClient = Container.Locate<IHttpClientProvider>();
     p_log = Container.Locate<ILog>()["options-page-view-model"];
 
-    ServerAddressCommand = new Command(OnServerAddressCommand);
     RoomIdCommand = new Command(OnRoomIdCommand);
     UsernameCommand = new Command(OnUsernameCommand);
     MinimumIntervalCommand = new Command(OnMinimumInterval);
@@ -56,7 +53,6 @@ internal class OptionsPageViewModel : BaseViewModel
       .StartWithDefault()
       .Subscribe(_ =>
       {
-        SetProperty(ref p_serverName, p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS), nameof(ServerName));
         SetProperty(ref p_roomId, p_storage.GetValueOrDefault<string>(PREF_ROOM), nameof(RoomId));
         SetProperty(ref p_username, p_storage.GetValueOrDefault<string>(PREF_USERNAME), nameof(Nickname));
         SetProperty(ref p_minimumTime, p_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL), nameof(MinimumTime));
@@ -81,16 +77,6 @@ internal class OptionsPageViewModel : BaseViewModel
       }, lifetime);
   }
 
-  public string? ServerName
-  {
-    get => p_serverName;
-    set
-    {
-      SetProperty(ref p_serverName, value);
-      if (p_serverName != null)
-        p_storage.SetValue(PREF_SERVER_ADDRESS, p_serverName);
-    }
-  }
   public string? RoomId
   {
     get => p_roomId;
@@ -211,7 +197,6 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
-  public ICommand ServerAddressCommand { get; }
   public ICommand RoomIdCommand { get; }
   public ICommand UsernameCommand { get; }
   public ICommand MinimumIntervalCommand { get; }
@@ -222,26 +207,6 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand WipeOldTrackOnNewCommand { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
-
-  private async void OnServerAddressCommand(object _arg)
-  {
-    var currentPage = p_pagesController.CurrentPage;
-    if (currentPage == null)
-      return;
-
-    var serverName = await currentPage.DisplayPromptAsync(
-        "Server address",
-        null,
-        "Save",
-        placeholder: "http://example.com:5544/",
-        initialValue: ServerName,
-        keyboard: Keyboard.Url);
-
-    if (serverName == null)
-      return;
-
-    ServerName = serverName;
-  }
 
   private async void OnRoomIdCommand(object _arg)
   {
@@ -267,7 +232,7 @@ internal class OptionsPageViewModel : BaseViewModel
     }
     else if (mode == modeGenerate)
     {
-      var serverAddress = p_storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+      var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
       if (!serverAddress.IsNullOrWhiteSpace())
       {
         var url = $"{serverAddress.TrimEnd('/')}{ReqPaths.GET_FREE_ROOM_ID}";

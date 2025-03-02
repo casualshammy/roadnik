@@ -95,7 +95,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
     SetValue(PREF_DB_VERSION, 1);
 
-    SetValue(PREF_SERVER_ADDRESS, ROADNIK_APP_ADDRESS);
     SetValue(PREF_ROOM, Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false));
     SetValue(PREF_TIME_INTERVAL, 10);
     SetValue(PREF_DISTANCE_INTERVAL, 100);

@@ -1,5 +1,4 @@
-﻿using Android.App;
-using Android.Content;
+﻿using Android.Content;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -10,7 +9,6 @@ using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
-using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -62,7 +60,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     var prefsFlow = _storage.PreferencesChanged
       .Select(_ => new
       {
-        ServerAddress = _storage.GetValueOrDefault<string>(PREF_SERVER_ADDRESS),
+        ServerAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS,
         RoomId = _storage.GetValueOrDefault<string>(PREF_ROOM),
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
         DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),

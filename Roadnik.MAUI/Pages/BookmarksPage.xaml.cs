@@ -74,7 +74,6 @@ public partial class BookmarksPage : CContentPage
     if (!dialogResult)
       return;
 
-    p_preferences.SetValue(PREF_SERVER_ADDRESS, bookmark.ServerAddress);
     p_preferences.SetValue(PREF_ROOM, bookmark.RoomId);
     p_preferences.SetValue(PREF_USERNAME, bookmark.Username);
 
@@ -83,7 +82,7 @@ public partial class BookmarksPage : CContentPage
 
   private async void AddCurrentCredentials_Clicked(object _sender, EventArgs _e)
   {
-    var server = p_preferences.GetValueOrDefault<string>(PREF_SERVER_ADDRESS);
+    var server = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
     if (server.IsNullOrWhiteSpace())
     {
       await DisplayAlert("Current server address is empty", "Please go to options page and fill it", "Close");

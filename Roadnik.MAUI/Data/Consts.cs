@@ -2,13 +2,16 @@
 
 internal static class Consts
 {
+  public static string? DEBUG_APP_ADDRESS = null;
+
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";
+  public const int PRIVACY_POLICY_VERSION = 3;
 
   public const string PREF_DB_VERSION = "settings.db-version";
   public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";
 
-  public const string PREF_SERVER_ADDRESS = "settings.network.server-address";
+  //public const string PREF_SERVER_ADDRESS = "settings.network.server-address";
   public const string PREF_ROOM = "settings.network.room";
   public const string PREF_USERNAME = "settings.network.username";
   public const string PREF_TIME_INTERVAL = "settings.report.time-interval";

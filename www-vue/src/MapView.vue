@@ -541,14 +541,17 @@ function initControlsForUser(_user: string): void {
 function updateControlsForUser(
   _user: string,
   _entries: TimedStorageEntry[],
-  _isFirstDataChunk: boolean): void {
-  const lastEntry = _entries[_entries.length - 1];
-  if (lastEntry === undefined)
+  _isFirstDataChunk: boolean
+): void {
+  if (_entries.length === 0)
     return;
+
+  const sortedEntries = _entries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
+  const lastEntry = sortedEntries[sortedEntries.length - 1];
 
   const geoEntries = p_gEntries.get(_user);
   if (geoEntries !== undefined) {
-    geoEntries.push(..._entries);
+    geoEntries.push(...sortedEntries);
     const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
     if (geoEntriesExcessiveCount > 0) {
       const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
@@ -577,7 +580,7 @@ function updateControlsForUser(
 
   const path = p_paths.get(_user);
   if (path !== undefined) {
-    const points = _entries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
+    const points = sortedEntries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
     if (_isFirstDataChunk) {
       path.setLatLngs(points);
       console.log(`Set ${points.length} points to path ${_user}`);

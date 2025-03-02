@@ -488,15 +488,6 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Server address に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string page_options_serverAddress {
-            get {
-                return ResourceManager.GetString("page.options.serverAddress", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Location share condition に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_share_condition {

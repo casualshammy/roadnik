@@ -271,7 +271,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        locationProvider.StartLocationWatcher(conf.LocationProvider);
+        locationProvider.StartLocationWatcher(conf.LocationProvider, TimeSpan.FromSeconds(1)); // conf.TimeInterval
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });

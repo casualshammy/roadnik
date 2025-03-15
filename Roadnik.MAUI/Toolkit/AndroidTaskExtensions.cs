@@ -1,10 +1,8 @@
-﻿using Android.Gms.Tasks;
-
-namespace Roadnik.MAUI.Toolkit;
+﻿namespace Roadnik.MAUI.Toolkit;
 
 internal static class AndroidTaskExtensions
 {
-  private class TaskCompleteListener : Java.Lang.Object, IOnCompleteListener
+  private class TaskCompleteListener : Java.Lang.Object, Android.Gms.Tasks.IOnCompleteListener
   {
     private readonly TaskCompletionSource<Java.Lang.Object> p_tcs;
 

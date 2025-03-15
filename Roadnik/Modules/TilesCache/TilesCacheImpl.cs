@@ -84,11 +84,11 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
         }
         catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
         {
-          _log.Warn($"Tile '__{_task.Key}__' is not found");
+          _log.Warn($"Tile '{_task.Key}' is not found");
         }
         catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.Unauthorized)
         {
-          _log.Warn($"Can't download tile '__{_task.Key}__' - unauthorized");
+          _log.Warn($"Can't download tile '{_task.Key}' - unauthorized");
         }
         catch (Exception ex)
         {

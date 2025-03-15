@@ -1,4 +1,4 @@
-﻿using Android.Gms.Location;
+﻿using Android.Content;
 using Android.Locations;
 using Android.OS;
 using Android.Runtime;
@@ -12,10 +12,9 @@ using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
-internal class AndroidLocationProvider : LocationCallback, ILocationProvider
+internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {
-  //private static readonly LocationManager p_locationService;
-  private static readonly FusedLocationProviderClient p_fusedLocationClient;
+  private static readonly LocationManager p_locationService;
   private static readonly Pool<ReplaySubject<LocationData>> p_locationSubjPool;
   private readonly ReplaySubject<LocationData> p_locationFlow;
   private readonly Subject<string> p_providerDisabledSubj;
@@ -25,8 +24,7 @@ internal class AndroidLocationProvider : LocationCallback, ILocationProvider
 
   static AndroidLocationProvider()
   {
-    //p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
-    p_fusedLocationClient = LocationServices.GetFusedLocationProviderClient(Platform.AppContext);
+    p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
     p_locationSubjPool = new Pool<ReplaySubject<LocationData>>(() => new ReplaySubject<LocationData>(1), null);
   }
 
@@ -50,30 +48,48 @@ internal class AndroidLocationProvider : LocationCallback, ILocationProvider
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(LocationPriority _locationPriority)
+  public void StartLocationWatcher(LocationPriority _locationPriority, TimeSpan _frequency)
   {
+    if (_locationPriority == LocationPriority.HighAccuracy)
+      StartLocationWatcher([LocationManager.GpsProvider], _frequency);
+    else if (_locationPriority == LocationPriority.BalancedPowerAccuracy || _locationPriority == LocationPriority.LowPower)
+      StartLocationWatcher([LocationManager.NetworkProvider, LocationManager.PassiveProvider], _frequency);
+    else if (_locationPriority == LocationPriority.Passive)
+      StartLocationWatcher([LocationManager.PassiveProvider], _frequency);
+    else
+      throw new InvalidOperationException($"Unknown location priority: '{_locationPriority}'");
+  }
+
+  public void StartLocationWatcher(IReadOnlyList<string> _providers, TimeSpan _frequency)
+  {
+    if (!p_locationService.IsLocationEnabled)
+      return;
+
     MainThread.BeginInvokeOnMainThread(() =>
     {
-    lock (p_startStopLock)
-    {
-      p_logger.Info($"Subscribing to location updates with priority '{_locationPriority}'...");
-      var result = new HashSet<string>();
-
-      try
+      lock (p_startStopLock)
       {
-        var locReq = Android.Gms.Location.LocationRequest
-          .Create()
-          .SetInterval(1000L)
-          .SetPriority((int)_locationPriority);
+        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'...");
+        var result = new HashSet<string>();
 
-          p_fusedLocationClient.RequestLocationUpdates(locReq, this, Platform.AppContext.MainLooper);
-        }
-        catch (Exception ex)
+        foreach (var provider in _providers.Distinct())
         {
-          p_logger.Error($"Can't subscribe to location updates with priority '{_locationPriority}'", ex);
+          if (!p_locationService.IsProviderEnabled(provider))
+            continue;
+
+          try
+          {
+            p_locationService.RequestLocationUpdates(provider, (long)_frequency.TotalMilliseconds, 0f, this);
+            result.Add(provider);
+            p_logger.Info($"Subscribed to '{provider}' provider");
+          }
+          catch (Exception ex)
+          {
+            p_logger.Error($"Can't subscribe to provider '{provider}'", ex);
+          }
         }
 
-        p_logger.Info($"Subscribed to location updates with priority '{_locationPriority}'");
+        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'");
       }
     });
   }
@@ -88,7 +104,7 @@ internal class AndroidLocationProvider : LocationCallback, ILocationProvider
       {
         try
         {
-          p_fusedLocationClient.RemoveLocationUpdates(this);
+          p_locationService.RemoveUpdates(this);
           p_logger.Info($"Unsubscribed from location updates");
         }
         catch (Exception ex)
@@ -97,44 +113,6 @@ internal class AndroidLocationProvider : LocationCallback, ILocationProvider
         }
       }
     });
-  }
-
-  public override void OnLocationResult(LocationResult _locResult)
-  {
-    base.OnLocationResult(_locResult);
-
-    try
-    {
-      var locations = _locResult.Locations;
-      if (locations.Count == 0)
-        return;
-
-      var rawLocation = locations
-        .Where(_ => _.HasAccuracy)
-        .OrderBy(_ => _.Accuracy)
-        .FirstOrDefault();
-
-      if (rawLocation == null)
-        return;
-
-      var timeStamp = DateTimeOffset.FromUnixTimeMilliseconds(rawLocation.Time);
-
-      var location = new LocationData(
-        rawLocation.Latitude,
-        rawLocation.Longitude,
-        rawLocation.Altitude,
-        rawLocation.Accuracy,
-        rawLocation.HasVerticalAccuracy ? rawLocation.VerticalAccuracyMeters : null,
-        rawLocation.HasBearing ? rawLocation.Bearing : null,
-        rawLocation.HasSpeed ? rawLocation.Speed : null,
-        timeStamp);
-
-      p_locationFlow.OnNext(location);
-    }
-    finally
-    {
-      _locResult.Dispose();
-    }
   }
 
   public void OnLocationChanged(Android.Locations.Location _location)

@@ -218,7 +218,7 @@ public partial class MainPage : CContentPage
             if (permissionGranted != PermissionStatus.Granted)
               return;
 
-            webAppLocationProvider.StartLocationWatcher(LocationPriority.HighAccuracy);
+            webAppLocationProvider.StartLocationWatcher(LocationPriority.HighAccuracy, TimeSpan.FromSeconds(1));
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
             compassProvider.Values

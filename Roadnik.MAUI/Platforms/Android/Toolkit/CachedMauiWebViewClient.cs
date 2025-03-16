@@ -26,7 +26,6 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     // we can't just cache tracks:
     //   1. at some point request will return 'MoreEntriesAvailable = false', and this info will be cached, thus web app will not request further data
     //   2. tracks wiped by client will remain in cache - we should somehow wipe it...
-    //GetRoomTracksRegex() 
   ];
 
   private readonly IWebDataCache? p_webDataCache;
@@ -110,8 +109,5 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
   private static partial Regex GetLocalIndexRegex();
   [GeneratedRegex($@"^https?\://{WEBAPP_HOST}\:?\d*/r/(.+)$")]
   private static partial Regex GetLocalFileRegex();
-
-  [GeneratedRegex(@"^https?\://.+?/get\?roomId=.+?&offset=\d+$")]
-  private static partial Regex GetRoomTracksRegex();
 
 }

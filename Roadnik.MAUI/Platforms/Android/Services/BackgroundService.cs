@@ -8,6 +8,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
+using System.Text;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
@@ -54,31 +55,27 @@ public class BackgroundService : CAndroidService
       else
         StartForeground(Consts.NOTIFICATION_ID_RECORDING, notification);
 
-      var dateTimeFormatOptions = new DateTimeOffsetToHumanFriendlyStringOptions(
-        HoursWord: L.generic_hours,
-        MinutesWord: L.generic_minutes,
-        SecondsWord: L.generic_seconds);
-
       p_locationReporter.Stats
-        .Sample(TimeSpan.FromSeconds(1))
+        .DistinctUntilChanged()
+        .Sample(TimeSpan.FromSeconds(5))
         .Subscribe(_info =>
         {
-          var lastLocationFixTime = _info.LastLocationFixTime != null ?
-            $"{_info.LastLocationFixTime.Value.ToLocalTime():MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
-            L.notification_location_sharing_body_never;
+          var lastLocationFixTime = _info.LastLocationFixTime != null 
+            ? $"{_info.LastLocationFixTime.Value.ToLocalTime():MM/dd HH:mm:ss}"
+            : L.notification_location_sharing_body_never;
 
-          var lastSuccessfulReportTime = _info.LastSuccessfulReportTime != null ?
-            $"{_info.LastSuccessfulReportTime.Value.ToLocalTime():MM/dd HH:mm:ss}" : // .ToHumanFriendlyString(dateTimeFormatOptions)} {L.generic_ago}
-            L.notification_location_sharing_body_never;
+          var lastSuccessfulReportTime = _info.LastSuccessfulReportTime != null
+            ? $"{_info.LastSuccessfulReportTime.Value.ToLocalTime():MM/dd HH:mm:ss}"
+            : L.notification_location_sharing_body_never;
 
-          var text = L.notification_location_sharing_body
+          var textSb = new StringBuilder(L.notification_location_sharing_body)
             .Replace("%last-location-fix-accuracy%", _info.LastLocationFixAccuracy.ToString())
             .Replace("%last-successful-report%", lastSuccessfulReportTime)
             .Replace("%last-location-fix%", lastLocationFixTime)
             .Replace("%success%", _info.Successful.ToString())
             .Replace("%total%", _info.Total.ToString());
 
-          GetRecordingNotification(L.notification_location_sharing_title, text, true);
+          GetRecordingNotification(L.notification_location_sharing_title, textSb.ToString(), true);
         }, p_lifetime);
 
       p_lifetime.DoOnEnding(() =>
@@ -107,8 +104,7 @@ public class BackgroundService : CAndroidService
     p_notificationMgr.CreateNotificationChannel(channel);
     var builder = new Notification.Builder(this, channelId)
      .SetContentTitle(_title)
-     .SetStyle(new Notification.BigTextStyle().BigText(_text))
-     //.SetContentText(_text)
+     .SetContentText(_text)
      .SetContentIntent(activity)
      .SetSmallIcon(Resource.Drawable.letter_r)
      .SetOnlyAlertOnce(true)

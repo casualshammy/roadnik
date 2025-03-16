@@ -1,4 +1,5 @@
 ﻿using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Modules.LocationProvider;
 
 namespace Roadnik.MAUI.Interfaces;
 
@@ -11,5 +12,5 @@ internal interface ILocationProvider
   void StopLocationWatcher();
   void StartLocationWatcher(IReadOnlyList<string> _providers, TimeSpan _frequency);
   static abstract Task<LocationData?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
-  void StartLocationWatcher(LocationPriority _locationPriority, TimeSpan _frequency);
+  void StartLocationWatcher(LocationProviders _providers, TimeSpan _frequency);
 }

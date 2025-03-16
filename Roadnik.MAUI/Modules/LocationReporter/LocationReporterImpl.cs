@@ -271,7 +271,13 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        locationProvider.StartLocationWatcher(conf.LocationProvider, TimeSpan.FromSeconds(1)); // conf.TimeInterval
+        if (conf.LocationProvider == LocationPriority.HighAccuracy)
+          locationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1)); // conf.TimeInterval
+        else if (conf.LocationProvider == LocationPriority.BalancedPowerAccuracy || conf.LocationProvider == LocationPriority.LowPower)
+          locationProvider.StartLocationWatcher(LocationProviders.Network | LocationProviders.Passive, TimeSpan.FromSeconds(1)); // conf.TimeInterval
+        else if (conf.LocationProvider == LocationPriority.Passive)
+          locationProvider.StartLocationWatcher(LocationProviders.Passive, TimeSpan.FromSeconds(1)); // conf.TimeInterval
+
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);
       });

@@ -12,6 +12,15 @@ using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
 
+[Flags]
+internal enum LocationProviders
+{
+  Gps = 1,
+  Network = 2,
+  Passive = 4,
+  All = Gps | Network | Passive,
+}
+
 internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {
   private static readonly LocationManager p_locationService;
@@ -48,16 +57,17 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(LocationPriority _locationPriority, TimeSpan _frequency)
+  public void StartLocationWatcher(LocationProviders _providers, TimeSpan _frequency)
   {
-    if (_locationPriority == LocationPriority.HighAccuracy)
-      StartLocationWatcher([LocationManager.GpsProvider], _frequency);
-    else if (_locationPriority == LocationPriority.BalancedPowerAccuracy || _locationPriority == LocationPriority.LowPower)
-      StartLocationWatcher([LocationManager.NetworkProvider, LocationManager.PassiveProvider], _frequency);
-    else if (_locationPriority == LocationPriority.Passive)
-      StartLocationWatcher([LocationManager.PassiveProvider], _frequency);
-    else
-      throw new InvalidOperationException($"Unknown location priority: '{_locationPriority}'");
+    var providers = new List<string>();
+    if ((_providers & LocationProviders.Gps) != 0)
+      providers.Add(LocationManager.GpsProvider);
+    if ((_providers & LocationProviders.Network) != 0)
+      providers.Add(LocationManager.NetworkProvider);
+    if ((_providers & LocationProviders.Passive) != 0)
+      providers.Add(LocationManager.PassiveProvider);
+
+    StartLocationWatcher(providers, _frequency);
   }
 
   public void StartLocationWatcher(IReadOnlyList<string> _providers, TimeSpan _frequency)

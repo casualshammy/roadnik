@@ -140,7 +140,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         if (queue <= 10)
           return true;
 
-        Interlocked.Decrement(ref reportQueueCounter);
+        p_log.Warn($"Too many reporting tasks in queue ({Interlocked.Decrement(ref reportQueueCounter)})!");
         return false;
       })
       .ObserveOn(reportScheduler)
@@ -201,7 +201,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
           var reqDataJson = JsonSerializer.Serialize(reqData);
           using var content = new StringContent(reqDataJson, Encoding.UTF8, Ax.Fw.MimeTypes.Json);
-          using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, _lifetime.Token);
+          using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+          using var cts = CancellationTokenSource.CreateLinkedTokenSource(timedCts.Token, _lifetime.Token);
+          using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, cts.Token);
           res.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };

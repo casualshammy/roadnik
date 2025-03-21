@@ -22,9 +22,10 @@ internal class SettingsController : ISettingsController
     var storage = new JsonStorage<RawAppSettings>(_configPath, SettingsJsonCtx.Default, lifetime);
     Settings = storage
       .Do(_ => _log.Warn($"New config is read"))
+      .Select(_ => _ == null ? null : AppConfig.From(_))
       .ToNullableProperty(lifetime, null);
   }
 
-  public IRxProperty<RawAppSettings?> Settings { get; }
+  public IRxProperty<AppConfig?> Settings { get; }
 
 }

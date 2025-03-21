@@ -1,4 +1,5 @@
-﻿using Roadnik.Data;
+﻿using Roadnik.Common.Data;
+using Roadnik.Data;
 using Roadnik.Server.Data;
 using Roadnik.Server.Data.DbTypes;
 using System.Text.Json.Serialization;

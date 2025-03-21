@@ -1,6 +1,8 @@
-﻿namespace Roadnik.Data;
+﻿using Roadnik.Common.Data;
 
-internal record GetPathResData(
+namespace Roadnik.Common.ReqRes;
+
+public record GetPathResData(
   long LastUpdateUnixMs,
   bool MoreEntriesAvailable,
   IEnumerable<TimedStorageEntry> Entries);

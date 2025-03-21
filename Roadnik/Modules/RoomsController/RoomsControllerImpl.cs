@@ -1,36 +1,50 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Ax.Fw.Storage.Data;
-using Ax.Fw.Storage.Interfaces;
-using Roadnik.Data;
+using Roadnik.Common.Data;
+using Roadnik.Common.JsonCtx;
+using Roadnik.Common.ReqRes;
+using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
-using Roadnik.Server.Data;
+using Roadnik.Server.Data.DbTypes;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.JsonCtx;
+using System.Net;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 
-namespace Roadnik.Modules.RoomsController;
+namespace Roadnik.Server.Modules.RoomsController;
+
+record SaveNewPathPointResult(
+  HttpStatusCode? ErrorCode,
+  string? ErrorMsg);
 
 internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsController>
 {
   public static IRoomsController ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance(
-      (IDbProvider _storage,
+    return _ctx.CreateInstance((
+      IDbProvider _storage,
       IReadOnlyLifetime _lifetime,
       ISettingsController _settingsController,
       IWebSocketCtrl _webSocketCtrl,
-      ILog _log) => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log));
+      ILog _log,
+      IReqRateLimiter _reqRateLimiter,
+      IFCMPublisher _firebasePublisher)
+      => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log, _reqRateLimiter, _firebasePublisher));
   }
 
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
   record PathTruncateInfo(string RoomId, string Username);
 
   private readonly IDbProvider p_storage;
+  private readonly ISettingsController p_settingsController;
+  private readonly IWebSocketCtrl p_webSocketCtrl;
+  private readonly IReqRateLimiter p_reqRateLimiter;
+  private readonly IFCMPublisher p_firebasePublisher;
   private readonly Subject<UserWipeInfo> p_userWipeFlow = new();
   private readonly Subject<PathTruncateInfo> p_pathTruncateFlow = new();
 
@@ -39,9 +53,16 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     IReadOnlyLifetime _lifetime,
     ISettingsController _settingsController,
     IWebSocketCtrl _webSocketCtrl,
-    ILog _log)
+    ILog _log,
+    IReqRateLimiter _reqRateLimiter,
+    IFCMPublisher _firebasePublisher)
   {
     p_storage = _storage;
+    p_settingsController = _settingsController;
+    p_webSocketCtrl = _webSocketCtrl;
+    p_reqRateLimiter = _reqRateLimiter;
+    p_firebasePublisher = _firebasePublisher;
+
     var log = _log["rooms-controller"];
 
     var semaphore = new SemaphoreSlim(1, 1);
@@ -139,41 +160,48 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       .Subscribe(_lifetime);
 
     p_pathTruncateFlow
-      .SelectAsync(async (_data, _ct) =>
+      .Buffer(TimeSpan.FromMinutes(1))
+      .SelectAsync(async (_list, _ct) =>
       {
+        if (_list.Count == 0)
+          return;
+
         await semaphore.WaitAsync(_ct);
 
         try
         {
-          var maxPointsPerPath = GetRoom(_data.RoomId)?.MaxPointsPerPath;
-          if (maxPointsPerPath == null || maxPointsPerPath == 0)
-            return;
-
-          log.Info($"Truncating path points for '{_data.RoomId}/{_data.Username}' to '{maxPointsPerPath}' points");
-
-          var entriesEE = p_storage.Paths
-            .ListDocuments<StorageEntry>(_data.RoomId)
-            .Where(_ => _.Data.Username == _data.Username)
-            .OrderByDescending(_ => _.Created);
-
-          var counter = 0;
-          var removedDocumentsCount = 0;
-          foreach (var entry in entriesEE)
+          foreach (var entry in _list.DistinctBy(_ => HashCode.Combine(_.RoomId, _.Username)))
           {
-            if (++counter > maxPointsPerPath)
+            var maxPointsPerPath = GetRoom(entry.RoomId)?.MaxPointsPerPath;
+            if (maxPointsPerPath == null || maxPointsPerPath == 0)
+              continue;
+
+            log.Info($"Truncating path points for '{entry.RoomId}/{entry.Username}' to '{maxPointsPerPath}' points");
+
+            var entriesEE = p_storage.Paths
+              .ListDocuments<StorageEntry>(entry.RoomId)
+              .Where(_ => _.Data.Username == entry.Username)
+              .OrderByDescending(_ => _.Created);
+
+            var counter = 0;
+            var removedDocumentsCount = 0;
+            foreach (var e in entriesEE)
             {
-              p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
-              ++removedDocumentsCount;
+              if (++counter > maxPointsPerPath)
+              {
+                p_storage.Paths.DeleteDocuments(e.Namespace, e.Key);
+                ++removedDocumentsCount;
+              }
             }
+
+            await _webSocketCtrl.SendMsgByRoomIdAsync(entry.RoomId, new WsMsgPathTruncated(entry.Username, maxPointsPerPath.Value), _ct);
+
+            log.Info($"Truncated '{entry.RoomId}/{entry.Username}' to '{maxPointsPerPath}' points (removed: {removedDocumentsCount})");
           }
-
-          await _webSocketCtrl.SendMsgByRoomIdAsync(_data.RoomId, new WsMsgPathTruncated(_data.Username, maxPointsPerPath.Value), _ct);
-
-          log.Info($"Truncated '{_data.RoomId}/{_data.Username}' to '{maxPointsPerPath}' points (removed: {removedDocumentsCount})");
         }
         catch (Exception ex)
         {
-          log.Error($"Can't truncate entries for {_data.RoomId}/{_data.Username}", ex);
+          log.Error($"Can't truncate entries", ex);
         }
         finally
         {
@@ -218,6 +246,75 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   {
     var data = new PathTruncateInfo(_roomId, _username);
     p_pathTruncateFlow.OnNext(data);
+  }
+
+  public async Task<SaveNewPathPointResult> SaveNewPathPointAsync(
+    ILog _log,
+    IPAddress? _clientIpAddress,
+    string _roomId,
+    string _username,
+    int _sessionId,
+    bool _wipeOldPath,
+    float _lat,
+    float _lng,
+    float _alt,
+    float? _acc,
+    float? _speed,
+    float? _battery,
+    float? _gsmSignal,
+    float? _bearing,
+    CancellationToken _ct)
+  {
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
+      return new(HttpStatusCode.BadRequest, "Room Id is incorrect!");
+    if (!ReqResUtil.IsUsernameSafe(_username))
+      return new(HttpStatusCode.BadRequest, "Username is incorrect!");
+
+    _log.Info($"Got request to store path point: '{_roomId}/{_username}'");
+
+    var room = GetRoom(_roomId);
+    var maxPathPoints = room?.MaxPathPoints ?? p_settingsController.Settings.Value?.MaxPathPointsPerRoom;
+    if (maxPathPoints != null && maxPathPoints == 0)
+      return new(HttpStatusCode.Forbidden, "Publishing is forbidden!");
+
+    var minInterval = room?.MinPathPointIntervalMs ?? p_settingsController.Settings.Value?.MinPathPointIntervalMs ?? 0u;
+    var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username}";
+    if (!p_reqRateLimiter.IsReqOk(compositeKey, _clientIpAddress, minInterval))
+    {
+      _log.Warn($"Too many requests, room '{_roomId}', username: '{_username}', time limit: '{minInterval} ms'");
+      return new(HttpStatusCode.TooManyRequests, string.Empty);
+    }
+
+    var now = DateTimeOffset.UtcNow;
+    var nowUnixMs = now.ToUnixTimeMilliseconds();
+
+    var sessionKey = $"{_roomId}/{_username}";
+    var sessionDoc = p_storage.GenericData.ReadSimpleDocument<RoomUserSession>(sessionKey);
+    if (sessionDoc == null || sessionDoc.Data.SessionId != _sessionId)
+    {
+      _log.Info($"New session {_sessionId} is started, username '{_username}', wipe: '{_wipeOldPath}'");
+
+      p_storage.GenericData.WriteSimpleDocument(sessionKey, new RoomUserSession(_sessionId));
+
+      if (_wipeOldPath == true)
+        EnqueueUserWipe(_roomId, _username, nowUnixMs);
+
+      var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgNewTrackStarted(_username), AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
+      var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
+      await p_firebasePublisher.SendDataAsync(_roomId, pushMsg, _ct);
+    }
+
+    var record = new StorageEntry(_username, _lat, _lng, _alt, _speed, _acc, _battery, _gsmSignal, _bearing);
+    p_storage.Paths.WriteDocument(_roomId, nowUnixMs, record);
+
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
+
+    if (room?.MaxPointsPerPath > 0)
+      EnqueuePathTruncate(_roomId, _username);
+
+    _log.Info($"Successfully stored path point: '{_roomId}/{_username}'");
+
+    return new(null, null);
   }
 
 }

@@ -1,8 +1,8 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes.PushMessages;
-using Roadnik.Common.Serializers;
 using Roadnik.Interfaces;
 using Roadnik.Modules.FCMProvider;
 using Roadnik.Modules.FCMProvider.Parts;

@@ -1,5 +1,4 @@
-﻿using MimeMapping;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -27,7 +26,7 @@ internal abstract class GenericController
   protected IResult Json<T>(T _obj) where T : notnull
   {
     var json = JsonSerializer.Serialize(_obj, typeof(T), p_jsonCtx);
-    return Results.Content(json, KnownMimeTypes.Json, Encoding.UTF8);
+    return Results.Content(json, Ax.Fw.MimeTypes.Json, Encoding.UTF8);
   }
   protected static IResult NotFound() => Results.NotFound();
 

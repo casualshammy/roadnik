@@ -34,7 +34,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   private readonly Subject<WebSocketSession> p_clientConnectedFlow = new();
   private int p_sessionsCount = 0;
 
-  public WebSocketCtrlImpl(
+  private WebSocketCtrlImpl(
     ILog _log,
     ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime)

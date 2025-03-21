@@ -3,7 +3,7 @@ using Roadnik.Server.Data.Settings;
 
 namespace Roadnik.Server.Interfaces;
 
-public interface ISettingsController
+internal interface ISettingsController
 {
-  IRxProperty<RawAppSettings?> Settings { get; }
+  IRxProperty<AppConfig?> Settings { get; }
 }

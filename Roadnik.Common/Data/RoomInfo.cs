@@ -1,6 +1,6 @@
 ﻿using Ax.Fw.SharedTypes.Attributes;
 
-namespace Roadnik.Data;
+namespace Roadnik.Common.Data;
 
 [SimpleDocument("room-info")]
 public record RoomInfo(

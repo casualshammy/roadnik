@@ -1,14 +1,15 @@
 ﻿using Ax.Fw;
+using Roadnik.Common.Data;
 using Roadnik.Common.ReqRes;
-using Roadnik.Data;
-using Roadnik.Server.Data.ReqRes;
 using System.Text.Json.Serialization;
 
-namespace Roadnik.Server.JsonCtx;
+namespace Roadnik.Common.JsonCtx;
 
 [JsonSourceGenerationOptions(
   PropertyNameCaseInsensitive = true)]
+//[JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(StorePathPointReq))]
+[JsonSerializable(typeof(StorePathPointRes))]
 [JsonSerializable(typeof(GetPathResData))]
 [JsonSerializable(typeof(CreateNewPointReq))]
 [JsonSerializable(typeof(IReadOnlyList<ListRoomPointsResData>))]
@@ -17,4 +18,4 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(DeleteRoomReq))]
 [JsonSerializable(typeof(IReadOnlyList<RoomInfo>))]
 [JsonSerializable(typeof(SerializableVersion))]
-internal partial class ControllersJsonCtx : JsonSerializerContext { }
+public partial class RestJsonCtx : JsonSerializerContext { }

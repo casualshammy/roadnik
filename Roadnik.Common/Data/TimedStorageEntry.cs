@@ -1,9 +1,8 @@
 ﻿using Ax.Fw.Storage.Data;
-using Roadnik.Server.Data;
 
-namespace Roadnik.Data;
+namespace Roadnik.Common.Data;
 
-internal record TimedStorageEntry(
+public record TimedStorageEntry(
   long UnixTimeMs,
   string Username,
   float Latitude,

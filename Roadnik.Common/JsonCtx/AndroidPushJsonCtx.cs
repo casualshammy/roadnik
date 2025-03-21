@@ -1,9 +1,12 @@
 ﻿using Roadnik.Common.ReqRes.PushMessages;
 using System.Text.Json.Serialization;
 
-namespace Roadnik.Common.Serializers;
+namespace Roadnik.Common.JsonCtx;
 
-[JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
+[JsonSourceGenerationOptions(
+  PropertyNameCaseInsensitive = true, 
+  PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, 
+  WriteIndented = true)]
 [JsonSerializable(typeof(PushMsg))]
 [JsonSerializable(typeof(PushMsgNewTrackStarted))]
 [JsonSerializable(typeof(PushMsgNotification))]

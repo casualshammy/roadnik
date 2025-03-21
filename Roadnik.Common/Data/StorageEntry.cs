@@ -1,6 +1,6 @@
-﻿namespace Roadnik.Server.Data;
+﻿namespace Roadnik.Common.Data;
 
-internal record StorageEntry(
+public record StorageEntry(
   string Username,
   float Latitude,
   float Longitude,

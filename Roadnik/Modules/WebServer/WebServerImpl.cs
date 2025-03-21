@@ -1,9 +1,9 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
 using Roadnik.Server.Modules.WebServer.Middlewares;
 using Roadnik.Server.Toolkit;
@@ -112,7 +112,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
     builder.Services.ConfigureHttpJsonOptions(_opt =>
     {
-      _opt.SerializerOptions.TypeInfoResolverChain.Insert(0, ControllersJsonCtx.Default);
+      _opt.SerializerOptions.TypeInfoResolverChain.Insert(0, RestJsonCtx.Default);
     });
 
     builder.Services.AddResponseCompression(_options => _options.EnableForHttps = true);

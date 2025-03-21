@@ -5,7 +5,6 @@ using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using FluentArgs;
 using Roadnik.Interfaces;
-using Roadnik.Modules.RoomsController;
 using Roadnik.Modules.WebSocketController;
 using Roadnik.Server.Data;
 using Roadnik.Server.Interfaces;
@@ -13,8 +12,10 @@ using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
+using Roadnik.Server.Modules.RoomsController;
 using Roadnik.Server.Modules.Settings;
 using Roadnik.Server.Modules.TilesCache;
+using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -97,7 +98,9 @@ public partial class Program
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
+      .AddModule<UdpServerImpl, IUdpServer>()
       .ActivateOnStart<IWebServer>()
+      .ActivateOnStart<IUdpServer>()
       .Build();
 
     lifetime.InstallConsoleCtrlCHook();

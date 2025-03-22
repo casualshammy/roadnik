@@ -20,44 +20,34 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
   public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      ISettingsController _settingsController,
+      IAppConfig _appConfig,
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider,
-      ILog _log) => new TilesCacheImpl(_settingsController, _lifetime, _httpClientProvider, _log["tiles-cache"]));
+      ILog _log) => new TilesCacheImpl(_appConfig, _lifetime, _httpClientProvider, _log["tiles-cache"]));
   }
 
-  private readonly IRxProperty<FileCache?> p_cacheProp;
+  private readonly FileCache? p_cache;
   private readonly Subject<DownloadTask> p_downloadTaskSubj = new();
 
   private TilesCacheImpl(
-    ISettingsController _settingsController,
+    IAppConfig _appConfig,
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider,
     ILog _log)
   {
-    var confPropScheduler = new EventLoopScheduler();
-
-    p_cacheProp = _settingsController.Settings
-      .WhereNotNull()
-      .Alive(_lifetime, confPropScheduler, (_conf, _life) =>
-      {
-        if (_conf.MapTilesCacheSize == null || _conf.MapTilesCacheSize <= 0)
-        {
-          _log.Warn($"Tiles cache is disabled");
-          return null;
-        }
-
-        var folder = Path.Combine(_conf.DataDirPath, "tiles-cache");
-        var cache = new FileCache(
-          _life,
-          folder,
-          TimeSpan.FromDays(30),
-          _conf.MapTilesCacheSize.Value,
-          TimeSpan.FromHours(6));
-
-        return cache;
-      })
-      .ToNullableProperty(_lifetime, null);
+    if (_appConfig.MapTilesCacheSize == null || _appConfig.MapTilesCacheSize <= 0)
+    {
+      _log.Warn($"Tiles cache is disabled");
+    }
+    else
+    {
+      p_cache = new FileCache(
+        _lifetime,
+        Path.Combine(_appConfig.DataDirPath, "tiles-cache"),
+        TimeSpan.FromDays(30),
+        _appConfig.MapTilesCacheSize.Value,
+        TimeSpan.FromHours(6));
+    }
 
     var downloadScheduler = new EventLoopScheduler();
     p_downloadTaskSubj
@@ -65,8 +55,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       .ObserveOn(downloadScheduler)
       .SelectAsync(async (_task, _ct) =>
       {
-        var cache = p_cacheProp.Value;
-        if (cache == null)
+        if (p_cache == null)
           return;
 
         try
@@ -78,7 +67,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 
           using var stream = await res.Content.ReadAsStreamAsync(_ct);
           var mime = res.Content.Headers.ContentType?.ToString();
-          await cache.StoreAsync(_task.Key, stream, mime, true, _ct);
+          await p_cache.StoreAsync(_task.Key, stream, mime, true, _ct);
 
           _log.Info($"Tile '__{_task.Key}__' is downloaded");
         }
@@ -115,12 +104,11 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     _stream = null;
     _hash = null;
 
-    var cache = p_cacheProp.Value;
-    if (cache == null)
+    if (p_cache == null)
       return false;
 
     var key = GetKey(_x, _y, _z, _type);
-    if (!cache.TryGet(key, out var stream, out var meta))
+    if (!p_cache.TryGet(key, out var stream, out var meta))
       return false;
 
     _stream = stream;

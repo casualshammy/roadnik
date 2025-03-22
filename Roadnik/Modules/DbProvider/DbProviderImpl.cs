@@ -17,15 +17,15 @@ internal class DbProviderImpl : IDbProvider
   public DbProviderImpl(
     IReadOnlyLifetime _lifetime,
     ILog _log,
-    AppConfig _rawAppSettings)
+    AppConfig _appConfig)
   {
     GenericData = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(_rawAppSettings.DataDirPath, "data.v0.db"),
+      Path.Combine(_appConfig.DataDirPath, "data.v0.db"),
       DocStorageJsonCtx.Default,
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
     Paths = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(_rawAppSettings.DataDirPath, "paths.v0.db"),
+      Path.Combine(_appConfig.DataDirPath, "paths.v0.db"),
       DocStorageJsonCtx.Default,
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 

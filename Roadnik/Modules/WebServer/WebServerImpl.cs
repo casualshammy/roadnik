@@ -1,17 +1,12 @@
 ﻿using Ax.Fw.DependencyInjection;
-using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
-using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
 using Roadnik.Server.Modules.WebServer.Middlewares;
-using System.Net;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.WebServer;
 
@@ -20,7 +15,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   public static IWebServer ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      ISettingsController _settingsController,
+      IAppConfig _appConfig,
       IDbProvider _documentStorage,
       ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
@@ -30,7 +25,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider) => new WebServerImpl(
-        _settingsController,
+        _appConfig,
         _documentStorage,
         _logger["kestrel"],
         _webSocketCtrl,
@@ -42,7 +37,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         _httpClientProvider));
   }
 
-  private readonly ISettingsController p_settingsController;
   private readonly IDbProvider p_documentStorage;
   private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
@@ -53,7 +47,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private readonly IHttpClientProvider p_httpClientProvider;
 
   private WebServerImpl(
-    ISettingsController _settingsController,
+    IAppConfig _appConfig,
     IDbProvider _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
@@ -64,7 +58,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     IReadOnlyLifetime _lifetime,
     IHttpClientProvider _httpClientProvider)
   {
-    p_settingsController = _settingsController;
     p_documentStorage = _documentStorage;
     p_logger = _logger;
     p_webSocketCtrl = _webSocketCtrl;
@@ -74,39 +67,29 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_fCMPublisher = _fCMPublisher;
     p_httpClientProvider = _httpClientProvider;
 
-    var confScheduler = new EventLoopScheduler();
-
-    _settingsController.Settings
-      .DistinctUntilChanged(_ => HashCode.Combine(_?.IpBind, _?.PortBind))
-      .HotAlive(_lifetime, confScheduler, (_conf, _life) =>
+    var thread = new Thread(async () =>
+    {
+      try
       {
-        if (_conf == null)
-          return;
+        _logger.Info($"Starting server on {_appConfig.BindIp}:{_appConfig.BindPort}...");
 
-        var thread = new Thread(async () =>
-        {
-          try
-          {
-            _logger.Info($"Starting server on {_conf.IpBind}:{_conf.PortBind}...");
+        using (var host = CreateWebHost(_appConfig))
+          await host.RunAsync(_lifetime.Token);
 
-            using (var host = CreateWebHost(_conf))
-              await host.RunAsync(_life.Token);
+        _logger.Info($"Server on {_appConfig.BindIp}:{_appConfig.BindPort} is stopped");
+      }
+      catch (Exception ex)
+      {
+        _logger.Error($"Error in thread: {ex}");
+      }
+    });
 
-            _logger.Info($"Server on {_conf.IpBind}:{_conf.PortBind} is stopped");
-          }
-          catch (Exception ex)
-          {
-            _logger.Error($"Error in thread: {ex}");
-          }
-        });
-
-        thread.IsBackground = true;
-        thread.Start();
-      });
+    thread.IsBackground = true;
+    thread.Start();
   }
 
   private IHost CreateWebHost(
-    AppConfig _config)
+    IAppConfig _config)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -123,7 +106,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     {
       _opt.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
       _opt.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
-      _opt.Listen(IPAddress.Parse(_config.IpBind), _config.PortBind);
+      _opt.Listen(_config.BindIp, _config.BindPort);
     });
 
     builder.Services.AddSingleton(p_logger);
@@ -142,7 +125,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       });
 
     var controller = new ApiControllerV0(
-      p_settingsController,
+      _config,
       p_documentStorage,
       p_logger,
       p_webSocketCtrl,

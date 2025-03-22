@@ -29,19 +29,19 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     return _ctx.CreateInstance((
       IDbProvider _storage,
       IReadOnlyLifetime _lifetime,
-      ISettingsController _settingsController,
+      IAppConfig _appConfig,
       IWebSocketCtrl _webSocketCtrl,
       ILog _log,
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _firebasePublisher)
-      => new RoomsControllerImpl(_storage, _lifetime, _settingsController, _webSocketCtrl, _log, _reqRateLimiter, _firebasePublisher));
+      => new RoomsControllerImpl(_storage, _lifetime, _appConfig, _webSocketCtrl, _log, _reqRateLimiter, _firebasePublisher));
   }
 
   record UserWipeInfo(string RoomId, string Username, long UpToDateTimeUnixMs);
   record PathTruncateInfo(string RoomId, string Username);
 
   private readonly IDbProvider p_storage;
-  private readonly ISettingsController p_settingsController;
+  private readonly IAppConfig p_appConfig;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_firebasePublisher;
@@ -51,14 +51,14 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
   private RoomsControllerImpl(
     IDbProvider _storage,
     IReadOnlyLifetime _lifetime,
-    ISettingsController _settingsController,
+    IAppConfig _appConfig,
     IWebSocketCtrl _webSocketCtrl,
     ILog _log,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _firebasePublisher)
   {
     p_storage = _storage;
-    p_settingsController = _settingsController;
+    p_appConfig = _appConfig;
     p_webSocketCtrl = _webSocketCtrl;
     p_reqRateLimiter = _reqRateLimiter;
     p_firebasePublisher = _firebasePublisher;
@@ -68,56 +68,51 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     var semaphore = new SemaphoreSlim(1, 1);
     var cleanerScheduler = new EventLoopScheduler();
 
-    _settingsController.Settings
-      .WhereNotNull()
-      .HotAlive(_lifetime, cleanerScheduler, (_conf, _life) =>
+    Observable
+      .Interval(TimeSpan.FromHours(1))
+      .StartWithDefault()
+      .Delay(TimeSpan.FromMinutes(10))
+      .SelectAsync(async (_, _ct) =>
       {
-        Observable
-          .Interval(TimeSpan.FromHours(1))
-          .StartWithDefault()
-          .Delay(TimeSpan.FromMinutes(10))
-          .SelectAsync(async (_, _ct) =>
+        await semaphore.WaitAsync(_ct);
+
+        try
+        {
+          var now = DateTimeOffset.UtcNow;
+
+          foreach (var roomGroup in p_storage.Paths.ListDocumentsMeta().GroupBy(_ => _.Namespace))
           {
-            await semaphore.WaitAsync(_ct);
+            var roomInfo = GetRoom(roomGroup.Key);
 
-            try
+            var maxPathPoints = roomInfo?.MaxPathPoints ?? _appConfig.MaxPathPointsPerRoom;
+            var maxPathPointAgeHours = roomInfo?.MaxPathPointAgeHours ?? _appConfig.MaxPathPointAgeHours;
+
+            var counter = 0;
+            var deleted = 0;
+            foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
             {
-              var now = DateTimeOffset.UtcNow;
-
-              foreach (var roomGroup in p_storage.Paths.ListDocumentsMeta().GroupBy(_ => _.Namespace))
+              if ((now - entry.Created).TotalHours > maxPathPointAgeHours)
               {
-                var roomInfo = GetRoom(roomGroup.Key);
-
-                var maxPathPoints = roomInfo?.MaxPathPoints ?? _conf.MaxPathPointsPerRoom;
-                var maxPathPointAgeHours = roomInfo?.MaxPathPointAgeHours ?? _conf.MaxPathPointAgeHours;
-
-                var counter = 0;
-                var deleted = 0;
-                foreach (var entry in roomGroup.OrderByDescending(_ => _.Created))
-                {
-                  if (maxPathPointAgeHours != null && (now - entry.Created).TotalHours > maxPathPointAgeHours)
-                  {
-                    p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
-                    ++deleted;
-                  }
-                  else if (maxPathPoints != null && ++counter > maxPathPoints)
-                  {
-                    p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
-                    ++deleted;
-                  }
-                }
-
-                if (deleted > 0)
-                  log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
+                p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
+                ++deleted;
+              }
+              else if (++counter > maxPathPoints)
+              {
+                p_storage.Paths.DeleteDocuments(entry.Namespace, entry.Key);
+                ++deleted;
               }
             }
-            finally
-            {
-              semaphore.Release();
-            }
-          })
-          .Subscribe(_life);
-      });
+
+            if (deleted > 0)
+              log.Warn($"Removed '{deleted}' geo entries of room id '{roomGroup.Key}'");
+          }
+        }
+        finally
+        {
+          semaphore.Release();
+        }
+      })
+      .Subscribe(_lifetime);
 
     var wipeCounter = 0L;
     p_userWipeFlow
@@ -273,11 +268,11 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     _log.Info($"Got request to store path point: '{_roomId}/{_username}'");
 
     var room = GetRoom(_roomId);
-    var maxPathPoints = room?.MaxPathPoints ?? p_settingsController.Settings.Value?.MaxPathPointsPerRoom;
-    if (maxPathPoints != null && maxPathPoints == 0)
+    var maxPathPoints = room?.MaxPathPoints ?? p_appConfig.MaxPathPointsPerRoom;
+    if (maxPathPoints == 0)
       return new(HttpStatusCode.Forbidden, "Publishing is forbidden!");
 
-    var minInterval = room?.MinPathPointIntervalMs ?? p_settingsController.Settings.Value?.MinPathPointIntervalMs ?? 0u;
+    var minInterval = room?.MinPathPointIntervalMs ?? p_appConfig.MinPathPointIntervalMs;
     var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username}";
     if (!p_reqRateLimiter.IsReqOk(compositeKey, _clientIpAddress, minInterval))
     {

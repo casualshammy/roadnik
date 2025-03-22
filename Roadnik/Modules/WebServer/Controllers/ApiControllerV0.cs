@@ -29,7 +29,7 @@ internal class ApiControllerV0 : GenericController
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
 
-  private readonly ISettingsController p_settingsCtrl;
+  private readonly IAppConfig p_appConfig;
   private readonly IDbProvider p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
@@ -40,7 +40,7 @@ internal class ApiControllerV0 : GenericController
   private readonly ILog p_log;
 
   public ApiControllerV0(
-    ISettingsController _settingsCtrl,
+    IAppConfig _appConfig,
     IDbProvider _documentStorage,
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
@@ -50,7 +50,7 @@ internal class ApiControllerV0 : GenericController
     IFCMPublisher _fcmPublisher,
     IHttpClientProvider _httpClientProvider) : base("/", RestJsonCtx.Default)
   {
-    p_settingsCtrl = _settingsCtrl;
+    p_appConfig = _appConfig;
     p_documentStorage = _documentStorage;
     p_log = _logger;
     p_webSocketCtrl = _webSocketCtrl;
@@ -124,11 +124,7 @@ internal class ApiControllerV0 : GenericController
       if (string.IsNullOrWhiteSpace(_path) || _path == "/")
         _path = "index.html";
 
-      var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
-      if (webroot.IsNullOrWhiteSpace())
-        throw new InvalidOperationException($"Webroot dir is misconfigured");
-
-      var path = Path.Combine(webroot, _path);
+      var path = Path.Combine(p_appConfig.WebrootDirPath, _path);
       if (!File.Exists(path))
       {
         log.Warn($"File '{_path}' is not found");
@@ -180,7 +176,7 @@ internal class ApiControllerV0 : GenericController
         return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
       }
 
-      var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApiKey;
+      var tfApiKey = p_appConfig.ThunderforestApiKey;
       var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
       var url = _mapType switch
       {
@@ -199,7 +195,7 @@ internal class ApiControllerV0 : GenericController
         return BadRequest($"Map type is not available: '{_mapType}'");
       }
 
-      var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
+      var mapCacheSize = p_appConfig.MapTilesCacheSize;
       if (mapCacheSize != null && mapCacheSize.Value > 0)
         p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
 
@@ -623,7 +619,7 @@ internal class ApiControllerV0 : GenericController
       log.Info($"**Establishing ws connection** '__{sessionIndex}__' for room '__{_roomId}__'...");
 
       var roomInfo = p_roomsController.GetRoom(_roomId);
-      var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom ?? int.MaxValue;
+      var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_appConfig.MaxPathPointsPerRoom;
 
       using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
       _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);

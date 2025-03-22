@@ -13,7 +13,6 @@ using System.Reactive.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.FCMProvider;
 
@@ -22,53 +21,37 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
   public static IFCMPublisher ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      ISettingsController _settingsController, 
-      IReadOnlyLifetime _lifetime, 
-      ILog _log) => new FCMPublisherImpl(_settingsController, _lifetime, _log));
+      IAppConfig _appConfig,
+      ILog _log) => new FCMPublisherImpl(_appConfig, _log));
   }
 
   private readonly ILog p_log;
-  private readonly IRxProperty<FCMSettions?> p_fcmSettings;
+  private readonly FirebaseSettings? p_firebaseSettings;
   private readonly HttpClient p_httpClient = new();
   private volatile FCMAccessToken? p_accessToken;
 
   public FCMPublisherImpl(
-    ISettingsController _settingsController,
-    IReadOnlyLifetime _lifetime,
+    IAppConfig _appConfig,
     ILog _log)
   {
     p_log = _log["fcm-provider"];
 
-    p_fcmSettings = _settingsController.Settings
-      .Select(_ =>
-      {
-        if (_ == null)
-          return null;
-        if (_.FCMServiceAccountJsonPath.IsNullOrWhiteSpace() || _.FCMProjectId.IsNullOrWhiteSpace())
-          return null;
-
-        try
-        {
-          var json = File.ReadAllText(_.FCMServiceAccountJsonPath, Encoding.UTF8);
-          var data = JsonSerializer.Deserialize(json, FcmPushJsonCtx.Default.ServiceAccountAuthData);
-          if (data == null)
-            return null;
-
-          return new FCMSettions(data, _.FCMProjectId);
-        }
-        catch (Exception ex)
-        {
-          p_log.Error($"Can't deserialize fcm settings!", ex);
-          return null;
-        }
-      })
-      .ToNullableProperty(_lifetime);
+    try
+    {
+      var json = File.ReadAllText(_appConfig.FirebaseServiceAccountJsonPath, Encoding.UTF8);
+      var data = JsonSerializer.Deserialize(json, FcmPushJsonCtx.Default.ServiceAccountAuthData);
+      if (data != null)
+        p_firebaseSettings = new FirebaseSettings(data, _appConfig.FirebaseProjectId);
+    }
+    catch (Exception ex)
+    {
+      p_log.Error($"Can't deserialize firebase settings!", ex);
+    }
   }
 
   public async Task<bool> SendDataAsync(string _topic, PushMsg _pushMsg, CancellationToken _ct)
   {
-    var settings = p_fcmSettings.Value;
-    if (settings == null)
+    if (p_firebaseSettings == null)
       return false;
 
     var payload = new FcmMsg()
@@ -91,9 +74,9 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
 
     using var message = new HttpRequestMessage(
       HttpMethod.Post,
-      $"https://fcm.googleapis.com/v1/projects/{settings.ProjectId}/messages:send");
+      $"https://fcm.googleapis.com/v1/projects/{p_firebaseSettings.ProjectId}/messages:send");
 
-    var token = await GetJwtTokenAsync(settings.Data, _ct);
+    var token = await GetJwtTokenAsync(p_firebaseSettings.Data, _ct);
 
 #if DEBUG
     p_log.Warn($"FCM JWT: {token}");

@@ -3,7 +3,6 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Modules.WebSocketController.Parts;
 using Roadnik.Server.Data.WebSockets;
-using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Toolkit;
 using System.Buffers;
@@ -14,7 +13,7 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
-namespace Roadnik.Modules.WebSocketController;
+namespace Roadnik.Server.Modules.WebSocketController;
 
 public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 {
@@ -22,12 +21,10 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   {
     return _ctx.CreateInstance((
       ILog _log,
-      ISettingsController _settingsController,
-      IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _settingsController, _lifetime));
+      IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _lifetime));
   }
 
   private readonly ILog p_log;
-  private readonly ISettingsController p_settingsCtrl;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly ConcurrentDictionary<int, WebSocketSession> p_sessions = new();
   private readonly Subject<object> p_incomingMsgs = new();
@@ -36,11 +33,9 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
 
   private WebSocketCtrlImpl(
     ILog _log,
-    ISettingsController _settingsController,
     IReadOnlyLifetime _lifetime)
   {
     p_log = _log["ws"];
-    p_settingsCtrl = _settingsController;
     p_lifetime = _lifetime;
 
     WsHelper.RegisterMsType("ws-msg-hello", typeof(WsMsgHello));

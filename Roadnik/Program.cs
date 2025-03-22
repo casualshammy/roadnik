@@ -15,7 +15,6 @@ using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
 using Roadnik.Server.Modules.Settings;
 using Roadnik.Server.Modules.TilesCache;
-using Roadnik.Server.Modules.UdpServer;
 using Roadnik.Server.Modules.WebServer;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -98,9 +97,7 @@ public partial class Program
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
-      .AddModule<UdpServerImpl, IUdpServer>()
       .ActivateOnStart<IWebServer>()
-      .ActivateOnStart<IUdpServer>()
       .Build();
 
     lifetime.InstallConsoleCtrlCHook();

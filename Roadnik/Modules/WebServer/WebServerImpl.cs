@@ -1,7 +1,6 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data.Settings;
@@ -9,7 +8,6 @@ using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
 using Roadnik.Server.Modules.WebServer.Middlewares;
-using Roadnik.Server.Toolkit;
 using System.Net;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -52,7 +50,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fCMPublisher;
-  private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClientProvider;
 
   private WebServerImpl(
@@ -75,7 +72,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fCMPublisher = _fCMPublisher;
-    p_lifetime = _lifetime;
     p_httpClientProvider = _httpClientProvider;
 
     var confScheduler = new EventLoopScheduler();
@@ -146,7 +142,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       });
 
     var controller = new ApiControllerV0(
-      p_lifetime,
       p_settingsController,
       p_documentStorage,
       p_logger,

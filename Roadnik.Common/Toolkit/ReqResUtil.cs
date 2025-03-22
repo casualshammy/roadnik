@@ -1,6 +1,5 @@
 ﻿using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -41,17 +40,6 @@ public static partial class ReqResUtil
         sb.Append(c);
     }
     return sb.ToString();
-  }
-
-  public static async Task<string> GetUdpPublicKeyHashAsync(
-    string _publicKey,
-    CancellationToken _ct)
-  {
-    var keyBytes = Encoding.UTF8.GetBytes(_publicKey);
-    using var ms = new MemoryStream(keyBytes);
-    var hash = await SHA256.HashDataAsync(ms, _ct);
-    var hashString = BitConverter.ToString(hash);
-    return hashString;
   }
 
   [GeneratedRegex(@"^[a-zA-Z0-9\-]*$", RegexOptions.Compiled)]

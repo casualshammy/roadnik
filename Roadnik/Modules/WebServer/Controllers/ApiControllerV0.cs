@@ -1,16 +1,13 @@
 ﻿using Ax.Fw;
-using Ax.Fw.Crypto;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.Data;
 using Roadnik.Common.Data.DocumentStorage;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.ReqRes.PushMessages;
-using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Common.ReqResTypes;
 using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
@@ -20,7 +17,6 @@ using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Toolkit;
-using System.Collections.Frozen;
 using System.Net;
 using System.Reactive.Linq;
 using System.Text;
@@ -42,10 +38,8 @@ internal class ApiControllerV0 : GenericController
   private readonly IFCMPublisher p_fcmPublisher;
   private readonly IHttpClientProvider p_httpClientProvider;
   private readonly ILog p_log;
-  private readonly IRxProperty<StorePathPointRes> p_storePathPointResProp;
 
   public ApiControllerV0(
-    IReadOnlyLifetime _lifetime,
     ISettingsController _settingsCtrl,
     IDbProvider _documentStorage,
     ILog _logger,
@@ -65,18 +59,6 @@ internal class ApiControllerV0 : GenericController
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
     p_httpClientProvider = _httpClientProvider;
-
-    p_storePathPointResProp = _settingsCtrl.Settings
-      .DistinctUntilChanged(_ => HashCode.Combine(_?.UdpPublicKey, _?.UdpServerEndpoint))
-      .SelectAsync(async (_, _ct) =>
-      {
-        if (_ == null || _.UdpPublicKey.IsNullOrWhiteSpace() || _.UdpServerEndpoint.IsNullOrWhiteSpace())
-          return new StorePathPointRes(null, null);
-
-        var udpPublicKeyHash = await ReqResUtil.GetUdpPublicKeyHashAsync(_.UdpPublicKey, _ct);
-        return new StorePathPointRes(udpPublicKeyHash, _.UdpServerEndpoint);
-      })
-      .ToProperty(_lifetime, new StorePathPointRes(null, null));
   }
 
   public override void RegisterPaths(WebApplication _app)
@@ -342,7 +324,7 @@ internal class ApiControllerV0 : GenericController
         return Problem(savePointResult.ErrorCode.Value, savePointResult.ErrorMsg);
 
       log.Info($"**Handled** request to **store path point** of __{_req.RoomId}/{_req.Username}__");
-      return Json(p_storePathPointResProp.Value);
+      return Results.Ok();
     }
     catch (Exception ex)
     {

@@ -6,7 +6,6 @@ using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
-using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
@@ -41,10 +40,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
   record ReportingCtx(
     int? SessionId,
     LocationData? Location,
-    DateTimeOffset? LastReportAttemptTime,
-    string? UdpEndpoint)
+    DateTimeOffset? LastReportAttemptTime)
   {
-    public static ReportingCtx Empty { get; } = new ReportingCtx(null, null, null, null);
+    public static ReportingCtx Empty { get; } = new ReportingCtx(null, null, null);
   }
 
   private readonly ReplaySubject<LocationReporterSessionStats> p_statsFlow = new(1);
@@ -209,41 +207,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
           using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
           using var cts = CancellationTokenSource.CreateLinkedTokenSource(timedCts.Token, _lifetime.Token);
-
-          if (!acc.UdpEndpoint.IsNullOrWhiteSpace() && IPEndPoint.TryParse(acc.UdpEndpoint, out var udpEndpoint))
-          {
-            p_log.Info($"Using UDP transport");
-
-            var data = StoreLocationUdpMsg.FromStorePathPointReq(reqData).MarshalToByteArray();
-            var udpData = new GenericUdpMsg(StoreLocationUdpMsg.Type, data).MarshalToByteArray();
-
-            using var keyStream = await FileSystem.OpenAppPackageFileAsync("udp_public.crt");
-            using var sr = new StreamReader(keyStream);
-            var keyContents = await sr.ReadToEndAsync(cts.Token);
-            using var rsaAes = new RsaAesGcm(keyContents, null, null);
-            var encData = rsaAes.Encrypt(udpData).ToArray();
-
-            using var udpClient = new UdpClient();
-            await udpClient.SendAsync(encData, udpEndpoint, cts.Token);
-          }
-          else
-          {
-            var reqDataJson = JsonSerializer.Serialize(reqData);
-            using var content = new StringContent(reqDataJson, Encoding.UTF8, Ax.Fw.MimeTypes.Json);
-            using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, cts.Token);
-            res.EnsureSuccessStatusCode();
-
-            var resData = await res.Content.ReadFromJsonAsync(RestJsonCtx.Default.StorePathPointRes, cts.Token);
-            if (resData != null && !resData.UdpPublicKeyHash.IsNullOrWhiteSpace() && !resData.UdpEndpoint.IsNullOrWhiteSpace())
-            {
-              using var keyStream = await FileSystem.OpenAppPackageFileAsync("udp_public.crt");
-              using var sr = new StreamReader(keyStream);
-              var keyContents = await sr.ReadToEndAsync(cts.Token);
-              var keyHash = await ReqResUtil.GetUdpPublicKeyHashAsync(keyContents, cts.Token);
-              if (keyHash == resData.UdpPublicKeyHash)
-                acc = acc with { UdpEndpoint = resData.UdpEndpoint };
-            }
-          }
+          using var content = JsonContent.Create(reqData, RestJsonCtx.Default.StorePathPointReq);
+          using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}{ReqPaths.STORE_PATH_POINT}", content, cts.Token);
+          res.EnsureSuccessStatusCode();
 
           stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };
           p_statsFlow.OnNext(stats);

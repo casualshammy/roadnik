@@ -15,9 +15,6 @@ internal record AppConfig
   public required uint? MinPathPointIntervalMs { get; init; }
   public required string? FCMServiceAccountJsonPath { get; init; }
   public required string? FCMProjectId { get; init; }
-  public required string? UdpPrivateKey { get; init; }
-  public required string? UdpPublicKey { get; init; }
-  public required string? UdpServerEndpoint { get; init; }
 
   public static AppConfig From(RawAppSettings _rawConfig)
   {
@@ -36,9 +33,6 @@ internal record AppConfig
       MinPathPointIntervalMs = _rawConfig.MinPathPointIntervalMs,
       FCMServiceAccountJsonPath = _rawConfig.FCMServiceAccountJsonPath,
       FCMProjectId = _rawConfig.FCMProjectId,
-      UdpPrivateKey = Environment.GetEnvironmentVariable("ROADNIK_UDP_PRIVATE_KEY"),
-      UdpPublicKey = Environment.GetEnvironmentVariable("ROADNIK_UDP_PUBLIC_KEY"),
-      UdpServerEndpoint = Environment.GetEnvironmentVariable("ROADNIK_UDP_ENDPOINT"),
     };
   }
 

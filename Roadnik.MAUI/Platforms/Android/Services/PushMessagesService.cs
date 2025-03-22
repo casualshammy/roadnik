@@ -6,14 +6,14 @@ using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Firebase.Messaging;
+using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes.PushMessages;
-using Roadnik.Common.Serializers;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Frozen;
 using System.Text.Json;
-using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;
 

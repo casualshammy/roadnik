@@ -39,10 +39,10 @@ public readonly struct StoreLocationUdpMsg : IEquatable<StoreLocationUdpMsg>
 
   public readonly int SessionId;
 
-  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = ReqResUtil.MaxRoomIdLength)]
+  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = ReqResUtil.MaxRoomIdLength + 1)]
   public readonly string RoomId;
 
-  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = ReqResUtil.MaxUsernameLength)]
+  [MarshalAs(UnmanagedType.ByValTStr, SizeConst = ReqResUtil.MaxUsernameLength + 1)]
   public readonly string Username;
 
   public readonly float Lat;

@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComputedRef, type Ref, shallowRef, shallowReactive, watch, onMounted, type WatchHandle, onUnmounted } from "vue";
+import { ref, computed, type ComputedRef, type Ref, shallowRef, watch, onMounted, type WatchHandle, onUnmounted, reactive } from "vue";
 import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
@@ -60,10 +60,10 @@ const p_mapLocation = ref<LatLngZoom>({
 
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
-const p_paths = shallowReactive(new Map<string, L.Polyline>());
+const p_paths = reactive(new Map<string, L.Polyline>());
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
-const p_gEntries = shallowReactive(new Map<string, TimedStorageEntry[]>());
+const p_gEntries = reactive(new Map<string, TimedStorageEntry[]>());
 const p_tracksUpdateRequired$ = new Subject<void>();
 
 const p_map = shallowRef<L.Map>();

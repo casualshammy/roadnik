@@ -2,7 +2,7 @@ import { CurrentLocationControl } from "@/components/CurrentLocationControl";
 import type { AppCtx } from "@/data/AppCtx";
 import type { TimedStorageEntry } from "@/data/backend";
 import Cookies from "js-cookie";
-import type { ShallowReactive, ShallowRef } from "vue";
+import type { Reactive, ShallowRef } from "vue";
 import * as Consts from '../data/Consts';
 import type { HostApi } from "@/api/hostApi";
 
@@ -10,15 +10,15 @@ export class MapInteractor {
   private readonly p_appCtx: AppCtx;
   private readonly p_hostApi: HostApi;
   private readonly p_map: ShallowRef<L.Map | undefined>;
-  private readonly p_paths: ShallowReactive<Map<string, L.Polyline>>;
-  private readonly p_geoEntries: ShallowReactive<Map<string, TimedStorageEntry[]>>;
+  private readonly p_paths: Reactive<Map<string, L.Polyline>>;
+  private readonly p_geoEntries: Reactive<Map<string, TimedStorageEntry[]>>;
 
   constructor(
     _appCtx: AppCtx,
     _hostApi: HostApi,
     _map: ShallowRef<L.Map | undefined>,
-    _paths: ShallowReactive<Map<string, L.Polyline>>,
-    _geoEntries: ShallowReactive<Map<string, TimedStorageEntry[]>>
+    _paths: Reactive<Map<string, L.Polyline>>,
+    _geoEntries: Reactive<Map<string, TimedStorageEntry[]>>
   ) {
     this.p_appCtx = _appCtx;
     this.p_hostApi = _hostApi;

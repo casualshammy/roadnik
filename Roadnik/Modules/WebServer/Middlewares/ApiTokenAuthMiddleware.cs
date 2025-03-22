@@ -1,8 +1,7 @@
 ﻿using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Roadnik.Server.Attributes;
-using Roadnik.Server.Data.Settings;
+using Roadnik.Server.Interfaces;
 using System.Net;
 
 namespace Roadnik.Server.Modules.WebServer.Middlewares;
@@ -11,12 +10,12 @@ internal class ApiTokenAuthMiddleware
 {
   private readonly ILog p_log;
   private readonly RequestDelegate p_next;
-  private readonly AppConfig p_config;
+  private readonly IAppConfig p_config;
 
   public ApiTokenAuthMiddleware(
     ILog _log,
     RequestDelegate _next,
-    AppConfig _config)
+    IAppConfig _config)
   {
     p_log = _log["auth-middleware"];
     p_next = _next;

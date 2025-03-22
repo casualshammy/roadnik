@@ -1,8 +1,10 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
+using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
@@ -30,15 +32,15 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider) => new WebServerImpl(
-        _settingsController, 
-        _documentStorage, 
-        _logger["kestrel"], 
-        _webSocketCtrl, 
-        _roomsController, 
-        _tilesCache, 
-        _reqRateLimiter, 
-        _fCMPublisher, 
-        _lifetime, 
+        _settingsController,
+        _documentStorage,
+        _logger["kestrel"],
+        _webSocketCtrl,
+        _roomsController,
+        _tilesCache,
+        _reqRateLimiter,
+        _fCMPublisher,
+        _lifetime,
         _httpClientProvider));
   }
 
@@ -91,7 +93,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
           {
             _logger.Info($"Starting server on {_conf.IpBind}:{_conf.PortBind}...");
 
-            using (var host = CreateWebHost(_conf.IpBind, _conf.PortBind))
+            using (var host = CreateWebHost(_conf))
               await host.RunAsync(_life.Token);
 
             _logger.Info($"Server on {_conf.IpBind}:{_conf.PortBind} is stopped");
@@ -107,7 +109,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       });
   }
 
-  private IHost CreateWebHost(string _host, int _port)
+  private IHost CreateWebHost(
+    AppConfig _config)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -124,10 +127,23 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     {
       _opt.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
       _opt.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
-      _opt.Listen(IPAddress.Parse(_host), _port);
+      _opt.Listen(IPAddress.Parse(_config.IpBind), _config.PortBind);
     });
 
-    builder.Services.AddSingleton<ILog>(p_logger);
+    builder.Services.AddSingleton(p_logger);
+    builder.Services.AddSingleton(_config);
+
+    var app = builder.Build();
+    app
+      .UseMiddleware<LogMiddleware>()
+      .UseMiddleware<CorsMiddleware>(p_logger)
+      .UseMiddleware<ForwardProxyMiddleware>()
+      .UseMiddleware<ApiTokenAuthMiddleware>(p_logger)
+      .UseResponseCompression()
+      .UseWebSockets(new WebSocketOptions()
+      {
+        KeepAliveInterval = TimeSpan.FromSeconds(30)
+      });
 
     var controller = new ApiControllerV0(
       p_lifetime,
@@ -140,19 +156,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       p_reqRateLimiter,
       p_fCMPublisher,
       p_httpClientProvider);
-
-    var app = builder.Build();
-    app
-      .UseMiddleware<LogMiddleware>()
-      .UseMiddleware<CorsMiddleware>(p_logger)
-      .UseMiddleware<ForwardProxyMiddleware>()
-      .UseMiddleware<AuthMiddleware>(p_logger, new GenericController[] { controller })
-      .UseResponseCompression()
-      .UseWebSockets(new WebSocketOptions()
-      {
-        KeepAliveInterval = TimeSpan.FromSeconds(30)
-      });
-
     controller.RegisterPaths(app);
 
     return app;

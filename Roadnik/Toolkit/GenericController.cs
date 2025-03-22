@@ -18,7 +18,6 @@ internal abstract class GenericController
   public string Route { get; }
 
   public abstract void RegisterPaths(WebApplication _app);
-  public abstract Task<bool> AuthAsync(HttpRequest _req, CancellationToken _ct);
 
   protected static IResult Forbidden(string _details) => Results.Problem(_details, statusCode: 403);
   protected static IResult InternalServerError(string? _details = null) => Results.Problem(_details, statusCode: (int)HttpStatusCode.InternalServerError);

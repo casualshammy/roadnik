@@ -8,6 +8,7 @@ using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Views;
 using QRCoder;
+using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
@@ -511,7 +512,14 @@ public partial class MainPage : CContentPage
     {
       p_log.Info($"Sending request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}'");
       using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.CREATE_NEW_POINT}");
-      using var content = JsonContent.Create(new CreateNewPointReq(roomId, username, latLng.Lat, latLng.Lng, dialogResult));
+      using var content = JsonContent.Create(new CreateRoomPointReq
+      {
+        RoomId = roomId,
+        Username = username,
+        Lat = latLng.Lat,
+        Lng = latLng.Lng,
+        Description = dialogResult
+      }, RestJsonCtx.Default.CreateRoomPointReq);
       req.Content = content;
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
       using var res = await p_httpClient.Value.SendAsync(req, cts.Token);

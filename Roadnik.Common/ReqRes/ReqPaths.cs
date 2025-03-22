@@ -2,17 +2,16 @@
 
 public static class ReqPaths
 {
-  public const string GET_ROOM_PATHS = "/get";
-  public const string CREATE_NEW_POINT = "/create-new-point";
-  public const string LIST_ROOM_POINTS = "/list-room-points";
-  public const string DELETE_ROOM_POINT = "/delete-room-point";
-  public const string UPLOAD_LOG = "/upload-log";
-  public const string GET_FREE_ROOM_ID = "/get-free-room-id";
-  public const string IS_ROOM_ID_VALID = "/is-room-id-valid";
-  public const string STORE_PATH_POINT = "/store-path-point";
-  public const string REGISTER_ROOM = "/register-room";
-  public const string UNREGISTER_ROOM = "/unregister-room";
-  public const string LIST_REGISTERED_ROOMS = "/list-registered-rooms";
-  public const string GET_VERSION = "/get-version";
+  public static string GET_ROOM_PATHS { get; } = "/get";
+  public static string CREATE_NEW_POINT { get; } = "/create-new-point";
+  public static string LIST_ROOM_POINTS { get; } = "/list-room-points";
+  public static string DELETE_ROOM_POINT { get; } = "/delete-room-point";
+  public static string GET_FREE_ROOM_ID { get; } = "/get-free-room-id";
+  public static string IS_ROOM_ID_VALID { get; } = "/is-room-id-valid";
+  public static string STORE_PATH_POINT { get; } = "/store-path-point";
+  public static string REGISTER_ROOM { get; } = "/register-room";
+  public static string UNREGISTER_ROOM { get; } = "/unregister-room";
+  public static string LIST_REGISTERED_ROOMS { get; } = "/list-registered-rooms";
+  public static string GET_VERSION { get; } = "/get-version";
 
 }

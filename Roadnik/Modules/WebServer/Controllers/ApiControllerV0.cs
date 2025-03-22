@@ -3,6 +3,7 @@ using Ax.Fw.Crypto;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.Data;
 using Roadnik.Common.Data.DocumentStorage;
@@ -13,6 +14,7 @@ using Roadnik.Common.ReqRes.Udp;
 using Roadnik.Common.ReqResTypes;
 using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
+using Roadnik.Server.Attributes;
 using Roadnik.Server.Data;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
@@ -28,13 +30,6 @@ namespace Roadnik.Server.Modules.WebServer.Controllers;
 
 internal class ApiControllerV0 : GenericController
 {
-  private static readonly FrozenSet<string> p_authRequiredPaths = new string[] {
-    ReqPaths.REGISTER_ROOM,
-    ReqPaths.UNREGISTER_ROOM,
-    ReqPaths.LIST_REGISTERED_ROOMS }
-    .Select(_ => _.Trim('/', ' '))
-    .ToFrozenSet();
-
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
 
@@ -95,34 +90,16 @@ internal class ApiControllerV0 : GenericController
     _app.MapGet("/map-tile", GetMapTileAsync);
     _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
     _app.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
-    _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPaths);
-    _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateNewPointAsync);
+    _app.MapGet(ReqPaths.GET_ROOM_PATHS, ListRoomPathPoints);
+    _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateRoomPointAsync);
     _app.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints);
     _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
     _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
-    _app.MapPost(ReqPaths.UPLOAD_LOG, UploadLogAsync);
     _app.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
-    _app.MapGet("/ws", StartWebSocketAsync);
+    _app.MapGet("/ws", ConnectToWsAsync);
     _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
     _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
     _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
-  }
-
-  public override Task<bool> AuthAsync(HttpRequest _req, CancellationToken _ct)
-  {
-    var path = _req.Path.ToString().Trim('/', ' ');
-    if (!p_authRequiredPaths.Contains(path))
-      return Task.FromResult(true);
-
-    var apiKeyStr = _req.Headers["api-key"].FirstOrDefault();
-    if (apiKeyStr.IsNullOrWhiteSpace())
-      return Task.FromResult(false);
-
-    var adminApiKey = p_settingsCtrl.Settings.Value?.AdminApiKey;
-    if (adminApiKey.IsNullOrWhiteSpace())
-      return Task.FromResult(false);
-
-    return Task.FromResult(adminApiKey == apiKeyStr);
   }
 
   public IResult GetVersion(HttpContext _httpContext)
@@ -374,103 +351,121 @@ internal class ApiControllerV0 : GenericController
     }
   }
 
-  //[HttpGet(ReqPaths.GET_ROOM_PATHS)]
-  public IResult GetRoomPaths(
+  public IResult ListRoomPathPoints(
     HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string? _roomId,
-    [FromQuery(Name = "offset")] long? _offsetUnixTimeMs,
-    CancellationToken _ct)
+    [FromQuery(Name = "roomId")] string _roomId,
+    [FromQuery(Name = "offset")] long _offsetUnixTimeMs)
   {
-    if (string.IsNullOrWhiteSpace(_roomId))
-      return BadRequest("Room Id is null!");
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return BadRequest("Room Id is incorrect!");
-
     var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_ROOM_PATHS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    try
     {
-      log.Warn($"[{ReqPaths.GET_ROOM_PATHS}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      log.Info($"Requested **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
+
+      if (!ReqResUtil.IsRoomIdValid(_roomId))
+      {
+        log.Info("Room Id is incorrect!");
+        return BadRequest("Room Id is incorrect!");
+      }
+
+      var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+      if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_ROOM_PATHS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+      {
+        log.Warn($"Too many requests from ip '{ip}'");
+        return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      }
+
+      var now = DateTimeOffset.UtcNow;
+
+      const int maxReturnEntries = 250;
+      var offset = DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs + 1);
+      var documents = p_documentStorage.Paths
+        .ListDocuments<StorageEntry>(_roomId, _from: offset)
+        .OrderBy(_ => _.Created)
+        .Take(maxReturnEntries + 1)
+        .ToArray();
+
+      ListRoomPathPointsRes result;
+      if (documents.Length == 0)
+      {
+        result = new(now.ToUnixTimeMilliseconds(), false, []);
+      }
+      else if (documents.Length <= maxReturnEntries)
+      {
+        var entries = documents.Select(TimedStorageEntry.FromStorageEntry);
+        result = new(now.ToUnixTimeMilliseconds(), false, entries);
+      }
+      else
+      {
+        var lastEntryTime = documents[^2].Created.ToUnixTimeMilliseconds();
+        var entries = documents
+          .Take(maxReturnEntries)
+          .Select(TimedStorageEntry.FromStorageEntry);
+
+        result = new(lastEntryTime, true, entries);
+      }
+
+      log.Info($"**Handled** request **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
+      return Json(result);
     }
-
-    log.Info($"Requested **paths** of room: __{_roomId}__; offset __{_offsetUnixTimeMs}__");
-
-    var now = DateTimeOffset.UtcNow;
-
-    const int maxReturnEntries = 250;
-    var offset = _offsetUnixTimeMs != null ? DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs.Value + 1) : (DateTimeOffset?)null;
-    var documents = p_documentStorage.Paths
-      .ListDocuments<StorageEntry>(_roomId, _from: offset ?? null)
-      .OrderBy(_ => _.Created)
-      .Take(maxReturnEntries + 1)
-      .ToList();
-
-    GetPathResData result;
-    if (documents.Count == 0)
+    catch (Exception ex)
     {
-      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, []);
+      log.Error($"Error occured while trying to handle 'room path points of {_roomId} from timestamp {_offsetUnixTimeMs}' request: {ex}");
+      return InternalServerError(ex.Message);
     }
-    else if (documents.Count <= maxReturnEntries)
-    {
-      var entries = documents.Select(TimedStorageEntry.FromStorageEntry);
-      result = new GetPathResData(now.ToUnixTimeMilliseconds(), false, entries);
-    }
-    else
-    {
-      var lastEntryTime = documents[^2].Created.ToUnixTimeMilliseconds();
-      var entries = documents
-        .Take(maxReturnEntries)
-        .Select(TimedStorageEntry.FromStorageEntry);
-
-      result = new GetPathResData(lastEntryTime, true, entries);
-    }
-
-    return Json(result);
   }
 
-  //[HttpPost(ReqPaths.CREATE_NEW_POINT)]
-  public async Task<IResult> CreateNewPointAsync(
+  public async Task<IResult> CreateRoomPointAsync(
     HttpRequest _httpRequest,
-    [FromBody] CreateNewPointReq _req,
+    [FromBody] CreateRoomPointReq _req,
     CancellationToken _ct)
   {
     var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_NEW_POINT, ip, () => new TimeWall(10, TimeSpan.FromSeconds(10))))
+    try
     {
-      log.Warn($"[{ReqPaths.CREATE_NEW_POINT}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      log.Info($"Requested to **create room point** in __{_req.RoomId}__ from user __{_req.Username}__, coords: __{_req.Lat}; {_req.Lng}__");
+
+      if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
+      {
+        log.Warn($"Incorrect room id!");
+        return BadRequest($"Incorrect room id!");
+      }
+      if (!ReqResUtil.IsUserDefinedStringSafe(_req.Username))
+      {
+        log.Warn($"Incorrect username!");
+        return BadRequest($"Incorrect username!");
+      }
+
+      var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+      if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_NEW_POINT, ip, () => new TimeWall(10, TimeSpan.FromSeconds(10))))
+      {
+        log.Warn($"Too many requests from ip '{ip}'");
+        return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      }
+
+      var description = ReqResUtil.ClearUserMsg(_req.Description);
+      var now = DateTimeOffset.UtcNow;
+      var point = new RoomPointDocument(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
+      p_documentStorage.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
+
+      await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+
+      var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgRoomPointAdded(_req.Username, _req.Description, _req.Lat, _req.Lng), AndroidPushJsonCtx.Default.PushMsgRoomPointAdded);
+      var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, pushMsgData);
+      await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
+
+      log.Info($"**Handled** request to **create room point** in __{_req.RoomId}__ from user __{_req.Username}__, coords: __{_req.Lat}; {_req.Lng}__");
+      return Results.Ok();
     }
-
-    if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
-      return BadRequest($"Incorrect room id!");
-    if (!ReqResUtil.IsUserDefinedStringSafe(_req.Username))
-      return BadRequest($"Incorrect username!");
-
-    var description = ReqResUtil.ClearUserMsg(_req.Description);
-
-    log.Info($"Got request to save point [{(int)_req.Lat}, {(int)_req.Lng}] for room '{_req.RoomId}'");
-
-    var now = DateTimeOffset.UtcNow;
-    var point = new RoomPointDocument(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
-    p_documentStorage.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
-
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
-
-    var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgRoomPointAdded(_req.Username, _req.Description, _req.Lat, _req.Lng), AndroidPushJsonCtx.Default.PushMsgRoomPointAdded);
-    var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, pushMsgData);
-    await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
-
-    return Results.Ok();
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'create room point in {_req.RoomId} from user {_req.Username}, coords: {_req.Lat}; {_req.Lng}' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
   }
 
   public IResult ListRoomPoints(
     HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string _roomId,
-    CancellationToken _ct)
+    [FromQuery(Name = "roomId")] string _roomId)
   {
     var log = GetLog(_httpRequest);
     try
@@ -504,184 +499,226 @@ internal class ApiControllerV0 : GenericController
     }
   }
 
-  //[HttpPost(ReqPaths.DELETE_ROOM_POINT)]
   public async Task<IResult> DeleteRoomPointAsync(
     HttpRequest _httpRequest,
     [FromBody] DeleteRoomPointReq _req,
     CancellationToken _ct)
   {
-    if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
-      return BadRequest($"Incorrect room id!");
-
     var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    try
     {
-      log.Warn($"[{ReqPaths.DELETE_ROOM_POINT}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
-    }
+      log.Info($"Requested to **delete room point** __{_req.PointId}__ from room __{_req.RoomId}__");
 
-    log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
-
-    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<RoomPointDocument>(new LikeExpr($"{_req.RoomId}.%")))
-      if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
+      if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
       {
-        p_documentStorage.GenericData.DeleteSimpleDocument<RoomPointDocument>(entry.Key);
-        break;
+        log.Warn($"Incorrect room id!");
+        return BadRequest($"Incorrect room id!");
       }
 
-    var now = DateTimeOffset.UtcNow;
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+      var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+      if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+      {
+        log.Warn($"Too many requests from ip '{ip}'");
+        return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      }
 
-    return Results.Ok();
+      var deleted = false;
+      foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<RoomPointDocument>(new LikeExpr($"{_req.RoomId}.%")))
+        if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
+        {
+          p_documentStorage.GenericData.DeleteSimpleDocument<RoomPointDocument>(entry.Key);
+
+          var now = DateTimeOffset.UtcNow;
+          await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+
+          deleted = true;
+          break;
+        }
+
+      if (deleted)
+        log.Info($"**Handled** request to **delete room point** __{_req.PointId}__ from room __{_req.RoomId}__");
+      else
+        log.Warn($"Handled request to delete room point {_req.PointId} from room {_req.RoomId} (not found)");
+
+      return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'delete room point {_req.PointId} from room {_req.RoomId}' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
   }
 
-  //[HttpGet(ReqPaths.GET_FREE_ROOM_ID)]
   public IResult GetFreeRoomId(
     HttpRequest _httpRequest,
     CancellationToken _ct)
   {
     var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_FREE_ROOM_ID, ip, () => new TimeWall(10, TimeSpan.FromSeconds(60))))
-    {
-      log.Warn($"[{ReqPaths.GET_FREE_ROOM_ID}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
-    }
-
-    log.Info($"Got req to get free room id");
-
-    string? roomId = null;
-    var roomIdValid = false;
-    while (!_ct.IsCancellationRequested && !roomIdValid)
-    {
-      roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
-      roomIdValid = !p_documentStorage.Paths
-        .ListDocumentsMeta(roomId)
-        .Any();
-    }
-
-    if (!roomIdValid || string.IsNullOrEmpty(roomId))
-    {
-      log.Error("Can't find free room id!");
-      return InternalServerError("Can't find free room id!");
-    }
-
-    log.Info($"Sending free room id: '{roomId}'");
-    return Results.Content(roomId, "text/plain", Encoding.UTF8);
-  }
-
-  //[HttpPost(ReqPaths.UPLOAD_LOG)]
-  [RequestSizeLimit(10 * 1024 * 1024)]
-  public async Task<IResult> UploadLogAsync(
-    HttpRequest _httpRequest,
-    [FromHeader(Name = "roomId")] string? _roomId,
-    [FromHeader(Name = "username")] string? _username,
-    CancellationToken _ct)
-  {
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return BadRequest("Room Id is incorrect!");
-    if (!ReqResUtil.IsUsernameSafe(_username))
-      return BadRequest("Username is incorrect!");
-
-    var dataDir = p_settingsCtrl.Settings.Value?.DataDirPath;
-    if (dataDir.IsNullOrWhiteSpace())
-      return InternalServerError($"Data dir path is not set!");
-
-    var folder = Path.Combine(dataDir, "user-logs", _roomId, _username);
-    if (!Directory.Exists(folder))
-      Directory.CreateDirectory(folder);
-
-    var log = GetLog(_httpRequest);
-
-    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-    var filePath = Path.Combine(folder, $"{timestamp}.gzip");
-    log.Info($"Requested to store user log file to '{filePath}'");
-
     try
     {
-      using (var file = File.OpenWrite(filePath))
-        await _httpRequest.Body.CopyToAsync(file, _ct);
+      log.Info($"Requested **free room id**");
 
-      log.Info($"User log file is stored to '{filePath}'");
+      var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+      if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_FREE_ROOM_ID, ip, () => new TimeWall(10, TimeSpan.FromSeconds(60))))
+      {
+        log.Warn($"Too many requests from ip '{ip}'");
+        return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      }
+
+      using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+      using var cts = CancellationTokenSource.CreateLinkedTokenSource(_ct, timedCts.Token);
+      string? roomId = null;
+      var roomIdValid = false;
+      while (!cts.IsCancellationRequested && !roomIdValid)
+      {
+        roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
+        roomIdValid = !p_documentStorage.Paths
+          .ListDocumentsMeta(roomId)
+          .Any();
+      }
+
+      if (!roomIdValid || roomId.IsNullOrEmpty())
+      {
+        log.Error($"Can't find free room id (last: '{roomId}')!");
+        return InternalServerError("Can't find free room id!");
+      }
+
+      log.Info($"**Handled** request **free room id** (__{roomId}__)");
+      return Results.Content(roomId, MimeTypes.Text, Encoding.UTF8);
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'free room id' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
+  }
+
+  public IResult IsRoomIdValid(
+    HttpRequest _httpRequest,
+    [FromQuery(Name = "roomId")] string _roomId)
+  {
+    var log = GetLog(_httpRequest);
+    try
+    {
+      log.Info($"Requested to **check** if __'{_roomId}'__ is **valid** room id");
+
+      var valid = ReqResUtil.IsRoomIdValid(_roomId);
+
+      log.Info($"**Handled** request to **check** if __'{_roomId}'__ is **valid** room id ({(valid ? "valid" : "not valid")})");
+      return valid
+        ? Results.Ok()
+        : Results.StatusCode((int)HttpStatusCode.NotAcceptable);
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'check if '{_roomId}' is valid room id' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
+  }
+
+  public async Task<IResult> ConnectToWsAsync(
+    HttpRequest _httpRequest,
+    [FromQuery(Name = "roomId")] string _roomId,
+    CancellationToken _ct)
+  {
+    var log = GetLog(_httpRequest);
+    try
+    {
+      log.Info($"Requested to **connect to ws** of room __'{_roomId}'__");
+
+      if (!ReqResUtil.IsRoomIdValid(_roomId))
+      {
+        log.Warn("Room Id is incorrect!");
+        return BadRequest("Room Id is incorrect!");
+      }
+      if (!_httpRequest.HttpContext.WebSockets.IsWebSocketRequest)
+      {
+        log.Warn($"Expected web socket request");
+        return BadRequest($"Expected web socket request");
+      }
+
+      var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
+      log.Info($"**Establishing ws connection** '__{sessionIndex}__' for room '__{_roomId}__'...");
+
+      var roomInfo = p_roomsController.GetRoom(_roomId);
+      var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom ?? int.MaxValue;
+
+      using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
+      _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);
+      log.Info($"**Ws connection** '__{sessionIndex}__' for room '__{_roomId}__' is **closed**");
+
+      return Results.Empty;
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'connect to ws of room '{_roomId}'' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
+  }
+
+  [ApiTokenRequired]
+  public IResult RegisterRoom(
+    HttpRequest _httpRequest,
+    [FromBody] RoomInfo _req)
+  {
+    var log = GetLog(_httpRequest);
+    try
+    {
+      log.Info($"Requested to **register room** __'{_req.RoomId}'__");
+
+      p_roomsController.RegisterRoom(_req);
+
+      log.Info($"**Handled** request to **register room** __'{_req.RoomId}'__");
       return Results.Ok();
     }
     catch (Exception ex)
     {
-      log.Error($"Error occured while trying to save user log file '{filePath}'", ex);
-      return InternalServerError();
+      log.Error($"Error occured while trying to handle 'register room '{_req.RoomId}'' request: {ex}");
+      return InternalServerError(ex.Message);
     }
   }
 
-  //[HttpGet(ReqPaths.IS_ROOM_ID_VALID)]
-  public IResult IsRoomIdValid(
-    [FromQuery(Name = "roomId")] string? _roomId)
-  {
-    var valid = ReqResUtil.IsRoomIdValid(_roomId);
-    return valid ? Results.Ok() : Results.StatusCode((int)HttpStatusCode.NotAcceptable);
-  }
-
-  //[HttpGet("/ws")]
-  public async Task<IResult> StartWebSocketAsync(
-    HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string? _roomId,
-    CancellationToken _ct)
-  {
-    if (string.IsNullOrWhiteSpace(_roomId))
-      return BadRequest("Room Id is null!");
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return BadRequest("Room Id is incorrect!");
-
-    if (!_httpRequest.HttpContext.WebSockets.IsWebSocketRequest)
-      return BadRequest($"Expected web socket request");
-
-    var log = GetLog(_httpRequest);
-
-    var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
-    log.Info($"Establishing WS connection '{sessionIndex}' for room '{_roomId}'...");
-
-    var roomInfo = p_roomsController.GetRoom(_roomId);
-    var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_settingsCtrl.Settings.Value?.MaxPathPointsPerRoom ?? int.MaxValue;
-
-    using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
-    _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);
-    log.Info($"WS connection '{sessionIndex}' for room '{_roomId}' is closed");
-
-    return Results.Empty;
-  }
-
-  //[ApiKeyRequired]
-  //[HttpPost("register-room")]
-  public IResult RegisterRoom(
-    [FromBody] RoomInfo? _req)
-  {
-    if (_req == null)
-      return BadRequest("Room data is null");
-
-    p_roomsController.RegisterRoom(_req);
-    return Results.Ok();
-  }
-
-  //[ApiKeyRequired]
-  //[HttpPost("unregister-room")]
+  [ApiTokenRequired]
   public IResult DeleteRoomRegistration(
-    [FromBody] DeleteRoomReq? _req)
+    HttpRequest _httpRequest,
+    [FromBody] DeleteRoomReq _req)
   {
-    if (_req == null || _req.RoomId == null)
-      return BadRequest("Room Id is null");
+    var log = GetLog(_httpRequest);
+    try
+    {
+      log.Info($"Requested to **unregister room** __'{_req.RoomId}'__");
 
-    p_roomsController.UnregisterRoom(_req.RoomId);
-    return Results.Ok();
+      p_roomsController.UnregisterRoom(_req.RoomId);
+
+      log.Info($"**Handled** request to **unregister room** __'{_req.RoomId}'__");
+      return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'unregister room '{_req.RoomId}'' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
   }
 
-  //[ApiKeyRequired]
-  //[HttpGet("list-registered-rooms")]
-  public IResult ListRooms()
+  [ApiTokenRequired]
+  public IResult ListRooms(
+    HttpRequest _httpRequest)
   {
-    var users = p_roomsController.ListRegisteredRooms();
-    return Results.Json(users, RestJsonCtx.Default.IReadOnlyListRoomInfo);
+    var log = GetLog(_httpRequest);
+    try
+    {
+      log.Info($"Requested to **list rooms**");
+
+      var users = p_roomsController.ListRegisteredRooms();
+
+      log.Info($"**Handled** request to **list rooms**");
+      return Results.Json(users, RestJsonCtx.Default.IReadOnlyListRoomInfo);
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'list rooms' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
   }
 
   private ILog GetLog(HttpRequest _httpRequest)

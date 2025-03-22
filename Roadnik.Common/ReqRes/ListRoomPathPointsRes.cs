@@ -2,7 +2,7 @@
 
 namespace Roadnik.Common.ReqRes;
 
-public record GetPathResData(
+public record ListRoomPathPointsRes(
   long LastUpdateUnixMs,
   bool MoreEntriesAvailable,
   IEnumerable<TimedStorageEntry> Entries);

@@ -1,9 +1,9 @@
 ﻿using Ax.Fw.SharedTypes.Attributes;
 
-namespace Roadnik.Data;
+namespace Roadnik.Common.Data.DocumentStorage;
 
 [SimpleDocument("geo-point")]
-internal record GeoPointEntry(
+public record RoomPointDocument(
   string RoomId,
   string Username,
   double Lat,

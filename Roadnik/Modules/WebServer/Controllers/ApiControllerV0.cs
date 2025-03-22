@@ -5,22 +5,22 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.Data;
+using Roadnik.Common.Data.DocumentStorage;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.ReqRes.PushMessages;
 using Roadnik.Common.ReqRes.Udp;
+using Roadnik.Common.ReqResTypes;
 using Roadnik.Common.Toolkit;
-using Roadnik.Data;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data;
-using Roadnik.Server.Data.DbTypes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.Modules.Settings;
 using Roadnik.Server.Toolkit;
 using System.Collections.Frozen;
 using System.Net;
+using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
 
@@ -47,8 +47,10 @@ internal class ApiControllerV0 : GenericController
   private readonly IFCMPublisher p_fcmPublisher;
   private readonly IHttpClientProvider p_httpClientProvider;
   private readonly ILog p_log;
+  private readonly IRxProperty<StorePathPointRes> p_storePathPointResProp;
 
   public ApiControllerV0(
+    IReadOnlyLifetime _lifetime,
     ISettingsController _settingsCtrl,
     IDbProvider _documentStorage,
     ILog _logger,
@@ -68,6 +70,18 @@ internal class ApiControllerV0 : GenericController
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
     p_httpClientProvider = _httpClientProvider;
+
+    p_storePathPointResProp = _settingsCtrl.Settings
+      .DistinctUntilChanged(_ => HashCode.Combine(_?.UdpPublicKey, _?.UdpServerEndpoint))
+      .SelectAsync(async (_, _ct) =>
+      {
+        if (_ == null || _.UdpPublicKey.IsNullOrWhiteSpace() || _.UdpServerEndpoint.IsNullOrWhiteSpace())
+          return new StorePathPointRes(null, null);
+
+        var udpPublicKeyHash = await ReqResUtil.GetUdpPublicKeyHashAsync(_.UdpPublicKey, _ct);
+        return new StorePathPointRes(udpPublicKeyHash, _.UdpServerEndpoint);
+      })
+      .ToProperty(_lifetime, new StorePathPointRes(null, null));
   }
 
   public override void RegisterPaths(WebApplication _app)
@@ -75,15 +89,15 @@ internal class ApiControllerV0 : GenericController
     _app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
     _app.MapGet(ReqPaths.GET_VERSION, GetVersion);
     _app.MapGet("/", GetIndexFile);
+    _app.MapGet("/r/{**path}", GetRoomStaticFile);
     _app.MapGet("{**path}", GetStaticFile);
     _app.MapGet("/ping", () => Results.Ok());
-    _app.MapGet("/r/{**path}", GetRoom);
     _app.MapGet("/map-tile", GetMapTileAsync);
     _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
-    _app.MapPost(ReqPaths.STORE_PATH_POINT, StoreRoomPointPostAsync);
+    _app.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
     _app.MapGet(ReqPaths.GET_ROOM_PATHS, GetRoomPaths);
     _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateNewPointAsync);
-    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, GetRoomPoints);
+    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints);
     _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
     _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
     _app.MapPost(ReqPaths.UPLOAD_LOG, UploadLogAsync);
@@ -111,78 +125,76 @@ internal class ApiControllerV0 : GenericController
     return Task.FromResult(adminApiKey == apiKeyStr);
   }
 
-  public IResult GetVersion() => Json(Consts.AppVersion);
+  public IResult GetVersion(HttpContext _httpContext)
+  {
+    var log = GetLog(_httpContext.Request);
+    try
+    {
+      log.Info($"Requested **version**");
+      return Json(Consts.AppVersion);
+    }
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'version' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
+  }
 
-  //[HttpGet("/")]
-  public IResult GetIndexFile(HttpRequest _httpRequest) => GetStaticFile(_httpRequest, "/");
+  public IResult GetIndexFile(HttpRequest _httpRequest)
+    => GetStaticFile(_httpRequest, "/");
 
-  //[HttpGet("{**path}")]
+  public IResult GetRoomStaticFile(
+    HttpRequest _httpRequest,
+    [FromRoute(Name = "path")] string? _path)
+  {
+    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
+      _path = "index.html";
+
+    return GetStaticFile(_httpRequest, $"room/{_path}");
+  }
+
   public IResult GetStaticFile(
     HttpRequest _httpRequest,
     [FromRoute(Name = "path")] string _path)
   {
     var log = GetLog(_httpRequest);
-    log.Info($"Requested **static path** __{_path}__");
-
-    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
-      _path = "index.html";
-
-    var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
-    if (webroot.IsNullOrWhiteSpace())
-      return Results.Problem($"Webroot dir is misconfigured", statusCode: 502);
-
-    var path = Path.Combine(webroot, _path);
-    if (!File.Exists(path))
+    try
     {
-      log.Warn($"File '{_path}' is not found");
-      return Results.NotFound();
-    }
+      log.Info($"Requested **static path** __{_path}__");
 
-    if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
+      if (string.IsNullOrWhiteSpace(_path) || _path == "/")
+        _path = "index.html";
+
+      var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
+      if (webroot.IsNullOrWhiteSpace())
+        throw new InvalidOperationException($"Webroot dir is misconfigured");
+
+      var path = Path.Combine(webroot, _path);
+      if (!File.Exists(path))
+      {
+        log.Warn($"File '{_path}' is not found");
+        return NotFound();
+      }
+
+      if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
+      {
+        log.Warn($"Tried to get file not from webroot: '{_path}'");
+        return Forbidden(string.Empty);
+      }
+
+      var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
+      var stream = File.OpenRead(path);
+
+      log.Info($"**Handled** request of **static path** __{_path}__");
+      return Results.Stream(stream, mime);
+    }
+    catch (Exception ex)
     {
-      log.Error($"Tried to get file not from webroot: '{_path}'");
-      return Results.StatusCode(403);
+      log.Error($"Error occured while trying to handle 'static path {_path}' request: {ex}");
+      return InternalServerError(ex.Message);
     }
-
-    var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
-    var stream = File.OpenRead(path);
-    return Results.Stream(stream, mime);
   }
 
-  //[HttpGet("/r/{**path}")]
-  public IResult GetRoom(
-    HttpRequest _httpRequest,
-    [FromRoute(Name = "path")] string? _path)
-  {
-    var log = GetLog(_httpRequest);
-    log.Info($"Requested static path '/r/{_path}'");
-
-    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
-      _path = "index.html";
-
-    var webroot = p_settingsCtrl.Settings.Value?.WebrootDirPath;
-    if (webroot.IsNullOrWhiteSpace())
-      return Results.Problem($"Webroot dir is misconfigured", statusCode: 502);
-
-    var path = Path.Combine(webroot, "room", _path);
-    if (!File.Exists(path))
-    {
-      log.Warn($"File '{path}' is not found");
-      return Results.NotFound();
-    }
-
-    if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
-    {
-      log.Error($"Tried to get file not from webroot: '{path}'");
-      return Results.StatusCode(statusCode: 403);
-    }
-
-    var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
-    var stream = File.OpenRead(path);
-    return Results.Stream(stream, mime);
-  }
-
-  //[HttpGet("/map-tile")]
   public async Task<IResult> GetMapTileAsync(
     HttpContext _httpCtx,
     [FromQuery(Name = "x")] int? _x,
@@ -191,78 +203,78 @@ internal class ApiControllerV0 : GenericController
     [FromQuery(Name = "type")] string? _mapType,
     CancellationToken _ct)
   {
-    if (_x is null)
-      return Results.BadRequest("X is null!");
-    if (_y is null)
-      return Results.BadRequest("Y is null!");
-    if (_z is null)
-      return Results.BadRequest("Z is null!");
-
-    if (_mapType == null)
-      return BadRequest($"Unknown map type: '{_mapType}'");
-
     var log = GetLog(_httpCtx.Request);
-
-    if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _mapType, out var cachedStream, out var hash))
-    {
-      log.Info($"Sending **cached map tile** __{_mapType}__/{_z}/{_x}/{_y}");
-      _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
-      return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
-    }
-
-    log.Info($"Sending **map tile** __{_mapType}__/{_z}/{_x}/{_y}...");
-
-    var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApiKey;
-    var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
-
-    var url = _mapType switch
-    {
-      Consts.TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      Consts.TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      Consts.TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
-      Consts.TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
-      Consts.TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
-      _ => null
-    };
-
-    if (url == null)
-    {
-      log.Warn($"Map type is not available: '{_mapType}'");
-      return BadRequest($"Map type is not available: '{_mapType}'");
-    }
-
-    var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
-    if (mapCacheSize != null && mapCacheSize.Value > 0)
-      p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
-
     try
     {
-      var stream = await p_httpClientProvider.Value.GetStreamAsync(url, _ct);
-      return Results.Stream(stream, MimeMapping.KnownMimeTypes.Png);
-    }
-    catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
-    {
-      log.Warn($"Tile not found: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}");
-      return Results.NotFound();
-    }
-    catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.Unauthorized)
-    {
-      log.Warn($"Can't download map tile - Unauthorized: x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}");
-      return Results.Unauthorized();
-    }
-    catch (OperationCanceledException)
-    {
-      return Results.NoContent();
+      log.Info($"Requested **map tile** __{_mapType}/{_z}/{_x}/{_y}__");
+
+      if (_x == null || _y == null || _z == null || _mapType == null)
+      {
+        log.Warn($"Incorrect query!");
+        return BadRequest($"Incorrect query!");
+      }
+
+      if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _mapType, out var cachedStream, out var hash))
+      {
+        log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**cached**)");
+        _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
+        return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
+      }
+
+      var tfApiKey = p_settingsCtrl.Settings.Value?.ThunderforestApiKey;
+      var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
+      var url = _mapType switch
+      {
+        Consts.TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        Consts.TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        Consts.TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/ride/hot/{_z}/{_x}/{_y}.png?px=256",
+        Consts.TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/heatmap-external-a.strava.com/tiles-auth/run/hot/{_z}/{_x}/{_y}.png?px=256",
+        Consts.TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
+        _ => null
+      };
+
+      if (url == null)
+      {
+        log.Warn($"Map type is not available: '{_mapType}'");
+        return BadRequest($"Map type is not available: '{_mapType}'");
+      }
+
+      var mapCacheSize = p_settingsCtrl.Settings.Value?.MapTilesCacheSize;
+      if (mapCacheSize != null && mapCacheSize.Value > 0)
+        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
+
+      try
+      {
+        var stream = await p_httpClientProvider.Value.GetStreamAsync(url, _ct);
+
+        log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
+        return Results.Stream(stream, MimeMapping.KnownMimeTypes.Png);
+      }
+      catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
+      {
+        log.Warn($"Tile not found");
+        return NotFound();
+      }
+      catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.Unauthorized)
+      {
+        log.Warn($"Can't download map tile (unauthorized)");
+        return Results.Unauthorized();
+      }
+      catch (OperationCanceledException)
+      {
+        log.Warn($"Operation cancelled");
+        return Results.NoContent();
+      }
     }
     catch (Exception ex)
     {
-      log.Error($"Can't download map tile x:{_x.Value}; y:{_y.Value}; z:{_z.Value}; t:{_mapType}", ex);
-      return InternalServerError();
+      log.Error($"Error occured while trying to handle 'map tile {_mapType}/{_z}/{_x}/{_y}' request: {ex}");
+      return InternalServerError(ex.Message);
     }
   }
 
-  //[HttpGet(ReqPaths.STORE_PATH_POINT)]
+  [Obsolete]
   public async Task<IResult> StoreRoomPointGetAsync(
     HttpRequest _httpRequest,
     [FromQuery(Name = "roomId")] string? _roomId,
@@ -322,20 +334,19 @@ internal class ApiControllerV0 : GenericController
     }
   }
 
-  //[HttpPost(ReqPaths.STORE_PATH_POINT)]
-  public async Task<IResult> StoreRoomPointPostAsync(
+  public async Task<IResult> StorePathPointAsync(
     HttpRequest _httpRequest,
     [FromBody] StorePathPointReq _req,
     CancellationToken _ct)
   {
     var log = GetLog(_httpRequest);
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-
     try
     {
+      log.Info($"Requested to **store path point** of __{_req.RoomId}/{_req.Username}__");
+
       var savePointResult = await p_roomsController.SaveNewPathPointAsync(
         log,
-        ip,
+        _httpRequest.HttpContext.Connection.RemoteIpAddress,
         _req.RoomId,
         _req.Username,
         _req.SessionId,
@@ -350,23 +361,15 @@ internal class ApiControllerV0 : GenericController
         _req.Bearing,
         _ct);
 
-      var specUdpMsgBytes = StoreLocationUdpMsg.FromStorePathPointReq(_req).MarshalToByteArray();
-      var genericUdpMsgBytes = new GenericUdpMsg(StoreLocationUdpMsg.Type, specUdpMsgBytes).MarshalToByteArray();
-      var rsaAes = new RsaAesGcm(null, p_settingsCtrl.Settings.Value!.UdpPrivateKey, null);
-      var hex = BitConverter.ToString(rsaAes.Encrypt(genericUdpMsgBytes).ToArray()).Replace('-', ' ');
-
       if (savePointResult.ErrorCode != null)
-        return Results.StatusCode((int)savePointResult.ErrorCode.Value);
+        return Problem(savePointResult.ErrorCode.Value, savePointResult.ErrorMsg);
 
-      var config = p_settingsCtrl.Settings.Value;
-      var udpPublicKey = config?.UdpPublicKey;
-      var udpPublicKeyHash = udpPublicKey.IsNullOrWhiteSpace() ? null : await ReqResUtil.GetUdpPublicKeyHashAsync(udpPublicKey, _ct);
-      var result = new StorePathPointRes(udpPublicKeyHash, config?.UdpServerEndpoint);
-      return Json(result);
+      log.Info($"**Handled** request to **store path point** of __{_req.RoomId}/{_req.Username}__");
+      return Json(p_storePathPointResProp.Value);
     }
     catch (Exception ex)
     {
-      log.Error($"Error occured while trying to save path point: {ex}");
+      log.Error($"Error occured while trying to handle 'store path point of {_req.RoomId}/{_req.Username}' request: {ex}");
       return InternalServerError(ex.Message);
     }
   }
@@ -452,7 +455,7 @@ internal class ApiControllerV0 : GenericController
     log.Info($"Got request to save point [{(int)_req.Lat}, {(int)_req.Lng}] for room '{_req.RoomId}'");
 
     var now = DateTimeOffset.UtcNow;
-    var point = new GeoPointEntry(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
+    var point = new RoomPointDocument(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
     p_documentStorage.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
@@ -464,31 +467,41 @@ internal class ApiControllerV0 : GenericController
     return Results.Ok();
   }
 
-  //[HttpGet(ReqPaths.LIST_ROOM_POINTS)]
-  public IResult GetRoomPoints(
+  public IResult ListRoomPoints(
     HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string? _roomId,
+    [FromQuery(Name = "roomId")] string _roomId,
     CancellationToken _ct)
   {
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return BadRequest($"Incorrect room id!");
-
     var log = GetLog(_httpRequest);
-
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    try
     {
-      log.Warn($"[{ReqPaths.LIST_ROOM_POINTS}] Too many requests from ip '{ip}'");
-      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      log.Info($"Requested **list of room points**, room id: __{_roomId}__");
+
+      if (!ReqResUtil.IsRoomIdValid(_roomId))
+      {
+        log.Warn($"Incorrect room id: __'{_roomId}'__");
+        return BadRequest($"Incorrect room id: '{_roomId}'!");
+      }
+
+      var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+      if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+      {
+        log.Warn($"Too many requests from ip '{ip}'");
+        return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+      }
+
+      var entries = p_documentStorage.GenericData.ListSimpleDocuments<RoomPointDocument>(new LikeExpr($"{_roomId}.%"))
+        .Select(RoomPoint.From)
+        .ToArray();
+
+      log.Info($"**Handled** request of **list of room points**, room id: __{_roomId}__");
+      return Json(new ListRoomPointsRes(entries));
     }
-
-    log.Info($"Got req to **list points** in room __{_roomId}__");
-
-    var entries = new List<ListRoomPointsResData>();
-    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_roomId}.%")))
-      entries.Add(new ListRoomPointsResData(entry.Created.ToUnixTimeMilliseconds(), entry.Data.Username, entry.Data.Lat, entry.Data.Lng, entry.Data.Description));
-
-    return Json(entries);
+    catch (Exception ex)
+    {
+      log.Error($"Error occured while trying to handle 'list of room points, room id: {_roomId}' request: {ex}");
+      return InternalServerError(ex.Message);
+    }
   }
 
   //[HttpPost(ReqPaths.DELETE_ROOM_POINT)]
@@ -511,10 +524,10 @@ internal class ApiControllerV0 : GenericController
 
     log.Info($"Got request to delete point '{_req.PointId}' from room '{_req.RoomId}'");
 
-    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<GeoPointEntry>(new LikeExpr($"{_req.RoomId}.%")))
+    foreach (var entry in p_documentStorage.GenericData.ListSimpleDocuments<RoomPointDocument>(new LikeExpr($"{_req.RoomId}.%")))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
-        p_documentStorage.GenericData.DeleteSimpleDocument<GeoPointEntry>(entry.Key);
+        p_documentStorage.GenericData.DeleteSimpleDocument<RoomPointDocument>(entry.Key);
         break;
       }
 

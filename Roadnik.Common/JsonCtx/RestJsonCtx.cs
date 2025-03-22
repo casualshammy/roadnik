@@ -7,12 +7,11 @@ namespace Roadnik.Common.JsonCtx;
 
 [JsonSourceGenerationOptions(
   PropertyNameCaseInsensitive = true)]
-//[JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(StorePathPointReq))]
 [JsonSerializable(typeof(StorePathPointRes))]
 [JsonSerializable(typeof(GetPathResData))]
 [JsonSerializable(typeof(CreateNewPointReq))]
-[JsonSerializable(typeof(IReadOnlyList<ListRoomPointsResData>))]
+[JsonSerializable(typeof(ListRoomPointsRes))]
 [JsonSerializable(typeof(DeleteRoomPointReq))]
 [JsonSerializable(typeof(RoomInfo))]
 [JsonSerializable(typeof(DeleteRoomReq))]

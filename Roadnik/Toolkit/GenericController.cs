@@ -23,6 +23,7 @@ internal abstract class GenericController
   protected static IResult Forbidden(string _details) => Results.Problem(_details, statusCode: 403);
   protected static IResult InternalServerError(string? _details = null) => Results.Problem(_details, statusCode: (int)HttpStatusCode.InternalServerError);
   protected static IResult BadRequest(string _details) => Results.BadRequest(_details);
+  protected static IResult Problem(HttpStatusCode _code, string? _details) => Results.Problem(_details, statusCode: (int)_code);
   protected IResult Json<T>(T _obj) where T : notnull
   {
     var json = JsonSerializer.Serialize(_obj, typeof(T), p_jsonCtx);

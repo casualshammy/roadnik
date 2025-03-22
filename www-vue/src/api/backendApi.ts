@@ -2,7 +2,7 @@ import type { GetPathResData, WsBaseMsg } from '@/data/backend';
 import { LatLng } from 'leaflet';
 import { WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 
-type ListRoomPointsResData = {
+type RoomPoint = {
   PointId: number;
   Username: string;
   Lat: number;
@@ -46,10 +46,10 @@ export class BackendApi {
     return data;
   }
 
-  public async listPointsAsync(_roomId: string): Promise<ListRoomPointsResData[]> {
+  public async listPointsAsync(_roomId: string): Promise<RoomPoint[]> {
     const response = await fetch(`${this.p_apiUrl}/list-room-points?roomId=${_roomId}`);
-    const data: ListRoomPointsResData[] = await response.json();
-    return data;
+    const data: { Result: RoomPoint[] } = await response.json();
+    return data.Result;
   }
 
   public async createPointAsync(_roomId: string, _username: string, _latLng: LatLng, _description: string): Promise<boolean> {

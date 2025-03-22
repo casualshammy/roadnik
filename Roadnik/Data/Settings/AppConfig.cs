@@ -62,7 +62,7 @@ internal class AppConfig : IAppConfig
       return false;
 
     var mapTilesCacheSize = (long?)null;
-    if (long.TryParse(Environment.GetEnvironmentVariable("ROADNIK_TF_API_KEY"), out var confMapTilesCacheSize))
+    if (long.TryParse(Environment.GetEnvironmentVariable("ROADNIK_MAP_TILES_CACHE_SIZE"), out var confMapTilesCacheSize))
       mapTilesCacheSize = confMapTilesCacheSize;
 
     _config = new AppConfig

@@ -546,17 +546,26 @@ function updateControlsForUser(
   if (_entries.length === 0)
     return;
 
+  const path = p_paths.get(_user);
+  if (path === undefined) {
+    console.error(`Error occured while trying to update path of user '${_user}': leaflet's polyline is undefined`);
+    return;
+  }
+
+  const geoEntries = p_gEntries.get(_user);
+  if (geoEntries === undefined) {
+    console.error(`Error occured while trying to update path of user '${_user}': path entries array is undefined`);
+    return;
+  }
+
   const sortedEntries = _entries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
   const lastEntry = sortedEntries[sortedEntries.length - 1];
 
-  const geoEntries = p_gEntries.get(_user);
-  if (geoEntries !== undefined) {
-    geoEntries.push(...sortedEntries);
-    const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
-    if (geoEntriesExcessiveCount > 0) {
-      const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
-      console.log(`${removedEntries.length} geo entries were removed for user ${_user}`);
-    }
+  geoEntries.push(...sortedEntries);
+  const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
+  if (geoEntriesExcessiveCount > 0) {
+    const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
+    console.log(`${removedEntries.length} geo entries were removed for user ${_user}`);
   }
 
   const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
@@ -578,20 +587,9 @@ function updateControlsForUser(
       p_mapInteractor.setMapCenter(lastLocation.lat, lastLocation.lng, p_map.value!.getZoom(), 500);
   }
 
-  const path = p_paths.get(_user);
-  if (path !== undefined) {
-    const points = sortedEntries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-    if (_isFirstDataChunk) {
-      path.setLatLngs(points);
-      console.log(`Set ${points.length} points to path ${_user}`);
-    }
-    else {
-      for (const point of points)
-        path.addLatLng(point);
-
-      console.log(`Added ${points.length} points to path ${_user}`);
-    }
-  }
+  const points = geoEntries.map(_ => new L.LatLng(_.Latitude, _.Longitude, _.Altitude));
+  path.setLatLngs(points);
+  console.log(`Path '${_user}' now contains ${points.length} points`);
 }
 
 function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
@@ -619,7 +617,7 @@ let unwatchSelectedUser: WatchHandle;
 onMounted(() => {
   unwatchSelectedUser = watch(computed(() => p_mapState.value.selectedPath), _newSelectedUser => {
     pathsComboBoxSelectedEntry.value = _newSelectedUser ?? undefined;
-  }, {immediate: true});
+  }, { immediate: true });
 });
 
 onUnmounted(() => {

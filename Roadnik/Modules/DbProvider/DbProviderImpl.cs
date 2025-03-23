@@ -4,7 +4,6 @@ using Ax.Fw.Storage;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
 using Roadnik.Common.Data;
-using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using System.Reactive;
@@ -17,7 +16,7 @@ internal class DbProviderImpl : IDbProvider
   public DbProviderImpl(
     IReadOnlyLifetime _lifetime,
     ILog _log,
-    AppConfig _appConfig)
+    IAppConfig _appConfig)
   {
     GenericData = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
       Path.Combine(_appConfig.DataDirPath, "data.v0.db"),

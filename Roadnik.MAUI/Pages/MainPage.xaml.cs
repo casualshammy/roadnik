@@ -13,6 +13,7 @@ using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.JsonBridge;
+using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
@@ -328,15 +329,16 @@ public partial class MainPage : CContentPage
       await RequestIgnoreBattaryOptimizationAsync(p_lifetime.Token);
       locationReporter.SetState(true);
 
-      var locProvider = p_prefs.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
-      if (locProvider == LocationPriority.HighAccuracy)
-        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_high_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
-      else if (locProvider == LocationPriority.BalancedPowerAccuracy)
-        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_medium_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
-      else if (locProvider == LocationPriority.LowPower)
-        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_low_accuracy}", ToastDuration.Short).Show(p_lifetime.Token);
-      else if (locProvider == LocationPriority.Passive)
-        await Toast.Make($"{L.page_options_power_mode_title}: {L.page_options_power_mode_passive}", ToastDuration.Short).Show(p_lifetime.Token);
+      var providers = new List<string>();
+      var locProvider = p_prefs.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS);
+      if ((locProvider & LocationProviders.Gps) != 0)
+        providers.Add(L.page_options_power_mode_high_accuracy);
+      if ((locProvider & LocationProviders.Network) != 0)
+        providers.Add(L.page_options_power_mode_medium_accuracy);
+      if ((locProvider & LocationProviders.Passive) != 0)
+        providers.Add(L.page_options_power_mode_passive);
+
+      await Toast.Make($"{L.page_options_power_mode_title}: {string.Join(", ", providers)}", ToastDuration.Short).Show(p_lifetime.Token);
     }
     else
     {

@@ -9,6 +9,7 @@ using System.Reactive.Linq;
 using System.Windows.Input;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 using static Roadnik.MAUI.Data.Consts;
+using Roadnik.MAUI.Data.LocationProvider;
 
 namespace Roadnik.MAUI.ViewModels;
 
@@ -24,7 +25,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private int p_minimumDistance;
   private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
-  private string? p_locationProvider;
+  private LocationProviders p_locationProviders;
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
@@ -42,8 +43,10 @@ internal class OptionsPageViewModel : BaseViewModel
     MinimumDistanceCommand = new Command(OnMinimumDistance);
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
-    LocationProviderCommand = new Command(OnLocationProvider);
     WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
+    OnLocationProviderGpsSwitched = new Command(OnLocationProviderGpsSwitchedHandler);
+    OnLocationProviderNetworkSwitched = new Command(OnLocationProviderNetworkSwitchedHandler);
+    OnLocationProviderPassiveSwitched = new Command(OnLocationProviderPassiveSwitchedHandler);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
 
@@ -60,20 +63,13 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
+        SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS), 
+          nameof(LocationProviderGpsEnabled), 
+          nameof(LocationProviderNetworkEnabled), 
+          nameof(LocationProviderPassiveEnabled));
+
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
-
-        var locProvider = p_storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER);
-        if (locProvider == LocationPriority.HighAccuracy)
-          SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));
-        else if (locProvider == LocationPriority.BalancedPowerAccuracy)
-          SetProperty(ref p_locationProvider, L.page_options_power_mode_medium_accuracy, nameof(LocationProvider));
-        else if (locProvider == LocationPriority.LowPower)
-          SetProperty(ref p_locationProvider, L.page_options_power_mode_low_accuracy, nameof(LocationProvider));
-        else if (locProvider == LocationPriority.Passive)
-          SetProperty(ref p_locationProvider, L.page_options_power_mode_passive, nameof(LocationProvider));
-        else
-          SetProperty(ref p_locationProvider, L.page_options_power_mode_high_accuracy, nameof(LocationProvider));
       }, lifetime);
   }
 
@@ -148,26 +144,6 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
-  public string LocationProvider
-  {
-    get => p_locationProvider ?? L.page_options_power_mode_high_accuracy;
-    set
-    {
-      SetProperty(ref p_locationProvider, value);
-
-      if (value == L.page_options_power_mode_high_accuracy)
-        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
-      else if (value == L.page_options_power_mode_medium_accuracy)
-        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.BalancedPowerAccuracy);
-      else if (value == L.page_options_power_mode_low_accuracy)
-        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.LowPower);
-      else if (value == L.page_options_power_mode_passive)
-        p_storage.SetValue(PREF_LOCATION_PROVIDER, LocationPriority.Passive);
-      else
-        p_log.Error($"Unknown power mode: '{value}'");
-    }
-  }
-
   public bool WipeOldTrackOnNewEnabled
   {
     get => p_wipeOldTrackOnNewEnabled;
@@ -175,6 +151,48 @@ internal class OptionsPageViewModel : BaseViewModel
     {
       SetProperty(ref p_wipeOldTrackOnNewEnabled, value);
       p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled);
+    }
+  }
+
+  public bool LocationProviderGpsEnabled
+  {
+    get => (p_locationProviders & LocationProviders.Gps) != 0;
+    set
+    {
+      var newValue = value
+        ? p_locationProviders | LocationProviders.Gps
+        : p_locationProviders & ~LocationProviders.Gps;
+
+      SetProperty(ref p_locationProviders, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
+    }
+  }
+
+  public bool LocationProviderNetworkEnabled
+  {
+    get => (p_locationProviders & LocationProviders.Network) != 0;
+    set
+    {
+      var newValue = value
+        ? p_locationProviders | LocationProviders.Network
+        : p_locationProviders & ~LocationProviders.Network;
+
+      SetProperty(ref p_locationProviders, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
+    }
+  }
+
+  public bool LocationProviderPassiveEnabled
+  {
+    get => (p_locationProviders & LocationProviders.Passive) != 0;
+    set
+    {
+      var newValue = value
+        ? p_locationProviders | LocationProviders.Passive
+        : p_locationProviders & ~LocationProviders.Passive;
+
+      SetProperty(ref p_locationProviders, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
     }
   }
 
@@ -203,8 +221,10 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinimumDistanceCommand { get; }
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
-  public ICommand LocationProviderCommand { get; }
   public ICommand WipeOldTrackOnNewCommand { get; }
+  public ICommand OnLocationProviderGpsSwitched { get; }
+  public ICommand OnLocationProviderNetworkSwitched { get; }
+  public ICommand OnLocationProviderPassiveSwitched { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
 
@@ -356,33 +376,26 @@ internal class OptionsPageViewModel : BaseViewModel
     MinAccuracy = minAccuracy;
   }
 
-  private async void OnLocationProvider()
+  private void OnWipeOldTrackOnNew(object? _arg)
   {
+    if (_arg is not bool toggled)
+      return;
+
+    WipeOldTrackOnNewEnabled = toggled;
+  }
+
+  private async void OnLocationProviderGpsSwitchedHandler(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
     var currentPage = p_pagesController.CurrentPage;
     if (currentPage == null)
       return;
 
-    var result = await currentPage.DisplayActionSheet(
-      $"{L.page_options_power_mode_title}:",
-      null,
-      null,
-      L.page_options_power_mode_high_accuracy,
-      L.page_options_power_mode_medium_accuracy,
-      L.page_options_power_mode_low_accuracy,
-      L.page_options_power_mode_passive);
+    LocationProviderGpsEnabled = toggled;
 
-    if (result == null)
-      return;
-
-    LocationProvider = result;
-
-    var lowPowerProviders = new HashSet<string>()
-    {
-      L.page_options_power_mode_medium_accuracy,
-      L.page_options_power_mode_low_accuracy,
-      L.page_options_power_mode_passive
-    };
-    if (lowPowerProviders.Contains(result))
+    if (!toggled)
     {
       var body = L.page_options_power_mode_accuracy_warning
         .Replace("%min-location-accuracy%", L.page_options_tracking_required_accuracy);
@@ -394,12 +407,20 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
-  private void OnWipeOldTrackOnNew(object? _arg)
+  private void OnLocationProviderNetworkSwitchedHandler(object? _arg)
   {
     if (_arg is not bool toggled)
       return;
 
-    WipeOldTrackOnNewEnabled = toggled;
+    LocationProviderNetworkEnabled = toggled;
+  }
+
+  private void OnLocationProviderPassiveSwitchedHandler(object? _arg)
+  {
+    if (_arg is not bool toggled)
+      return;
+
+    LocationProviderPassiveEnabled = toggled;
   }
 
   private void OnNotifyNewTrack(object? _arg)

@@ -1,5 +1,5 @@
 ﻿using Roadnik.MAUI.Data;
-using Roadnik.MAUI.Modules.LocationProvider;
+using Roadnik.MAUI.Data.LocationProvider;
 
 namespace Roadnik.MAUI.Interfaces;
 

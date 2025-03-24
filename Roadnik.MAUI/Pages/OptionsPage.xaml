@@ -15,7 +15,7 @@
     <ScrollView>
         <VerticalStackLayout>
             
-            <!-- SERVER SETTINGS  -->
+            <!-- SERVER SETTINGS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_connection_settings}" />
             <controls:OptionsTextValue
@@ -28,7 +28,7 @@
                 ValueText="{Binding Nickname}"
                 TapCommand="{Binding UsernameCommand}"/>
 
-            <!-- TRACKING SETTINGS  -->
+            <!-- TRACKING SETTINGS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_tracking}" />
             <controls:OptionsTextValue
@@ -54,17 +54,32 @@
                 ValueText="{Binding MinAccuracy, StringFormat='{0} m'}"
                 TapCommand="{Binding MinAccuracyCommand}"/>
             <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_power_mode_title}"
-                DetailsText="{x:Static l:AppResources.page_options_power_mode_desc}"
-                ValueText="{Binding LocationProvider}"
-                TapCommand="{Binding LocationProviderCommand}"/>
-            <controls:OptionsHorizontalLine />
             <controls:OptionsSwitch
                 x:Name="p_deleteOldRouteOnNew"
                 Title="{x:Static l:AppResources.page_options_delete_old_route_title}"
                 DetailsText="{x:Static l:AppResources.page_options_delete_old_route_desc}"
                 SwitchTapped="{Binding WipeOldTrackOnNewCommand}"/>
+
+            <!-- LOCATION PROVIDERS -->
+            <controls:OptionsHeader
+                Title="{x:Static l:AppResources.page_options_location_providers}" />
+            <controls:OptionsSwitch
+                x:Name="p_locationProvidersGps"
+                Title="{x:Static l:AppResources.page_options_power_mode_high_accuracy}"
+                DetailsText="{x:Static l:AppResources.page_options_gps_tooltip}"
+                SwitchTapped="{Binding OnLocationProviderGpsSwitched}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsSwitch
+                x:Name="p_locationProvidersNetwork"
+                Title="{x:Static l:AppResources.page_options_power_mode_medium_accuracy}"
+                DetailsText="{x:Static l:AppResources.page_options_network_tooltip}"
+                SwitchTapped="{Binding OnLocationProviderNetworkSwitched}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsSwitch
+                x:Name="p_locationProvidersPassive"
+                Title="{x:Static l:AppResources.page_options_power_mode_passive}"
+                DetailsText="{x:Static l:AppResources.page_options_passive_tooltip}"
+                SwitchTapped="{Binding OnLocationProviderPassiveSwitched}"/>
 
             <!-- NOTIFICATIONS -->
             <controls:OptionsHeader

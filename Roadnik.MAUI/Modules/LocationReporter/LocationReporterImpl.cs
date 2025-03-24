@@ -8,6 +8,7 @@ using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Platforms.Android.Services;
@@ -73,7 +74,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
-        LocationProvider = _storage.GetValueOrDefault<LocationPriority>(PREF_LOCATION_PROVIDER),
+        LocationProviders = _storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS),
         WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED)
       })
       .Replay(1)
@@ -111,7 +112,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Select(_tuple =>
       {
         var (location, prefs) = _tuple;
-        if (prefs.LocationProvider == LocationPriority.HighAccuracy)
+        if ((prefs.LocationProviders & LocationProviders.Gps) != 0)
           return location;
 
         var filteredLatLng = kalmanFilter.CalculateNext(
@@ -278,12 +279,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        if (conf.LocationProvider == LocationPriority.HighAccuracy)
-          locationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1)); // conf.TimeInterval
-        else if (conf.LocationProvider == LocationPriority.BalancedPowerAccuracy || conf.LocationProvider == LocationPriority.LowPower)
-          locationProvider.StartLocationWatcher(LocationProviders.Network | LocationProviders.Passive, TimeSpan.FromSeconds(1)); // conf.TimeInterval
-        else if (conf.LocationProvider == LocationPriority.Passive)
-          locationProvider.StartLocationWatcher(LocationProviders.Passive, TimeSpan.FromSeconds(1)); // conf.TimeInterval
+        locationProvider.StartLocationWatcher(conf.LocationProviders, TimeSpan.FromSeconds(1)); // todo: conf.TimeInterval
 
         reportQueueCounter = 0;
         reportFlow.Subscribe(_life);

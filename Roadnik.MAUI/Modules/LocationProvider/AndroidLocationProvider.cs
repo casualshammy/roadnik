@@ -6,20 +6,12 @@ using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace Roadnik.MAUI.Modules.LocationProvider;
-
-[Flags]
-internal enum LocationProviders
-{
-  Gps = 1,
-  Network = 2,
-  Passive = 4,
-  All = Gps | Network | Passive,
-}
 
 internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {

@@ -358,6 +358,33 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   GPS consumes the most energy but has the highest accuracy に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_gps_tooltip {
+            get {
+                return ResourceManager.GetString("page.options.gps.tooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Location providers に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_location_providers {
+            get {
+                return ResourceManager.GetString("page.options.location_providers", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   WiFi/Cellular consumes less energy but has an accuracy of about 20-300 meters に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_network_tooltip {
+            get {
+                return ResourceManager.GetString("page.options.network.tooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Notifications に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string page_options_notifications {
@@ -399,6 +426,15 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_notifications_new_track_title {
             get {
                 return ResourceManager.GetString("page.options.notifications.new_track.title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Passive mode uses data obtained from other applications に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string page_options_passive_tooltip {
+            get {
+                return ResourceManager.GetString("page.options.passive.tooltip", resourceCulture);
             }
         }
         

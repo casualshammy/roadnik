@@ -301,4 +301,16 @@ Passive mode uses data obtained from other applications.</value>
   <data name="page.options.share_condition.hint" xml:space="preserve">
     <value>Your location will be sent when the following combination of the above conditions is met</value>
   </data>
+  <data name="page.options.location_providers" xml:space="preserve">
+    <value>Location providers</value>
+  </data>
+  <data name="page.options.gps.tooltip" xml:space="preserve">
+    <value>GPS consumes the most energy but has the highest accuracy</value>
+  </data>
+  <data name="page.options.network.tooltip" xml:space="preserve">
+    <value>WiFi/Cellular consumes less energy but has an accuracy of about 20-300 meters</value>
+  </data>
+  <data name="page.options.passive.tooltip" xml:space="preserve">
+    <value>Passive mode uses data obtained from other applications</value>
+  </data>
 </root>

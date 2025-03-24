@@ -34,6 +34,22 @@ internal abstract class BaseViewModel : INotifyPropertyChanged
     return true;
   }
 
+  protected bool SetProperty<T>(
+    ref T _backingStore,
+    T _value,
+    params string[] _propertyNames)
+  {
+    if (EqualityComparer<T>.Default.Equals(_backingStore, _value))
+      return false;
+
+    _backingStore = _value;
+
+    foreach (var propertyName in _propertyNames)
+      OnPropertyChanged(propertyName);
+
+    return true;
+  }
+
   protected void OnPropertyChanged([CallerMemberName] string _propertyName = "")
   {
     var changed = PropertyChanged;

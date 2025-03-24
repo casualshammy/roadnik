@@ -22,7 +22,8 @@ internal static class Consts
   public const string PREF_NOTIFY_NEW_TRACK = "settings.notifications.on-new-track";
   public const string PREF_NOTIFY_NEW_POINT = "settings.notifications.on-new-point";
   public const string PREF_WEBAPP_MAP_STATE = "webapp.map-state";
-  public const string PREF_LOCATION_PROVIDER = "settings.report.location-provider";
+  //public const string PREF_LOCATION_PROVIDER = "settings.report.location-provider";
+  public const string PREF_LOCATION_PROVIDERS = "settings.report.location-providers";
 
   public const string PREF_BOOKMARKS_LIST = "bookmarks.list";
 

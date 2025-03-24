@@ -5,6 +5,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Subjects;
@@ -104,7 +105,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_NOTIFY_NEW_POINT, true);
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
-    SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
+    SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
   }
 
   private void MigratePreferences()
@@ -162,13 +163,16 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     });
     migrations.Add(270, () =>
     {
-      SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
       RemoveValue("settings.report.low-power-mode");
     });
     migrations.Add(272, () =>
     {
-      SetValue(PREF_LOCATION_PROVIDER, LocationPriority.HighAccuracy);
       RemoveValue("settings.report.power-mode");
+    });
+    migrations.Add(351, () =>
+    {
+      RemoveValue("settings.report.location-provider"); // PREF_LOCATION_PROVIDER
+      SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
     });
 
     return migrations;

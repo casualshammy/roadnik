@@ -71,7 +71,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     {
       lock (p_startStopLock)
       {
-        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'...");
+        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {_frequency}...");
         var result = new HashSet<string>();
 
         foreach (var provider in _providers.Distinct())
@@ -91,7 +91,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
           }
         }
 
-        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'");
+        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {_frequency}");
       }
     });
   }

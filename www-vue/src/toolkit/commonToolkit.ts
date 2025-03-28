@@ -18,68 +18,6 @@ export function sleepAsync(_ms: number) {
   });
 }
 
-export function makeDraggableBottomLeft(element: HTMLElement, _callback: (_left: number, _bottom: number) => void) {
-  element.addEventListener('mousedown', function (ev: MouseEvent) {
-    const offsetX = ev.clientX - parseInt(window.getComputedStyle(element).left);
-    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.clientY;
-
-    function mouseMoveHandler(e: MouseEvent) {
-      const style = window.getComputedStyle(element);
-      const left = e.clientX - offsetX;
-      const bottom = window.innerHeight - e.clientY - offsetY;
-      if (left < 5 || left > window.innerWidth - parseInt(style.width) - 5)
-        return;
-      if (bottom < 5 || bottom > window.innerHeight - parseInt(style.height) - 5)
-        return;
-
-      element.style.left = left + 'px';
-      element.style.bottom = bottom + 'px';
-      element.classList.add(Consts.CLASS_IS_DRAGGING);
-      _callback(left, bottom);
-    }
-
-    function reset() {
-      window.removeEventListener('mousemove', mouseMoveHandler);
-      window.removeEventListener('mouseup', reset);
-      element.classList.remove(Consts.CLASS_IS_DRAGGING);
-    }
-
-    window.addEventListener('mousemove', mouseMoveHandler);
-    window.addEventListener('mouseup', reset);
-  });
-
-  element.addEventListener('touchstart', function (ev: TouchEvent) {
-    const offsetX = ev.touches[0].clientX - parseInt(window.getComputedStyle(element).left);
-    const offsetY = window.innerHeight - parseInt(window.getComputedStyle(element).bottom) - ev.touches[0].clientY;
-
-    function mouseMoveHandler(e: TouchEvent) {
-      const style = window.getComputedStyle(element);
-      const left = e.touches[0].clientX - offsetX;
-      const bottom = window.innerHeight - e.touches[0].clientY - offsetY;
-      if (left < 0 || left > window.innerWidth - parseInt(style.width))
-        return;
-      if (bottom < 0 || bottom > window.innerHeight - parseInt(style.height))
-        return;
-
-      element.style.left = left + 'px';
-      element.style.bottom = bottom + 'px';
-      element.classList.add(Consts.CLASS_IS_DRAGGING);
-      _callback(left, bottom);
-    }
-
-    function reset() {
-      window.removeEventListener('touchmove', mouseMoveHandler);
-      window.removeEventListener('touchend', reset);
-      window.removeEventListener('touchcancel', reset);
-      element.classList.remove(Consts.CLASS_IS_DRAGGING);
-    }
-
-    window.addEventListener('touchmove', mouseMoveHandler);
-    window.addEventListener('touchend', reset);
-    window.addEventListener('touchcancel', reset);
-  });
-}
-
 export function colorNameToRgba(_colorName: string): Uint8ClampedArray | null {
   const cachedValue = p_rgbPerColorName.get(_colorName);
   if (cachedValue !== undefined)

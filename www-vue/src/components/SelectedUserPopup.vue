@@ -2,7 +2,7 @@
   <div
        ref="containerRef"
        @mousedown="onContainerMouseDown"
-       @touchstart="onTouchStart"
+       @touchstart.passive="onTouchStart"
        :style="{
         position: 'fixed',
         zIndex: '10000',

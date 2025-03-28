@@ -417,7 +417,8 @@ async function updatePathsAsync() {
     p_appCtx.firstTracksSyncCompleted = true;
   }
   else {
-    p_hostApi.sendTracksSynchronized(false);
+    if (p_appCtx.isRoadnikApp)
+      p_hostApi.sendTracksSynchronized(false);
   }
 }
 

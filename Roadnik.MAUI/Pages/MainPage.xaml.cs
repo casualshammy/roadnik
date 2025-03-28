@@ -513,7 +513,7 @@ public partial class MainPage : CContentPage
     try
     {
       p_log.Info($"Sending request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}'");
-      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}{ReqPaths.CREATE_NEW_POINT}");
+      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}/api/v1{ReqPaths.CREATE_ROOM_POINT}");
       using var content = JsonContent.Create(new CreateRoomPointReq
       {
         RoomId = roomId,

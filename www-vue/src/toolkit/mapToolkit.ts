@@ -15,20 +15,20 @@ export function GetMapLayers(_apiUrl: string): L.Control.LayersObject {
 	const osmAttr = 'Map Data from <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> (<a href="http://creativecommons.org/licenses/by-sa/2.0/" target="_blank">CC-by-SA 2.0</a>)';
 	const osm = new L.TileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: osmAttr, noWrap: true });
 	// OpenCycleMap
-	const cyclemapUrl = `${_apiUrl}/map-tile?type=opencyclemap&x={x}&y={y}&z={z}`,
+	const cyclemapUrl = `${_apiUrl}/api/v1/map-tile?type=opencyclemap&x={x}&y={y}&z={z}`,
 		thunderforestAttribution = 'Maps © <a href="https://www.thunderforest.com/" target="_blank">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cyclemap = new L.TileLayer(cyclemapUrl, { maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
 	// Outdoors Map
-	const outdoorsMapUrl = `${_apiUrl}/map-tile?type=tf-outdoors&x={x}&y={y}&z={z}`,
+	const outdoorsMapUrl = `${_apiUrl}/api/v1/map-tile?type=tf-outdoors&x={x}&y={y}&z={z}`,
 		outdoorsMap = new L.TileLayer(outdoorsMapUrl, { maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
 
 	// Thunderstorm Transport
 	const transportLayer = new L.TileLayer(
-		`${_apiUrl}/map-tile?type=tf-transport&x={x}&y={y}&z={z}`, 
+		`${_apiUrl}/api/v1/map-tile?type=tf-transport&x={x}&y={y}&z={z}`, 
 		{ maxZoom: 18, attribution: thunderforestAttribution, noWrap: true });
 	
 	// CartoDb Dark
-	const cartoDbDarkUrl = `${_apiUrl}/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
+	const cartoDbDarkUrl = `${_apiUrl}/api/v1/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
 		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
 		cartoDbDark = new L.TileLayer(cartoDbDarkUrl, { maxZoom: 18, attribution: cartoDbAttribution, noWrap: true });
 	// Google Hybrid
@@ -60,12 +60,12 @@ export function GetMapOverlayLayers(_apiUrl: string): L.Control.LayersObject {
 		waymarkedshadingbike = new L.TileLayer(waymarkedshadingbikeUrl, { maxZoom: 18, attribution: waymarkedshadingbikeAttribution });
 
 	// Strava Heatmap Ride
-	const stravaRideUrl = `${_apiUrl}/map-tile?type=strava-heatmap-ride&x={x}&y={y}&z={z}`,
+	const stravaRideUrl = `${_apiUrl}/api/v1/map-tile?type=strava-heatmap-ride&x={x}&y={y}&z={z}`,
 		stravaRideAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
 		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRideAttribution });
 
 	// Strava Heatmap Run
-	const stravaRunUrl = `${_apiUrl}/map-tile?type=strava-heatmap-run&x={x}&y={y}&z={z}`,
+	const stravaRunUrl = `${_apiUrl}/api/v1/map-tile?type=strava-heatmap-run&x={x}&y={y}&z={z}`,
 		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
 		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: 18, maxNativeZoom: 16, attribution: stravaRunAttribution, });
 

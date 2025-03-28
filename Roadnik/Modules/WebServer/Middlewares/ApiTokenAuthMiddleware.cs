@@ -24,7 +24,7 @@ internal class ApiTokenAuthMiddleware
 
   public async Task Invoke(HttpContext _ctx)
   {
-    var isProtected = _ctx.GetEndpoint()?.Metadata.GetMetadata<ApiTokenRequired>();
+    var isProtected = _ctx.GetEndpoint()?.Metadata.GetMetadata<ApiTokenRequiredAttribute>();
     if (isProtected == null)
     {
       await p_next(_ctx);

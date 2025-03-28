@@ -24,7 +24,7 @@ using System.Text.Json;
 
 namespace Roadnik.Server.Modules.WebServer.Controllers;
 
-internal class ApiControllerV0 : GenericController
+internal class ApiControllerV1 : GenericController
 {
   private static long p_wsSessionsCount = 0;
   private static long p_reqCount = -1;
@@ -39,7 +39,7 @@ internal class ApiControllerV0 : GenericController
   private readonly IHttpClientProvider p_httpClientProvider;
   private readonly ILog p_log;
 
-  public ApiControllerV0(
+  public ApiControllerV1(
     IAppConfig _appConfig,
     IDbProvider _documentStorage,
     ILog _logger,
@@ -63,25 +63,27 @@ internal class ApiControllerV0 : GenericController
 
   public override void RegisterPaths(WebApplication _app)
   {
-    _app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
-    _app.MapGet(ReqPaths.GET_VERSION, GetVersion);
-    _app.MapGet("/", GetIndexFile);
-    _app.MapGet("/r/{**path}", GetRoomStaticFile);
-    _app.MapGet("{**path}", GetStaticFile);
-    _app.MapGet("/ping", () => Results.Ok());
-    _app.MapGet("/map-tile", GetMapTileAsync);
-    _app.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
-    _app.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
-    _app.MapGet(ReqPaths.GET_ROOM_PATHS, ListRoomPathPoints);
-    _app.MapPost(ReqPaths.CREATE_NEW_POINT, CreateRoomPointAsync);
-    _app.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints);
-    _app.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
-    _app.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
-    _app.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
-    _app.MapGet("/ws", ConnectToWsAsync);
-    _app.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
-    _app.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
-    _app.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
+    //_app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
+    //_app.MapGet("/", GetIndexFile);
+    //_app.MapGet("/r/{**path}", GetRoomStaticFile);
+    //_app.MapGet("{**path}", GetStaticFile);
+    
+    var apiGroup = _app.MapGroup("/api/v1/");
+    apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion);
+    apiGroup.MapGet("/ping", () => Results.Ok());
+    apiGroup.MapGet("/map-tile", GetMapTileAsync);
+    apiGroup.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
+    apiGroup.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
+    apiGroup.MapGet(ReqPaths.LIST_ROOM_PATH_POINTS, ListRoomPathPoints);
+    apiGroup.MapPost(ReqPaths.CREATE_ROOM_POINT, CreateRoomPointAsync);
+    apiGroup.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints);
+    apiGroup.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
+    apiGroup.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
+    apiGroup.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
+    apiGroup.MapGet("/ws", ConnectToWsAsync);
+    apiGroup.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
+    apiGroup.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
+    apiGroup.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
   }
 
   public IResult GetVersion(HttpContext _httpContext)

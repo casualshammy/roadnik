@@ -273,7 +273,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       return new(HttpStatusCode.Forbidden, "Publishing is forbidden!");
 
     var minInterval = room?.MinPathPointIntervalMs ?? p_appConfig.MinPathPointIntervalMs;
-    var compositeKey = $"{ReqPaths.GET_ROOM_PATHS}/{_roomId}/{_username}";
+    var compositeKey = $"{ReqPaths.STORE_PATH_POINT}/{_roomId}/{_username}";
     if (!p_reqRateLimiter.IsReqOk(compositeKey, _clientIpAddress, minInterval))
     {
       _log.Warn($"Too many requests, room '{_roomId}', username: '{_username}', time limit: '{minInterval} ms'");

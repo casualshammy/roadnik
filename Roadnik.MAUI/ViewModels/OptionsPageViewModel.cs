@@ -255,7 +255,7 @@ internal class OptionsPageViewModel : BaseViewModel
       var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
       if (!serverAddress.IsNullOrWhiteSpace())
       {
-        var url = $"{serverAddress.TrimEnd('/')}{ReqPaths.GET_FREE_ROOM_ID}";
+        var url = $"{serverAddress.TrimEnd('/')}/api/v1{ReqPaths.GET_FREE_ROOM_ID}";
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         try
         {

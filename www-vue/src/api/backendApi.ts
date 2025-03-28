@@ -32,7 +32,7 @@ export class BackendApi {
 
   public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => Promise<void>): Websocket {
     const wsApiUrl = this.p_apiUrl.replace(/^http/, "ws");
-    const url = `${wsApiUrl}/ws?roomId=${_roomId}`
+    const url = `${wsApiUrl}/api/v1/ws?roomId=${_roomId}`
     const ws = new WebsocketBuilder(url)
       .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
       .withBackoff(new ConstantBackoff(1000))
@@ -41,13 +41,13 @@ export class BackendApi {
   }
 
   public async getPathsAsync(_roomId: string, _offset: number | undefined = 0): Promise<GetPathResData> {
-    const response = await fetch(`${this.p_apiUrl}/get?roomId=${_roomId}&offset=${_offset}`);
+    const response = await fetch(`${this.p_apiUrl}/api/v1/list-room-path-points?roomId=${_roomId}&offset=${_offset}`);
     const data: GetPathResData = await response.json();
     return data;
   }
 
   public async listPointsAsync(_roomId: string): Promise<RoomPoint[]> {
-    const response = await fetch(`${this.p_apiUrl}/list-room-points?roomId=${_roomId}`);
+    const response = await fetch(`${this.p_apiUrl}/api/v1/list-room-points?roomId=${_roomId}`);
     const data: { Result: RoomPoint[] } = await response.json();
     return data.Result;
   }
@@ -61,7 +61,7 @@ export class BackendApi {
       Description: _description
     };
 
-    const res = await fetch(`${this.p_apiUrl}/create-new-point`, {
+    const res = await fetch(`${this.p_apiUrl}/api/v1/create-room-point`, {
       method: "POST",
       body: JSON.stringify(data),
       headers: {
@@ -77,7 +77,7 @@ export class BackendApi {
       PointId: _pointId
     };
 
-    const res = await fetch(`${this.p_apiUrl}/delete-room-point`, {
+    const res = await fetch(`${this.p_apiUrl}/api/v1/delete-room-point`, {
       method: "POST",
       body: JSON.stringify(data),
       headers: {
@@ -90,7 +90,7 @@ export class BackendApi {
   }
 
   public async isRoomIdValidAsync(_roomId?: string | undefined | null): Promise<boolean> {
-    const res = await fetch(`${this.p_apiUrl}/is-room-id-valid?roomId=${_roomId}`, {
+    const res = await fetch(`${this.p_apiUrl}/api/v1/is-room-id-valid?roomId=${_roomId}`, {
       method: "GET"
     });
 

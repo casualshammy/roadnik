@@ -21,6 +21,7 @@ using System.Net;
 using System.Reactive.Linq;
 using System.Text;
 using System.Text.Json;
+using static Roadnik.Server.Data.Consts;
 
 namespace Roadnik.Server.Modules.WebServer.Controllers;
 
@@ -67,7 +68,7 @@ internal class ApiControllerV1 : GenericController
     //_app.MapGet("/", GetIndexFile);
     //_app.MapGet("/r/{**path}", GetRoomStaticFile);
     //_app.MapGet("{**path}", GetStaticFile);
-    
+
     var apiGroup = _app.MapGroup("/api/v1/");
     apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion);
     apiGroup.MapGet("/ping", () => Results.Ok());
@@ -183,12 +184,12 @@ internal class ApiControllerV1 : GenericController
       var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
       var url = _mapType switch
       {
-        Consts.TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        Consts.TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        Consts.TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/ride/hot/{_z}/{_x}/{_y}.png?px=256",
-        Consts.TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/run/hot/{_z}/{_x}/{_y}.png?px=256",
-        Consts.TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
+        TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/ride/hot/{_z}/{_x}/{_y}.png?px=256",
+        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/run/hot/{_z}/{_x}/{_y}.png?px=256",
+        TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
         _ => null
       };
 
@@ -198,16 +199,25 @@ internal class ApiControllerV1 : GenericController
         return BadRequest($"Map type is not available: '{_mapType}'");
       }
 
+      var nkHeadersRequired = _mapType == TILE_TYPE_STRAVA_HEATMAP_RUN || _mapType == TILE_TYPE_STRAVA_HEATMAP_RIDE;
+
       var mapCacheSize = p_appConfig.MapTilesCacheSize;
       if (mapCacheSize != null && mapCacheSize.Value > 0)
-        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
+        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url, nkHeadersRequired);
 
       try
       {
-        var stream = await p_httpClientProvider.Value.GetStreamAsync(url, _ct);
+        using var httpReq = new HttpRequestMessage(HttpMethod.Get, url);
+        if (nkHeadersRequired)
+          httpReq.WithNkHeaders();
+
+        using var httpRes = await p_httpClientProvider.Value.SendAsync(httpReq, _ct);
+        httpRes.EnsureSuccessStatusCode();
+
+        var pngBytes = await httpRes.Content.ReadAsByteArrayAsync(_ct);
 
         log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
-        return Results.Stream(stream, MimeMapping.KnownMimeTypes.Png);
+        return Results.Bytes(pngBytes, MimeMapping.KnownMimeTypes.Png);
       }
       catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
       {

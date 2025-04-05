@@ -1,9 +1,11 @@
-﻿using Ax.Fw.Cache;
+﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
+using Ax.Fw.Cache;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
+using Roadnik.Server.Toolkit;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reactive.Concurrency;
@@ -15,7 +17,10 @@ namespace Roadnik.Server.Modules.TilesCache;
 
 internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 {
-  record DownloadTask(string Key, string Url);
+  record DownloadTask(
+    string Key,
+    string Url,
+    bool IsNkHeadersRequired);
 
   public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
   {
@@ -62,12 +67,17 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
         {
           _log.Info($"**Downloading** tile '__{_task.Key}__'...");
 
-          using var res = await _httpClientProvider.Value.GetAsync(_task.Url, _ct);
-          res.EnsureSuccessStatusCode();
+          using var httpReq = new HttpRequestMessage(HttpMethod.Get, _task.Url);
+          if (_task.IsNkHeadersRequired)
+            httpReq.WithNkHeaders();
 
-          using var stream = await res.Content.ReadAsStreamAsync(_ct);
-          var mime = res.Content.Headers.ContentType?.ToString();
-          await p_cache.StoreAsync(_task.Key, stream, mime, true, _ct);
+          using var httpRes = await _httpClientProvider.Value.SendAsync(httpReq, _ct);
+          httpRes.EnsureSuccessStatusCode();
+
+          using var pngStream = await httpRes.Content.ReadAsStreamAsync(_ct);
+
+          var mime = httpRes.Content.Headers.ContentType?.ToString();
+          await p_cache.StoreAsync(_task.Key, pngStream, mime, true, _ct);
 
           _log.Info($"Tile '__{_task.Key}__' is downloaded");
         }
@@ -87,10 +97,16 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
       .Subscribe(_lifetime);
   }
 
-  public void EnqueueUrl(int _x, int _y, int _z, string _type, string _url)
+  public void EnqueueUrl(
+    int _x,
+    int _y,
+    int _z,
+    string _type,
+    string _url,
+    bool _isHeaderInjectRequired)
   {
     var key = GetKey(_x, _y, _z, _type);
-    p_downloadTaskSubj.OnNext(new DownloadTask(key, _url));
+    p_downloadTaskSubj.OnNext(new DownloadTask(key, _url, _isHeaderInjectRequired));
   }
 
   public bool TryGet(

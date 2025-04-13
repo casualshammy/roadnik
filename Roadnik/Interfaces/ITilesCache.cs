@@ -1,16 +1,22 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace Roadnik.Interfaces;
+namespace Roadnik.Server.Interfaces;
 
 public interface ITilesCache
 {
   void EnqueueUrl(
-    int _x, 
-    int _y, 
-    int _z, 
-    string _type, 
-    string _url,
-    bool _isHeaderInjectRequired);
+    int _x,
+    int _y,
+    int _z,
+    string _type,
+    string _url);
 
-  bool TryGet(int _x, int _y, int _z, string _type, [NotNullWhen(true)] out Stream? _stream, [NotNullWhen(true)] out string? _hash);
+  bool TryGet(
+    int _x,
+    int _y,
+    int _z,
+    string _type,
+    [NotNullWhen(true)] out Stream? _stream,
+    [NotNullWhen(true)] out string? _hash);
+
 }

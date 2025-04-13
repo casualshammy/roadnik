@@ -2,10 +2,13 @@
 
 internal static class Extensions
 {
-  public static HttpRequestMessage WithNkHeaders(this HttpRequestMessage _msg)
-  {
-    _msg.Headers.Add("Referer", "https://nakarte.me/");
-    _msg.Headers.Add("User-Agent", "Chrome");
-    return _msg;
-  }
+  //public static string GetContentType(
+  //  this HttpResponseHeaders _headers,
+  //  string _fallback)
+  //{
+  //  if (_headers.TryGetValues("Content-Type", out var values))
+  //    return values.FirstOrDefault() ?? _fallback;
+
+  //  return _fallback;
+  //}
 }

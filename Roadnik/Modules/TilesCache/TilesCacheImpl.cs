@@ -1,11 +1,8 @@
-﻿using Amazon.Runtime.Internal.Endpoints.StandardLibrary;
-using Ax.Fw.Cache;
+﻿using Ax.Fw.Cache;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.Toolkit;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Reactive.Concurrency;
@@ -19,8 +16,7 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
 {
   record DownloadTask(
     string Key,
-    string Url,
-    bool IsNkHeadersRequired);
+    string Url);
 
   public static ITilesCache ExportInstance(IAppDependencyCtx _ctx)
   {
@@ -68,9 +64,6 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
           _log.Info($"**Downloading** tile '__{_task.Key}__'...");
 
           using var httpReq = new HttpRequestMessage(HttpMethod.Get, _task.Url);
-          if (_task.IsNkHeadersRequired)
-            httpReq.WithNkHeaders();
-
           using var httpRes = await _httpClientProvider.Value.SendAsync(httpReq, _ct);
           httpRes.EnsureSuccessStatusCode();
 
@@ -102,11 +95,10 @@ internal class TilesCacheImpl : ITilesCache, IAppModule<ITilesCache>
     int _y,
     int _z,
     string _type,
-    string _url,
-    bool _isHeaderInjectRequired)
+    string _url)
   {
     var key = GetKey(_x, _y, _z, _type);
-    p_downloadTaskSubj.OnNext(new DownloadTask(key, _url, _isHeaderInjectRequired));
+    p_downloadTaskSubj.OnNext(new DownloadTask(key, _url));
   }
 
   public bool TryGet(

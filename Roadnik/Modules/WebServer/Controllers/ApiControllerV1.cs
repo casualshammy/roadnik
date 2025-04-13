@@ -187,8 +187,8 @@ internal class ApiControllerV1 : GenericController
         TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/ride/hot/{_z}/{_x}/{_y}.png?px=256",
-        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://proxy.nakarte.me/https/content-a.strava.com/identified/globalheat/run/hot/{_z}/{_x}/{_y}.png?px=256",
+        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://strava-heatmap.tiles.freemap.sk/ride/red/{_z}/{_x}/{_y}.jpg",
+        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://strava-heatmap.tiles.freemap.sk/run/blue/{_z}/{_x}/{_y}.jpg",
         TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
         _ => null
       };
@@ -199,25 +199,20 @@ internal class ApiControllerV1 : GenericController
         return BadRequest($"Map type is not available: '{_mapType}'");
       }
 
-      var nkHeadersRequired = _mapType == TILE_TYPE_STRAVA_HEATMAP_RUN || _mapType == TILE_TYPE_STRAVA_HEATMAP_RIDE;
-
       var mapCacheSize = p_appConfig.MapTilesCacheSize;
       if (mapCacheSize != null && mapCacheSize.Value > 0)
-        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url, nkHeadersRequired);
+        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
 
       try
       {
         using var httpReq = new HttpRequestMessage(HttpMethod.Get, url);
-        if (nkHeadersRequired)
-          httpReq.WithNkHeaders();
-
         using var httpRes = await p_httpClientProvider.Value.SendAsync(httpReq, _ct);
         httpRes.EnsureSuccessStatusCode();
 
-        var pngBytes = await httpRes.Content.ReadAsByteArrayAsync(_ct);
+        var imageBytes = await httpRes.Content.ReadAsByteArrayAsync(_ct);
 
         log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
-        return Results.Bytes(pngBytes, MimeMapping.KnownMimeTypes.Png);
+        return Results.Bytes(imageBytes, httpRes.Content.Headers.ContentType?.ToString());
       }
       catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)
       {

@@ -11,6 +11,7 @@ using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
+using Roadnik.Server.Modules.StravaCredentialsController;
 using Roadnik.Server.Modules.TilesCache;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
@@ -64,7 +65,9 @@ public partial class Program
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
+      .AddModule<StravaCredentialsControllerImpl, IStravaCredentialsController>()
       .ActivateOnStart<IWebServer>()
+      .ActivateOnStart<IStravaCredentialsController>()
       .Build();
 
     lifetime.InstallConsoleCtrlCHook();

@@ -29,7 +29,7 @@ public class FailToBanMiddleware : IMiddleware
           if (newValue <= 0)
           {
             p_failedReqLut.TryRemove(ip, out _);
-            p_log.Info($"IP address '{ip}' is unbanned");
+            p_log.Info($"IP address '__{ip}__' is **unbanned**");
           }
           else
           {
@@ -58,7 +58,7 @@ public class FailToBanMiddleware : IMiddleware
 
     if (p_failedReqLut.TryGetValue(remoteIP, out var failedReq) && failedReq >= 10)
     {
-      p_log.Warn($"IP address '{remoteIP}' is banned, but still trying to make requests");
+      p_log.Warn($"IP address '{remoteIP}' is banned, but still trying to make requests ({failedReq})");
       _ctx.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
       p_failedReqLut.AddOrUpdate(remoteIP, 1, (_, _prev) => ++_prev);
       return;

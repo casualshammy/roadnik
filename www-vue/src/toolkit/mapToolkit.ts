@@ -62,12 +62,12 @@ export function GetMapOverlayLayers(_apiUrl: string): L.Control.LayersObject {
 	// Strava Heatmap Ride
 	const stravaRideUrl = `${_apiUrl}/api/v1/map-tile?type=strava-heatmap-ride&x={x}&y={y}&z={z}`,
 		stravaRideAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
-		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: DEFAULT_MAX_ZOOM, maxNativeZoom: 11, attribution: stravaRideAttribution });
+		stravaRideLayer = new L.TileLayer(stravaRideUrl, { maxZoom: DEFAULT_MAX_ZOOM, maxNativeZoom: 15, attribution: stravaRideAttribution });
 
 	// Strava Heatmap Run
 	const stravaRunUrl = `${_apiUrl}/api/v1/map-tile?type=strava-heatmap-run&x={x}&y={y}&z={z}`,
 		stravaRunAttribution = '<a href="https://www.strava.com/maps/global-heatmap" target="_blank">Strava Global Heatmap</a>',
-		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: DEFAULT_MAX_ZOOM, maxNativeZoom: 11, attribution: stravaRunAttribution, });
+		stravaRunLayer = new L.TileLayer(stravaRunUrl, { maxZoom: DEFAULT_MAX_ZOOM, maxNativeZoom: 15, attribution: stravaRunAttribution, });
 
 	const overlayMaps = {
 		"Trails": waymarkedshadinghike,

@@ -187,8 +187,8 @@ internal class ApiControllerV1 : GenericController
         TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://content-a.strava.com/anon/globalheat/ride/red/{_z}/{_x}/{_y}.png",
-        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://content-a.strava.com/anon/globalheat/run/blue/{_z}/{_x}/{_y}.png",
+        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://strava-heatmap.tiles.freemap.sk/ride/red/{_z}/{_x}/{_y}.jpg",
+        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://strava-heatmap.tiles.freemap.sk/run/blue/{_z}/{_x}/{_y}.jpg",
         TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
         _ => null
       };

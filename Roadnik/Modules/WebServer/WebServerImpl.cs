@@ -73,7 +73,11 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       {
         _logger.Info($"Starting server on {_appConfig.BindIp}:{_appConfig.BindPort}...");
 
-        using (var host = CreateWebHost(_appConfig))
+        var life = _lifetime.GetChildLifetime();
+        if (life == null)
+          throw new InvalidOperationException("Failed to create child lifetime");
+
+        using (var host = CreateWebHost(_appConfig, life))
           await host.RunAsync(_lifetime.Token);
 
         _logger.Info($"Server on {_appConfig.BindIp}:{_appConfig.BindPort} is stopped");
@@ -89,7 +93,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   }
 
   private IHost CreateWebHost(
-    IAppConfig _config)
+    IAppConfig _config,
+    IReadOnlyLifetime _life)
   {
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -110,13 +115,16 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     });
 
     builder.Services.AddSingleton(p_logger);
+    builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
+    builder.Services.AddSingleton<FailToBanMiddleware>();
 
     var app = builder.Build();
     app
       .UseMiddleware<LogMiddleware>()
       .UseMiddleware<CorsMiddleware>(p_logger)
       .UseMiddleware<ForwardProxyMiddleware>()
+      .UseMiddleware<FailToBanMiddleware>()
       .UseMiddleware<ApiTokenAuthMiddleware>(p_logger)
       .UseResponseCompression()
       .UseWebSockets(new WebSocketOptions()

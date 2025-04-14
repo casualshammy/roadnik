@@ -1,36 +1,50 @@
-﻿using Ax.Fw;
-using Ax.Fw.Cache;
+﻿using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Server.Attributes;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Reactive.Linq;
 
 namespace Roadnik.Server.Modules.WebServer.Middlewares;
 
-public class FailToBanMiddleware
+public class FailToBanMiddleware : IMiddleware
 {
-  private readonly RequestDelegate p_next;
   private readonly ConcurrentDictionary<IPAddress, int> p_failedReqLut;
   private readonly ILog p_log;
-  private long p_reqCount = -1;
 
   public FailToBanMiddleware(
-    RequestDelegate _next,
+    IReadOnlyLifetime _lifetime,
     ILog _log)
   {
-    p_next = _next;
     p_log = _log["fail-to-ban"];
     p_failedReqLut = new();
 
-    // add clean of p_failedReqLut
+    Observable
+      .Interval(TimeSpan.FromSeconds(1))
+      .Subscribe(__ =>
+      {
+        foreach (var (ip, failCount) in p_failedReqLut)
+        {
+          var newValue = failCount - 1;
+          if (newValue <= 0)
+          {
+            p_failedReqLut.TryRemove(ip, out _);
+            p_log.Info($"IP address '{ip}' is unbanned");
+          }
+          else
+          {
+            p_failedReqLut.TryUpdate(ip, newValue, failCount);
+          }
+        }
+      }, _lifetime);
   }
 
-  public async Task Invoke(HttpContext _ctx)
+  public async Task InvokeAsync(HttpContext _ctx, RequestDelegate _next)
   {
     var attrExist = _ctx.GetEndpoint()?.Metadata.GetMetadata<FailToBanAttribute>();
     if (attrExist == null)
     {
-      await p_next(_ctx);
+      await _next(_ctx);
       return;
     }
 
@@ -45,16 +59,18 @@ public class FailToBanMiddleware
     if (p_failedReqLut.TryGetValue(remoteIP, out var failedReq) && failedReq >= 10)
     {
       p_log.Warn($"IP address '{remoteIP}' is banned, but still trying to make requests");
-      _ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+      _ctx.Response.StatusCode = (int)HttpStatusCode.TooManyRequests;
+      p_failedReqLut.AddOrUpdate(remoteIP, 1, (_, _prev) => ++_prev);
       return;
     }
 
-    await p_next(_ctx);
+    await _next(_ctx);
 
     var response = _ctx.Response;
-    if (response.StatusCode < 400 || response.StatusCode >= 500)
+    if (response.StatusCode != (int)HttpStatusCode.NotFound)
       return;
 
     p_failedReqLut.AddOrUpdate(remoteIP, 1, (_, _prev) => ++_prev);
   }
+
 }

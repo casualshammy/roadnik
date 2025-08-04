@@ -43,6 +43,11 @@
             Title="{x:Static l:AppResources.shell_settings}" 
             Icon="cog_box.svg"
             ContentTemplate="{DataTemplate pages:OptionsPage}" />
+        <ShellContent 
+            Route="bledevices"
+            Title="BLE Devices"
+            Icon="bluetooth.svg"
+            ContentTemplate="{DataTemplate pages:BleDevicesPage}" />
     </FlyoutItem>
 
     <ShellContent 

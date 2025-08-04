@@ -1,27 +1,26 @@
 ﻿using Android.Content;
-using Ax.Fw.Crypto;
+using Android.OS;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
+using Javax.Security.Auth;
+using Microsoft.Maui.Controls.Shapes;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
-using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
-using System.Net;
+using System.Diagnostics;
 using System.Net.Http.Json;
-using System.Net.Sockets;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
-using System.Text.Json;
 using static Roadnik.MAUI.Data.Consts;
+using Debug = System.Diagnostics.Debug;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -29,13 +28,14 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 {
   public static ILocationReporter ExportInstance(IAppDependencyCtx _ctx)
   {
-    return _ctx.CreateInstance(
-      (IReadOnlyLifetime _lifetime,
+    return _ctx.CreateInstance((
+      IReadOnlyLifetime _lifetime,
       ILog _log,
       IPreferencesStorage _storage,
       IHttpClientProvider _httpClientProvider,
-      ITelephonyMgrProvider _telephonyMgrProvider)
-      => new LocationReporterImpl(_lifetime, _log["location-reporter"], _storage, _httpClientProvider, _telephonyMgrProvider));
+      ITelephonyMgrProvider _telephonyMgrProvider,
+      IBleDevicesManager _bleDevicesManager)
+      => new LocationReporterImpl(_lifetime, _log["location-reporter"], _storage, _httpClientProvider, _telephonyMgrProvider, _bleDevicesManager));
   }
 
   record ReportingCtx(
@@ -55,7 +55,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     ILog _log,
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
-    ITelephonyMgrProvider _telephonyMgrProvider)
+    ITelephonyMgrProvider _telephonyMgrProvider,
+    IBleDevicesManager _bleDevicesManager)
   {
     p_log = _log;
 
@@ -138,6 +139,39 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Replay(1)
       .RefCount();
 
+    var hrFlow = new BehaviorSubject<int?>(null);
+    p_enableFlow
+      .CombineLatest(Observable.Return(Guid.Parse("00000000-0000-0000-0000-c14d429bae40")), (_enabled, _hrmGuid) => (Enabled: _enabled, HrmGuid: _hrmGuid))
+      .HotAlive(_lifetime, new EventLoopScheduler(), (_pair, _life) =>
+      {
+        var (enabled, hrmGuid) = _pair;
+        hrFlow.OnNext(null);
+        if (!enabled)
+          return;
+
+        _ = Task.Run(async () =>
+        {
+          using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+          try
+          {
+            var device = await _bleDevicesManager.TryConnectToDeviceByIdAsync(hrmGuid, cts.Token) 
+              ?? throw new InvalidOperationException($"Device not found or could not be connected");
+
+            var subs = await _bleDevicesManager.SubscribeToHrmDataAsync(device, false, _hr =>
+            {
+              //Debug.WriteLine($"Heart rate: {_hr}");
+              p_log.Info($"Heart rate: {_hr}");
+              hrFlow.OnNext(_hr);
+            }, cts.Token);
+            _life.ToDisposeOnEnding(subs);
+          }
+          catch (Exception ex)
+          {
+            p_log.Error($"Error while subscribing to HRM data of device '{hrmGuid}': {ex}");
+          }
+        });
+      });
+
     var reportFlow = locationFlow
       .CombineLatest(prefsFlow)
       .Sample(TimeSpan.FromSeconds(1), reportScheduler)
@@ -153,9 +187,10 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .ObserveOn(reportScheduler)
       .WithLatestFrom(batteryFlow, (_tuple, _battery) => (Location: _tuple.First, Prefs: _tuple.Second, Battery: _battery))
       .WithLatestFrom(signalLevelFlow, (_tuple, _signal) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, Signal: _signal))
+      .WithLatestFrom(hrFlow, (_tuple, _hr) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, _tuple.Signal, HeartRate: _hr))
       .ScanAsync(ReportingCtx.Empty, async (_acc, _entry) =>
       {
-        var (location, prefs, battery, signalStrength) = _entry;
+        var (location, prefs, battery, signalStrength, hr) = _entry;
         var now = DateTimeOffset.UtcNow;
         var acc = _acc;
 
@@ -204,6 +239,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             GsmSignal = (float?)signalStrength,
             Bearing = (float)(location.Course ?? 0d),
             WipeOldPath = prefs.WipeOldPath,
+            HR = hr
           };
 
           using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));

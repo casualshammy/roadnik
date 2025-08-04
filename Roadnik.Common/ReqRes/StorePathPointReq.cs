@@ -14,4 +14,5 @@ public record StorePathPointReq
   public float? GsmSignal { get; init; }
   public float? Bearing { get; init; }
   public bool? WipeOldPath { get; init; }
+  public int? HR { get; init; }
 }

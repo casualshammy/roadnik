@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<tookit:CContentPage  xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+						 xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+             x:Class="Roadnik.MAUI.Pages.BleDevicesPage"
+             Title="BLE Devices">
+    <ContentPage.Content>
+        <StackLayout>
+            <Button Text="Scan for BLE Devices" Command="{Binding ScanCommand}"/>
+            <CollectionView ItemsSource="{Binding Devices}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="5" Padding="10" BorderColor="Gray">
+                            <StackLayout>
+                                <Label TextColor="Blue" Text="{Binding Name}" FontAttributes="Bold"/>
+                                <Label TextColor="Blue" Text="{Binding Id}" FontSize="12"/>
+                            </StackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </StackLayout>
+    </ContentPage.Content>
+</tookit:CContentPage >

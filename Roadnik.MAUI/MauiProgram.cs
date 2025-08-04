@@ -6,6 +6,7 @@ using Ax.Fw.SharedTypes.Data.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Modules.BleDevicesManager;
 using Roadnik.MAUI.Modules.CompassProvider;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using Roadnik.MAUI.Modules.HttpClientProvider;
@@ -80,6 +81,7 @@ public static partial class MauiProgram
       .AddModule<TelephonyMgrProviderImpl, ITelephonyMgrProvider>()
       .AddModule<WebDataCacheImpl, IWebDataCache>()
       .AddModule<CompassProviderImpl, ICompassProvider>()
+      .AddModule<BleDevicesManagerImpl, IBleDevicesManager>()
       .ActivateOnStart<IPushMessagesController>();
 
     Container = appDeps;

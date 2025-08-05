@@ -9,4 +9,5 @@ export interface TimedStorageEntry {
   Battery?: number | undefined | null;
   GsmSignal?: number | undefined | null;
   Bearing?: number | undefined | null;
+  HR?: number | null;
 }

@@ -1,24 +1,80 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<tookit:CContentPage  xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-						 xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
-             x:Class="Roadnik.MAUI.Pages.BleDevicesPage"
-             Title="BLE Devices">
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<tookit:CContentPage  
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+		xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
+    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
+    xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
+    xmlns:ble="clr-namespace:Plugin.BLE.Abstractions.Contracts;assembly=Plugin.BLE"
+    x:Class="Roadnik.MAUI.Pages.BleDevicesPage"
+    x:DataType="views:BleDevicesPageViewModel"         
+    Title="BLE Devices">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <ContentPage.Content>
-        <StackLayout>
-            <Button Text="Scan for BLE Devices" Command="{Binding ScanCommand}"/>
-            <CollectionView ItemsSource="{Binding Devices}">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate>
-                        <Frame Margin="5" Padding="10" BorderColor="Gray">
-                            <StackLayout>
-                                <Label TextColor="Blue" Text="{Binding Name}" FontAttributes="Bold"/>
-                                <Label TextColor="Blue" Text="{Binding Id}" FontSize="12"/>
-                            </StackLayout>
-                        </Frame>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </StackLayout>
+        <AbsoluteLayout>
+            <StackLayout
+                AbsoluteLayout.LayoutFlags="All"  
+                AbsoluteLayout.LayoutBounds="0,0,1,1">
+                <Button 
+                    Text="🔵 Scan for HRM devices" 
+                    FontSize="20"
+                    Margin="10"
+                    Command="{Binding ScanCommand}"
+                    IsEnabled="{Binding IsScanning, Converter={StaticResource InvertedBoolConverter}}"/>
+                <controls:ModifiedCollectionView 
+                    x:Name="p_devicesView"
+                    IsEnabled="{Binding IsScanning, Converter={StaticResource InvertedBoolConverter}}"
+                    ItemsSource="{Binding Devices}"
+                    SelectionChangedCommand="{Binding OnItemSelected}"
+                    SelectionChangedCommandParameter="{Binding SelectedItem, Source={x:Reference p_devicesView} }"
+                    SelectionMode="Single">
+                    <controls:ModifiedCollectionView.ItemTemplate>
+                        <DataTemplate
+                            x:DataType="ble:IDevice">
+                            <Border 
+                                Margin="5"
+                                Padding="10"
+                                Stroke="Gray"
+                                StrokeThickness="1"
+                                Background="Transparent"
+                                StrokeShape="RoundRectangle 8">
+                                <StackLayout>
+                                    <Label 
+                                        TextColor="{StaticResource Primary}" 
+                                        Text="{Binding Name}" 
+                                        FontAttributes="Bold"
+                                        FontSize="18"/>
+                                    <Label 
+                                        TextColor="{StaticResource Primary}" 
+                                        Text="{Binding Id}" 
+                                        FontSize="14"/>
+                                </StackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </controls:ModifiedCollectionView.ItemTemplate>
+                </controls:ModifiedCollectionView>
+            </StackLayout>
+            <StackLayout
+                AbsoluteLayout.LayoutFlags="PositionProportional"
+                AbsoluteLayout.LayoutBounds="0.5, 0.1, 300, 50"
+                IsVisible="{Binding IsScanning}">
+                <controls:Spinner
+                    WidthRequest="60"
+                    HeightRequest="60"/>
+                <Label
+                    Margin="10"
+                    HorizontalTextAlignment="Center"
+                    FontSize="Large"
+                    Text="{Binding ScanningProgress, StringFormat='Scanning for devices ({0}%)...'}"/>
+            </StackLayout>
+
+        </AbsoluteLayout>
     </ContentPage.Content>
 </tookit:CContentPage >

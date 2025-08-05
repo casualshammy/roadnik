@@ -258,6 +258,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     float? _battery,
     float? _gsmSignal,
     float? _bearing,
+    int? _hr,
     CancellationToken _ct)
   {
     if (!ReqResUtil.IsRoomIdValid(_roomId))
@@ -299,7 +300,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       await p_firebasePublisher.SendDataAsync(_roomId, pushMsg, _ct);
     }
 
-    var record = new StorageEntry(_username, _lat, _lng, _alt, _speed, _acc, _battery, _gsmSignal, _bearing);
+    var record = new StorageEntry(_username, _lat, _lng, _alt, _speed, _acc, _battery, _gsmSignal, _bearing, _hr);
     p_storage.Paths.WriteDocument(_roomId, nowUnixMs, record);
 
     await p_webSocketCtrl.SendMsgByRoomIdAsync(_roomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);

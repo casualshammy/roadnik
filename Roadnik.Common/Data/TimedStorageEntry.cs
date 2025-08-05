@@ -12,7 +12,8 @@ public record TimedStorageEntry(
   float? Accuracy = null,
   float? Battery = null,
   float? GsmSignal = null,
-  float? Bearing = null)
+  float? Bearing = null,
+  int? HR = null)
 {
   public static TimedStorageEntry FromStorageEntry(DocumentEntry<StorageEntry> _document)
   {
@@ -27,6 +28,7 @@ public record TimedStorageEntry(
       data.Accuracy,
       data.Battery,
       data.GsmSignal,
-      data.Bearing);
+      data.Bearing,
+      data.HR);
   }
 }

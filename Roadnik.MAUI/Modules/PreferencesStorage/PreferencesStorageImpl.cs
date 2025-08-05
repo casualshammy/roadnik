@@ -106,6 +106,8 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_NOTIFY_NEW_TRACK, true);
     SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
     SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
+    SetValue(PREF_BLE_HRM_ENABLED, false);
+    SetValue(PREF_BLE_HRM_DEVICE_INFO, (HrmDeviceInfo?)null);
   }
 
   private void MigratePreferences()

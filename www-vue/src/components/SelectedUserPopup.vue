@@ -31,7 +31,7 @@
       <b>{{ props.state?.user }}</b> ({{ timestamp }})
     </span>
     <span class="upper-text">
-      🔋{{ battery }}% 📶{{ gsmSignal }}%
+      🔋{{ battery }}% 📶{{ gsmSignal }}% {{ heartRate }}
     </span>
     <p class="lower-text">
       🚀{{ speed }} km/h ⛰{{ altitude }} m 📡{{ accuracy }} m
@@ -53,6 +53,7 @@ export type SelectedUserPopupState = {
   altitude: number,
   accuracy?: number | undefined,
   color: string,
+  hr?: number
 }
 
 const props = defineProps<{
@@ -92,7 +93,20 @@ const bgColor = computed(() => {
   return `#${CommonToolkit.byteArrayToHexString([bgR, bgG, bgB])}`;
 });
 const timestamp = ref('');
+const heartRate = computed(() => {
+  const hr = props.state?.hr;
+  if (hr === undefined)
+    return undefined;
 
+  if (hr < 100)
+    return `💚${hr}`
+  if (hr < 135)
+    return `💛${hr}`
+  if (hr < 170)
+    return `🧡${hr}`;
+
+  return `❤️${hr}`;
+});
 
 function onCloseButton() {
   emit('onCloseButton');

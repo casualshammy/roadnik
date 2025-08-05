@@ -76,7 +76,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
         Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
         LocationProviders = _storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS),
-        WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED)
+        WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED),
+        HrmReportEnabled = _storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED),
+        HrmDevice = _storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO)
       })
       .Replay(1)
       .RefCount();
@@ -141,33 +143,34 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
     var hrFlow = new BehaviorSubject<int?>(null);
     p_enableFlow
-      .CombineLatest(Observable.Return(Guid.Parse("00000000-0000-0000-0000-c14d429bae40")), (_enabled, _hrmGuid) => (Enabled: _enabled, HrmGuid: _hrmGuid))
-      .HotAlive(_lifetime, new EventLoopScheduler(), (_pair, _life) =>
+      .WithLatestFrom(prefsFlow, (_enabled, _prefs) => (Enabled: _enabled && _prefs.HrmReportEnabled, HrmInfo: _prefs.HrmDevice))
+      .HotAlive(_lifetime, new EventLoopScheduler(), (_tuple, _life) =>
       {
-        var (enabled, hrmGuid) = _pair;
+        var (enabled, hrmInfo) = _tuple;
+
         hrFlow.OnNext(null);
-        if (!enabled)
+        if (!enabled || hrmInfo == null)
+        {
+          p_log.Info($"HRM reporting is disabled or no device is selected");
           return;
+        }
 
         _ = Task.Run(async () =>
         {
+          p_log.Info($"Subscribing to HRM data of device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId})");
+
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
           try
           {
-            var device = await _bleDevicesManager.TryConnectToDeviceByIdAsync(hrmGuid, cts.Token) 
+            var device = await _bleDevicesManager.TryConnectToDeviceByIdAsync(hrmInfo.DeviceId, cts.Token)
               ?? throw new InvalidOperationException($"Device not found or could not be connected");
 
-            var subs = await _bleDevicesManager.SubscribeToHrmDataAsync(device, false, _hr =>
-            {
-              //Debug.WriteLine($"Heart rate: {_hr}");
-              p_log.Info($"Heart rate: {_hr}");
-              hrFlow.OnNext(_hr);
-            }, cts.Token);
+            var subs = await _bleDevicesManager.SubscribeToHrmDataAsync(device, false, _hr => hrFlow.OnNext(_hr), cts.Token);
             _life.ToDisposeOnEnding(subs);
           }
           catch (Exception ex)
           {
-            p_log.Error($"Error while subscribing to HRM data of device '{hrmGuid}': {ex}");
+            p_log.Error($"Error while subscribing to HRM data of device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}): {ex}");
           }
         });
       });

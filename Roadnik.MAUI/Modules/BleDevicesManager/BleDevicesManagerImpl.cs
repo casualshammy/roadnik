@@ -2,13 +2,11 @@
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
-using Google.Android.Material.Color.Utilities;
 using Plugin.BLE;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
 using Roadnik.MAUI.Interfaces;
-using System.Collections.Concurrent;
 using System.Reactive.Disposables;
 using static Roadnik.MAUI.Data.Consts;
 
@@ -27,7 +25,6 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
   private readonly IBluetoothLE p_bluetoothLE;
   private readonly IAdapter p_adapter;
   private readonly SemaphoreSlim p_bleSemaphore = new(1, 1);
-  private readonly ConcurrentDictionary<Guid, IObserver<int>> p_hrObservers = new();
 
   public BleDevicesManagerImpl(
     IReadOnlyLifetime _lifetime,
@@ -36,8 +33,6 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     p_log = _log;
     p_bluetoothLE = CrossBluetoothLE.Current;
     p_adapter = p_bluetoothLE.Adapter;
-
-
   }
 
   public bool IsBluetoothAvailable => p_bluetoothLE.IsAvailable && p_bluetoothLE.IsOn;
@@ -46,10 +41,11 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info("Starting BLE device scan...");
+
+    var devices = new List<IDevice>();
     try
     {
-      var devices = new List<IDevice>();
-
       void onDeviceDiscovered(
         object? _s,
         DeviceEventArgs _ev)
@@ -81,19 +77,69 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     finally
     {
       p_bleSemaphore.Release();
+      p_log.Info($"BLE device scan completed; total devices: '{devices.Count}'");
+    }
+  }
+
+  public async Task ListDevicesAsync(
+    Action<IDevice> _onDeviceFoundCallback,
+    CancellationToken _ct)
+  {
+    await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info("Starting BLE device scan...");
+
+    var deviceCounter = 0;
+    try
+    {
+      void onDeviceDiscovered(
+        object? _s,
+        DeviceEventArgs _ev)
+      {
+        var device = _ev.Device;
+        if (device != null)
+        {
+          _onDeviceFoundCallback(device);
+          Interlocked.Increment(ref deviceCounter);
+        }
+      }
+
+      p_adapter.DeviceDiscovered += onDeviceDiscovered;
+      try
+      {
+        await p_adapter.StopScanningForDevicesAsync();
+        await p_adapter.StartScanningForDevicesAsync(cancellationToken: _ct);
+      }
+      catch (Exception ex)
+      {
+        p_log.Error($"Error while scanning for BLE devices: {ex}");
+      }
+      finally
+      {
+        p_adapter.DeviceDiscovered -= onDeviceDiscovered;
+      }
+    }
+    finally
+    {
+      p_bleSemaphore.Release();
+      p_log.Info($"BLE device scan completed; total devices: '{deviceCounter}'");
     }
   }
 
   public async Task<IDevice?> TryConnectToDeviceByIdAsync(Guid _deviceGuid, CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info($"Trying to connect to BLE device with ID '{_deviceGuid}'...");
+
     try
     {
       var device = await p_adapter.ConnectToKnownDeviceAsync(_deviceGuid, cancellationToken: _ct);
+
+      p_log.Info($"Connected to BLE device '{device.Name}' ({device.Id})");
       return device;
     }
-    catch
+    catch (Exception ex)
     {
+      p_log.Error($"Failed to connect to BLE device with ID '{_deviceGuid}': {ex}");
       return null;
     }
     finally
@@ -107,12 +153,17 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info($"Trying to disconnect from BLE device '{_device.Name}' ({_device.Id})...");
+
     try
     {
       await p_adapter.DisconnectDeviceAsync(_device);
+      p_log.Info($"Disconnected from BLE device '{_device.Name}' ({_device.Id})");
     }
-    catch
-    { }
+    catch (Exception ex)
+    {
+      p_log.Error($"Failed to disconnect from BLE device '{_device.Name}' ({_device.Id}): {ex}");
+    }
     finally
     {
       p_bleSemaphore.Release();
@@ -124,6 +175,8 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info($"Checking if device '{_device.Name}' ({_device.Id}) is a Heart Rate Monitor (HRM)...");
+
     try
     {
       await p_adapter.ConnectToDeviceAsync(_device, cancellationToken: _ct);
@@ -132,14 +185,25 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
       {
         var hrmService = await _device.GetServiceAsync(BLE_SERVICE_ID_HEART_RATE, _ct);
         if (hrmService == null)
+        {
+          p_log.Info($"Device '{_device.Name}' ({_device.Id}) does not have the Heart Rate service.");
           return false;
+        }
 
         var hrmCharacteristic = await hrmService.GetCharacteristicAsync(BLE_CHARACTERISTIC_ID_HEART_RATE_MEASUREMENT);
         if (hrmCharacteristic == null)
+        {
+          p_log.Info($"Device '{_device.Name}' ({_device.Id}) does not have the Heart Rate Measurement characteristic.");
           return false;
-        if (hrmCharacteristic.Properties != CharacteristicPropertyType.Notify)
-          return false;
+        }
 
+        if (hrmCharacteristic.Properties != CharacteristicPropertyType.Notify)
+        {
+          p_log.Info($"Characteristic '{BLE_CHARACTERISTIC_ID_HEART_RATE_MEASUREMENT}' on device '{_device.Name}' ({_device.Id}) does not support notifications.");
+          return false;
+        }
+
+        p_log.Info($"Device '{_device.Name}' ({_device.Id}) is a Heart Rate Monitor (HRM).");
         return true;
       }
       finally
@@ -160,6 +224,8 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
+    p_log.Info($"Subscribing to Heart Rate Monitor (HRM) data for device '{_device.Name}' ({_device.Id})...");
+
     try
     {
       if (_forceConnect)
@@ -204,15 +270,16 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
           }
         });
       }
-      catch
+      catch (Exception ex)
       {
+        p_log.Error($"Error while subscribing to HRM data of device '{_device.Name}' ({_device.Id}): {ex}");
         try
         {
           await p_adapter.DisconnectDeviceAsync(_device);
         }
-        catch (Exception ex)
+        catch (Exception disconnectEx)
         {
-          p_log.Error($"Error while catch-disconnecting from device '{_device.Name}' ({_device.Id}): {ex}");
+          p_log.Error($"Error while catch-disconnecting from device '{_device.Name}' ({_device.Id}): {disconnectEx}");
         }
         throw;
       }

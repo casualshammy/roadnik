@@ -103,6 +103,7 @@ const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = comp
     altitude: lastEntry.Altitude,
     accuracy: lastEntry.Accuracy ?? undefined,
     color: p_appCtx.userColors.get(user) ?? 'black',
+    hr: lastEntry.HR ?? undefined
   };
 
   return data;

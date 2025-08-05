@@ -4,12 +4,14 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Pages;
 using System.Reactive.Linq;
 using System.Windows.Input;
-using L = Roadnik.MAUI.Resources.Strings.AppResources;
+using static Android.Graphics.ColorSpace;
 using static Roadnik.MAUI.Data.Consts;
-using Roadnik.MAUI.Data.LocationProvider;
+using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.ViewModels;
 
@@ -29,6 +31,8 @@ internal class OptionsPageViewModel : BaseViewModel
   private bool p_wipeOldTrackOnNewEnabled;
   private bool p_notificationOnNewTrack;
   private bool p_notificationOnNewPoint;
+  private bool p_bleHrmEnabled;
+  private HrmDeviceInfo? p_bleHrmDeviceInfo;
 
   public OptionsPageViewModel()
   {
@@ -49,6 +53,7 @@ internal class OptionsPageViewModel : BaseViewModel
     OnLocationProviderPassiveSwitched = new Command(OnLocationProviderPassiveSwitchedHandler);
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
+    BleHrmEnabledCommand = new Command(OnBleHrmEnabled);
 
     var lifetime = Container.Locate<IReadOnlyLifetime>();
     p_storage.PreferencesChanged
@@ -63,13 +68,15 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION), nameof(TrackpointReportingConditionText));
         SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY), nameof(MinAccuracy));
         SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED), nameof(WipeOldTrackOnNewEnabled));
-        SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS), 
-          nameof(LocationProviderGpsEnabled), 
-          nameof(LocationProviderNetworkEnabled), 
+        SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS),
+          nameof(LocationProviderGpsEnabled),
+          nameof(LocationProviderNetworkEnabled),
           nameof(LocationProviderPassiveEnabled));
 
         SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK), nameof(NotificationOnNewTrack));
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
+        SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED), nameof(BleHrmEnabled));
+        SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
       }, lifetime);
   }
 
@@ -215,6 +222,42 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
+  public bool BleHrmEnabled
+  {
+    get => p_bleHrmEnabled;
+    set
+    {
+      SetProperty(ref p_bleHrmEnabled, value);
+      p_storage.SetValue(PREF_BLE_HRM_ENABLED, p_bleHrmEnabled);
+    }
+  }
+
+  public Guid? BleHrmDeviceGuid
+  {
+    get => p_bleHrmDeviceInfo?.DeviceId;
+    set
+    {
+      var newValue = value == null
+        ? null
+        : new HrmDeviceInfo(value.Value, p_bleHrmDeviceInfo?.DeviceName ?? string.Empty);
+      SetProperty(ref p_bleHrmDeviceInfo, newValue);
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo);
+    }
+  }
+
+  public string? BleHrmDeviceName
+  {
+    get => p_bleHrmDeviceInfo?.DeviceName;
+    set
+    {
+      var newValue = value == null
+        ? null
+        : new HrmDeviceInfo(p_bleHrmDeviceInfo?.DeviceId ?? Guid.Empty, value);
+      SetProperty(ref p_bleHrmDeviceInfo, newValue);
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo);
+    }
+  }
+
   public ICommand RoomIdCommand { get; }
   public ICommand UsernameCommand { get; }
   public ICommand MinimumIntervalCommand { get; }
@@ -227,6 +270,7 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand OnLocationProviderPassiveSwitched { get; }
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
+  public ICommand BleHrmEnabledCommand { get; }
 
   private async void OnRoomIdCommand(object _arg)
   {
@@ -433,10 +477,14 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private void OnNotifyNewPoint(object? _arg)
   {
-    if (_arg is not bool toggled)
-      return;
+    if (_arg is bool toggled)
+      NotificationOnNewPoint = toggled;
+  }
 
-    NotificationOnNewPoint = toggled;
+  private void OnBleHrmEnabled(object? _arg)
+  {
+    if (_arg is bool toggled)
+      BleHrmEnabled = toggled;
   }
 
 }

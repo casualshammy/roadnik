@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+﻿<?xml version="1.0" encoding="UTF-8" ?>
 <Shell
     x:Class="Roadnik.MAUI.NavigationAppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -43,11 +43,6 @@
             Title="{x:Static l:AppResources.shell_settings}" 
             Icon="cog_box.svg"
             ContentTemplate="{DataTemplate pages:OptionsPage}" />
-        <ShellContent 
-            Route="bledevices"
-            Title="BLE Devices"
-            Icon="bluetooth.svg"
-            ContentTemplate="{DataTemplate pages:BleDevicesPage}" />
     </FlyoutItem>
 
     <ShellContent 

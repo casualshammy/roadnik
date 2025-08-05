@@ -21,4 +21,5 @@ internal interface IBleDevicesManager
     CancellationToken _ct);
   Task<IDevice?> TryConnectToDeviceByIdAsync(Guid _deviceGuid, CancellationToken _ct);
   Task TryDisconnectDeviceAsync(IDevice _device, CancellationToken _ct);
+  Task ListDevicesAsync(Action<IDevice> _onDeviceFoundCallback, CancellationToken _ct);
 }

@@ -281,6 +281,7 @@ internal class ApiControllerV0 : GenericController
         _battery,
         _gsmSignal,
         _bearing,
+        null, // hr
         _ct);
 
       if (savePointResult.ErrorCode != null)
@@ -320,6 +321,7 @@ internal class ApiControllerV0 : GenericController
         _req.Battery,
         _req.GsmSignal,
         _req.Bearing,
+        _req.HR,
         _ct);
 
       if (savePointResult.ErrorCode != null)

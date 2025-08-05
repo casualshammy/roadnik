@@ -30,5 +30,6 @@ internal interface IRoomsController
     float? _battery,
     float? _gsmSignal,
     float? _bearing,
+    int? _hr,
     CancellationToken _ct);
 }

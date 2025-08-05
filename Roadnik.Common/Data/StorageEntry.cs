@@ -9,4 +9,5 @@ public record StorageEntry(
   float? Accuracy = null,
   float? Battery = null,
   float? GsmSignal = null,
-  float? Bearing = null);
+  float? Bearing = null,
+  int? HR = null);

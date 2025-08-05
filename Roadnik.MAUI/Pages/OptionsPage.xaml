@@ -81,6 +81,21 @@
                 DetailsText="{x:Static l:AppResources.page_options_passive_tooltip}"
                 SwitchTapped="{Binding OnLocationProviderPassiveSwitched}"/>
 
+            <!-- SENSORS -->
+            <controls:OptionsHeader
+                Title="Sensors" />
+            <controls:OptionsSwitch
+                x:Name="p_hrReporting"
+                Title="Heart rate reporting"
+                DetailsText="Heart rate reporting details"
+                SwitchTapped="{Binding BleHrmEnabledCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextValue
+                x:Name="p_bleHrmDevice"
+                Title="BLE HRM device"
+                IsEnabled="{Binding BleHrmEnabled}"
+                ValueText="{Binding BleHrmDeviceName}"/>
+
             <!-- NOTIFICATIONS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_notifications}" />

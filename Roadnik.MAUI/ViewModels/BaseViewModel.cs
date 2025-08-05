@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Roadnik.MAUI.ViewModels;
 
-internal abstract class BaseViewModel : INotifyPropertyChanged
+public abstract class BaseViewModel : INotifyPropertyChanged
 {
   public event PropertyChangedEventHandler? PropertyChanged;
 

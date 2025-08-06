@@ -609,7 +609,7 @@ function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
     `<center>
       <b>${_user}</b> (${elapsedString})
       </br>
-      🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}% ${hrData}
+      🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}% ${hrData ?? ""}
     </center>
     <p style="margin-bottom: 0px">
       🚀${kmh.toFixed(1)} km/h ⛰${Math.ceil(_entry.Altitude)} m 📡${Math.ceil(_entry.Accuracy ?? 100)} m

@@ -223,7 +223,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           if (acc.SessionId == null)
           {
             acc = acc with { SessionId = Random.Shared.Next(int.MinValue, int.MaxValue) };
-            p_log.Info($"New session id: {acc.SessionId}");
+            p_log.Info($"New session id: {acc.SessionId:X}");
           }
 
           p_log.Info($"Sending location data, lat: {location.Latitude}, lng: {location.Longitude}, alt: {location.Altitude}, acc: {location.Accuracy}");

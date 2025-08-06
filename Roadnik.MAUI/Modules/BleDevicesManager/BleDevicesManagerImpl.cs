@@ -6,6 +6,7 @@ using Plugin.BLE;
 using Plugin.BLE.Abstractions;
 using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
+using Plugin.BLE.Abstractions.Extensions;
 using Roadnik.MAUI.Interfaces;
 using System.Reactive.Disposables;
 using static Roadnik.MAUI.Data.Consts;
@@ -132,7 +133,9 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
 
     try
     {
-      var device = await p_adapter.ConnectToKnownDeviceAsync(_deviceGuid, cancellationToken: _ct);
+      var device = await p_adapter.DiscoverDeviceAsync(_deviceGuid, _ct);
+      await p_adapter.ConnectToDeviceAsync(device, cancellationToken: _ct);
+      //var device = await p_adapter.ConnectToKnownDeviceAsync(_deviceGuid, cancellationToken: _ct);
 
       p_log.Info($"Connected to BLE device '{device.Name}' ({device.Id})");
       return device;

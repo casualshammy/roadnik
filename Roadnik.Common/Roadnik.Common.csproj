@@ -1,15 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
-				<TargetFramework>net8.0</TargetFramework>
+				<TargetFramework>net9.0</TargetFramework>
 				<ImplicitUsings>enable</ImplicitUsings>
 				<Nullable>enable</Nullable>
 				<LangVersion>latest</LangVersion>
 		</PropertyGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw" Version="14.5.247" />
-				<PackageReference Include="Ax.Fw.Storage" Version="14.5.247" />
+				<PackageReference Include="Ax.Fw" Version="14.5.257" />
+				<PackageReference Include="Ax.Fw.Storage" Version="14.5.257" />
 		</ItemGroup>
 
 </Project>

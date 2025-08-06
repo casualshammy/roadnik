@@ -6,6 +6,7 @@
              xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
              xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
              x:Class="Roadnik.MAUI.Pages.OptionsPage"
+             x:DataType="views:OptionsPageViewModel"
              Title="{x:Static l:AppResources.shell_settings}">
 
     <ContentPage.BindingContext>

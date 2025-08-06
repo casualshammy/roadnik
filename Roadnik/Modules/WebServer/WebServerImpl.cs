@@ -132,18 +132,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         KeepAliveInterval = TimeSpan.FromSeconds(30)
       });
 
-    var controllerV0 = new ApiControllerV0(
-      _config,
-      p_documentStorage,
-      p_logger,
-      p_webSocketCtrl,
-      p_roomsController,
-      p_tilesCache,
-      p_reqRateLimiter,
-      p_fCMPublisher,
-      p_httpClientProvider);
-    controllerV0.RegisterPaths(app);
-
     var controllerV1 = new ApiControllerV1(
       _config,
       p_documentStorage,

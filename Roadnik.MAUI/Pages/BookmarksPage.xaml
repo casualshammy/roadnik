@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <toolkit:CContentPage 
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
@@ -7,13 +7,10 @@
     xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
     xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
     xmlns:data="clr-namespace:Roadnik.MAUI.Data"
-    xmlns:strings="clr-namespace:Roadnik.MAUI.Resources.Strings"
     xmlns:conv="clr-namespace:Roadnik.MAUI.Pages.Parts"
+    xmlns:pages="clr-namespace:Roadnik.MAUI.Pages"
+    x:DataType="pages:BookmarksPage"
     x:Class="Roadnik.MAUI.Pages.BookmarksPage">
-
-    <ContentPage.Resources>
-        <conv:BookmarksConverter x:Key="bmConv" />
-    </ContentPage.Resources>
 
     <AbsoluteLayout>
         <VerticalStackLayout
@@ -21,13 +18,13 @@
             AbsoluteLayout.LayoutBounds="0,0,1,1">
             <ListView 
                 x:Name="p_listView"
-                x:DataType="data:BookmarkEntry"
                 HasUnevenRows="True"
                 ItemTapped="ListView_ItemTapped"
                 SelectionMode="None"
                 SeparatorVisibility="None">
                 <ListView.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate
+                        x:DataType="data:BookmarkEntryWrapper">
                         <ViewCell>
                             <SwipeView 
                                 Threshold="60">
@@ -35,10 +32,10 @@
                                     <SwipeItems 
                                         Mode="Execute">
                                         <SwipeItem
-                                            Text="{x:Static strings:AppResources.page_bookmarks_delete}"
+                                            Text="{x:Static l:AppResources.page_bookmarks_delete}"
                                             BackgroundColor="OrangeRed"
                                             IconImageSource="trash_bin.svg"
-                                            Command="{Binding Source={x:Reference p_listView}, Path=BindingContext.OnDeleteCommand}"
+                                            Command="{Binding OnDeleteCommand}"
                                             CommandParameter="{Binding}" />
                                     </SwipeItems>
                                 </SwipeView.RightItems>
@@ -53,15 +50,15 @@
                                         Margin="10, 0"
                                         VerticalOptions="Center">
                                         <Label 
-                                            Text="{Binding Converter={StaticResource bmConv}, ConverterParameter='RoomId'}"
+                                            Text="{Binding LocalizedRoomId}"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label 
-                                            Text="{Binding Converter={StaticResource bmConv}, ConverterParameter='Username'}"
+                                            Text="{Binding LocalizedUsername }"
                                             TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
                                         <Label
                                             TextColor="{AppThemeBinding Light=Gray, Dark=IndianRed}"
                                             FontSize="14"
-                                            Text="{Binding ServerAddress}"/>
+                                            Text="{Binding Bookmark.ServerAddress}"/>
                                     </VerticalStackLayout>
                                 </Border>
                             </SwipeView>
@@ -79,7 +76,7 @@
                     HeightRequest="14"/>
                 <Label 
                     Margin="10, 0"
-                    Text="{x:Static strings:AppResources.page_bookmarks_delete_hint}"/>
+                    Text="{x:Static l:AppResources.page_bookmarks_delete_hint}"/>
                 <Image
                     BackgroundColor="{AppThemeBinding Dark=White}"
                     Source="left_arrow.svg"

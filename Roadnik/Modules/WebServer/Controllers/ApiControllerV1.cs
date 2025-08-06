@@ -73,7 +73,6 @@ internal class ApiControllerV1 : GenericController
     apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion);
     apiGroup.MapGet("/ping", () => Results.Ok());
     apiGroup.MapGet("/map-tile", GetMapTileAsync);
-    apiGroup.MapGet(ReqPaths.STORE_PATH_POINT, StoreRoomPointGetAsync);
     apiGroup.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
     apiGroup.MapGet(ReqPaths.LIST_ROOM_PATH_POINTS, ListRoomPathPoints);
     apiGroup.MapPost(ReqPaths.CREATE_ROOM_POINT, CreateRoomPointAsync);
@@ -233,67 +232,6 @@ internal class ApiControllerV1 : GenericController
     catch (Exception ex)
     {
       log.Error($"Error occured while trying to handle 'map tile {_mapType}/{_z}/{_x}/{_y}' request: {ex}");
-      return InternalServerError(ex.Message);
-    }
-  }
-
-  [Obsolete]
-  public async Task<IResult> StoreRoomPointGetAsync(
-    HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string? _roomId,
-    [FromQuery(Name = "username")] string? _username,
-    [FromQuery(Name = "lat")] float? _lat,
-    [FromQuery(Name = "lng")] float? _lng,
-    [FromQuery(Name = "alt")] float? _alt, // metres
-    [FromQuery(Name = "speed")] float? _speed, // m/s
-    [FromQuery(Name = "acc")] float? _acc, // metres
-    [FromQuery(Name = "battery")] float? _battery, // %
-    [FromQuery(Name = "gsmSignal")] float? _gsmSignal, // %
-    [FromQuery(Name = "bearing")] float? _bearing, // grad
-    CancellationToken _ct)
-  {
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return Results.BadRequest("Room Id is incorrect!");
-    if (_lat == null)
-      return Results.BadRequest("Latitude is null!");
-    if (_lng == null)
-      return Results.BadRequest("Longitude is null!");
-    if (_alt == null)
-      return Results.BadRequest("Altitude is null!");
-    if (!ReqResUtil.IsUsernameSafe(_username))
-      return Results.BadRequest("Username is incorrect!");
-
-    var log = GetLog(_httpRequest);
-    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-
-    try
-    {
-      var savePointResult = await p_roomsController.SaveNewPathPointAsync(
-        log,
-        ip,
-        _roomId,
-        _username,
-        int.MinValue,
-        false,
-        _lat.Value,
-        _lng.Value,
-        _alt.Value,
-        _acc,
-        _speed,
-        _battery,
-        _gsmSignal,
-        _bearing,
-        null, // HR
-        _ct);
-
-      if (savePointResult.ErrorCode != null)
-        return Results.StatusCode(statusCode: (int)savePointResult.ErrorCode.Value);
-
-      return Results.Ok();
-    }
-    catch (Exception ex)
-    {
-      log.Error($"Error occured while trying to save path point: {ex}");
       return InternalServerError(ex.Message);
     }
   }

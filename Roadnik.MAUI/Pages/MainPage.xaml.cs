@@ -6,6 +6,7 @@ using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using QRCoder;
 using Roadnik.Common.JsonCtx;
@@ -21,6 +22,7 @@ using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Pages.Parts;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
+using System;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
@@ -105,7 +107,7 @@ public partial class MainPage : CContentPage
       //.Sample(TimeSpan.FromSeconds(1), scheduler)
       .CombineLatest(p_pageIsVisible, (_prefs, _pageVisible) => (ServerAddress: _prefs.serverAddress, RoomId: _prefs.roomId, PageVisible: _pageVisible))
       .ObserveOn(scheduler)
-      .SelectAsync(async (_entry, _ct) =>
+      .Subscribe(_entry =>
       {
         var (serverAddress, roomId, pageShown) = _entry;
         if (!pageShown)
@@ -137,12 +139,11 @@ public partial class MainPage : CContentPage
         var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
         var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
 
-        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Long).Show(_ct));
+        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Long).Show());
 
         var url = GetWebAppAddress(serverAddress, roomId, mapState);
         p_bindingCtx.WebViewUrl = url;
-      }, scheduler)
-      .Subscribe(p_lifetime);
+      }, p_lifetime);
 
     p_lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var webAppDataScheduler));
 
@@ -303,8 +304,10 @@ public partial class MainPage : CContentPage
     var version = p_prefs.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
     if (version < PRIVACY_POLICY_VERSION)
     {
-      var result = await this.ShowPopupAsync(new AgreementsPopup());
-      if (result is not bool agreed || !agreed)
+      var agreed = false;
+      var result = await this.ShowPopupAsync(new AgreementsPopup(_agreed => agreed = _agreed));
+
+      if ( !agreed)
         return;
 
       p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, PRIVACY_POLICY_VERSION);

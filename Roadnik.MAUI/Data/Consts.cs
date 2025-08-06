@@ -8,7 +8,7 @@ internal static class Consts
 
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";
-  public const int PRIVACY_POLICY_VERSION = 3;
+  public const int PRIVACY_POLICY_VERSION = 4;
 
   public const string PREF_DB_VERSION = "settings.db-version";
   public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";

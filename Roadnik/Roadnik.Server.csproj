@@ -2,7 +2,7 @@
 
 		<PropertyGroup>
 				<OutputType>Exe</OutputType>
-				<TargetFramework>net8.0</TargetFramework>
+				<TargetFramework>net9.0</TargetFramework>
 				<ImplicitUsings>enable</ImplicitUsings>
 				<Nullable>enable</Nullable>
 				<ApplicationIcon>favicon.ico</ApplicationIcon>
@@ -16,11 +16,11 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.App" Version="14.5.247" />
-				<PackageReference Include="Ax.Fw.Log" Version="14.5.247" />
-				<PackageReference Include="Ax.Fw.Storage" Version="14.5.247" />
+				<PackageReference Include="Ax.Fw.App" Version="14.5.257" />
+				<PackageReference Include="Ax.Fw.Log" Version="14.5.257" />
+				<PackageReference Include="Ax.Fw.Storage" Version="14.5.257" />
 				<PackageReference Include="MimeMapping" Version="3.1.0" />
-				<PackageReference Include="System.Linq.Async" Version="6.0.1" />
+				<PackageReference Include="System.Linq.Async" Version="6.0.3" />
 		</ItemGroup>
 
 		<ItemGroup>

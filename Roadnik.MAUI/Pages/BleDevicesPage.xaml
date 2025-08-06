@@ -33,7 +33,7 @@
                     IsEnabled="{Binding IsScanning, Converter={StaticResource InvertedBoolConverter}}"
                     ItemsSource="{Binding Devices}"
                     SelectionChangedCommand="{Binding OnItemSelected}"
-                    SelectionChangedCommandParameter="{Binding SelectedItem, Source={x:Reference p_devicesView} }"
+                    SelectionChangedCommandParameter="{Binding SelectedItem, Source={x:Reference p_devicesView}, x:DataType=controls:ModifiedCollectionView }"
                     SelectionMode="Single">
                     <controls:ModifiedCollectionView.ItemTemplate>
                         <DataTemplate

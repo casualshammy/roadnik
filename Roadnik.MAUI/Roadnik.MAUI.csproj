@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 		<PropertyGroup>
-				<TargetFramework>net8.0-android</TargetFramework>
+				<TargetFramework>net9.0-android</TargetFramework>
 
 				<OutputType>Exe</OutputType>
 				<RootNamespace>Roadnik.MAUI</RootNamespace>
@@ -18,13 +18,15 @@
 				<ApplicationVersion>176</ApplicationVersion>
 
 				<SupportedOSPlatformVersion>28</SupportedOSPlatformVersion>
+
+				<MauiEnableXamlCBindingWithSourceCompilation>true</MauiEnableXamlCBindingWithSourceCompilation>
 		</PropertyGroup>
 		<PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Configuration)' == 'Release'">
 				<AndroidKeyStore>True</AndroidKeyStore>
 				<AndroidSigningKeyStore>com.axiolab.roadnik</AndroidSigningKeyStore>
 				<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
+		<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
 				<EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
 		</PropertyGroup>
 
@@ -46,10 +48,10 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Log" Version="14.5.247" />
-				<PackageReference Include="CommunityToolkit.Maui" Version="[2.0.0]" />
-				<PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
-				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.100" />
+				<PackageReference Include="Ax.Fw.Log" Version="14.5.257" />
+				<PackageReference Include="CommunityToolkit.Maui" Version="12.1.0" />
+				<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.90" />
+				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.90" />
 				<PackageReference Include="MimeLut" Version="1.1.3" />
 				<PackageReference Include="Plugin.BLE" Version="3.1.0" />
 				<PackageReference Include="QRCoder" Version="1.6.0" />

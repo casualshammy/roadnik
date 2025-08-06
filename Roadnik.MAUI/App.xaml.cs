@@ -17,8 +17,6 @@ public partial class App : CMauiApplication
     InitializeComponent();
     log.Info($"App is started");
 
-    MainPage = new NavigationAppShell();
-
     Microsoft.Maui.Handlers.ButtonHandler.Mapper.AppendToMapping("LongPressButton", (_handler, _view) =>
     {
       _handler.PlatformView.LongClick += (_o, _e) => p_buttonLongPressed.OnNext(_view);
@@ -30,7 +28,7 @@ public partial class App : CMauiApplication
 
   protected override Window CreateWindow(IActivationState? _activationState)
   {
-    Window window = base.CreateWindow(_activationState);
+    var window = new Window(new NavigationAppShell());
 
     window.Activated += (_s, _e) => p_windowActivated.OnNext(true);
     window.Deactivated += (_s, _e) => p_windowActivated.OnNext(false);

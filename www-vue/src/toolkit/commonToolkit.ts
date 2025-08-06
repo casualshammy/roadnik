@@ -64,3 +64,18 @@ export function getColorForString(_str: string): string {
 
   return Consts.TRACK_COLORS[index];
 }
+
+export function getHeartRateString(
+  _hr: number | null | undefined
+): string | undefined {
+  if (!_hr)
+    return undefined;
+  if (_hr < 100)
+    return `💚${_hr} bpm`
+  if (_hr < 135)
+    return `💛${_hr} bpm`
+  if (_hr < 170)
+    return `🧡${_hr} bpm`;
+
+  return `❤️${_hr} bpm`;
+}

@@ -46,6 +46,7 @@ import * as CommonToolkit from './toolkit/commonToolkit';
 import { TimeSpan } from './toolkit/timespan';
 import { Pool } from './toolkit/Pool';
 import { MapInteractor } from "./parts/mapInteractor";
+import { getHeartRateString } from "./toolkit/commonToolkit";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
@@ -602,15 +603,17 @@ function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
   if (Math.abs(elapsedSinceLastUpdate.totalSeconds) > 5)
     elapsedString = `${elapsedSinceLastUpdate.toString(false)} ago`;
 
+  const hrData = getHeartRateString(_entry.HR);
+
   const popUpText =
     `<center>
-            <b>${_user}</b> (${elapsedString})
-            </br>
-            🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}%
-        </center>
-        <p style="margin-bottom: 0px">
-        🚀${kmh.toFixed(1)} km/h ⛰${Math.ceil(_entry.Altitude)} m 📡${Math.ceil(_entry.Accuracy ?? 100)} m
-        </p>`;
+      <b>${_user}</b> (${elapsedString})
+      </br>
+      🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}% ${hrData}
+    </center>
+    <p style="margin-bottom: 0px">
+      🚀${kmh.toFixed(1)} km/h ⛰${Math.ceil(_entry.Altitude)} m 📡${Math.ceil(_entry.Accuracy ?? 100)} m
+    </p>`;
 
   return popUpText;
 }

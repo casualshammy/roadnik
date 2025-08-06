@@ -95,17 +95,7 @@ const bgColor = computed(() => {
 const timestamp = ref('');
 const heartRate = computed(() => {
   const hr = props.state?.hr;
-  if (hr === undefined)
-    return undefined;
-
-  if (hr < 100)
-    return `💚${hr}`
-  if (hr < 135)
-    return `💛${hr}`
-  if (hr < 170)
-    return `🧡${hr}`;
-
-  return `❤️${hr}`;
+  return CommonToolkit.getHeartRateString(hr);
 });
 
 function onCloseButton() {

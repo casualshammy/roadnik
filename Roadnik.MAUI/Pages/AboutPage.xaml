@@ -29,20 +29,19 @@
 
             <!-- LOGO -->
             <HorizontalStackLayout 
-            Grid.Row="1"
-            Grid.ColumnSpan="2"
-            HorizontalOptions="Center"
-            HeightRequest="50">
+                Grid.Row="1"
+                Grid.ColumnSpan="2"
+                HorizontalOptions="Center"
+                HeightRequest="50">
                 <Image
-                Source="{AppThemeBinding Dark=letter_r_blue.svg, Light=letter_r.svg}"
-                Aspect="AspectFill"/>
+                    Source="{AppThemeBinding Dark=letter_r_blue.svg, Light=letter_r.svg}"/>
                 <Label 
-                Margin="-8"
-                Text="oadnik"
-                TextTransform="Uppercase"
-                FontSize="40"
-                VerticalOptions="Center" 
-                HorizontalOptions="Center" />
+                    Margin="-8"
+                    Text="oadnik"
+                    TextTransform="Uppercase"
+                    FontSize="40"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Center" />
             </HorizontalStackLayout>
 
             <!-- SUPPORT -->

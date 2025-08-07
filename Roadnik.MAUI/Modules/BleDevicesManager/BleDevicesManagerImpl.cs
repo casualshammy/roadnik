@@ -18,8 +18,7 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
   public static IBleDevicesManager ExportInstance(IAppDependencyCtx _ctx)
   {
     return _ctx.CreateInstance((
-      IReadOnlyLifetime _lifetime,
-      ILog _log) => new BleDevicesManagerImpl(_lifetime, _log["ble-devices-mgr"]));
+      ILog _log) => new BleDevicesManagerImpl(_log["ble-devices-mgr"]));
   }
 
   private readonly ILog p_log;
@@ -28,7 +27,6 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
   private readonly SemaphoreSlim p_bleSemaphore = new(1, 1);
 
   public BleDevicesManagerImpl(
-    IReadOnlyLifetime _lifetime,
     ILog _log)
   {
     p_log = _log;

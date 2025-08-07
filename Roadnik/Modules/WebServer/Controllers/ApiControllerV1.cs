@@ -49,7 +49,7 @@ internal class ApiControllerV1 : GenericController
     ITilesCache _tilesCache,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fcmPublisher,
-    IHttpClientProvider _httpClientProvider) : base("/", RestJsonCtx.Default)
+    IHttpClientProvider _httpClientProvider) : base(RestJsonCtx.Default)
   {
     p_appConfig = _appConfig;
     p_documentStorage = _documentStorage;
@@ -64,26 +64,23 @@ internal class ApiControllerV1 : GenericController
 
   public override void RegisterPaths(WebApplication _app)
   {
-    //_app.MapMethods("/r/", ["HEAD"], () => Results.Ok());
-    //_app.MapGet("/", GetIndexFile);
-    //_app.MapGet("/r/{**path}", GetRoomStaticFile);
-    //_app.MapGet("{**path}", GetStaticFile);
+    var ctrlInfo = new ControllerInfo("api-v1");
 
     var apiGroup = _app.MapGroup("/api/v1/");
-    apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion);
-    apiGroup.MapGet("/ping", () => Results.Ok());
-    apiGroup.MapGet("/map-tile", GetMapTileAsync);
-    apiGroup.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync);
-    apiGroup.MapGet(ReqPaths.LIST_ROOM_PATH_POINTS, ListRoomPathPoints);
-    apiGroup.MapPost(ReqPaths.CREATE_ROOM_POINT, CreateRoomPointAsync);
-    apiGroup.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints);
-    apiGroup.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync);
-    apiGroup.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId);
-    apiGroup.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid);
-    apiGroup.MapGet("/ws", ConnectToWsAsync);
-    apiGroup.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom);
-    apiGroup.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration);
-    apiGroup.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms);
+    apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion).WithMetadata(ctrlInfo);
+    apiGroup.MapGet("/ping", () => Results.Ok()).WithMetadata(ctrlInfo);
+    apiGroup.MapGet("/map-tile", GetMapTileAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapGet(ReqPaths.LIST_ROOM_PATH_POINTS, ListRoomPathPoints).WithMetadata(ctrlInfo);
+    apiGroup.MapPost(ReqPaths.CREATE_ROOM_POINT, CreateRoomPointAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapGet(ReqPaths.LIST_ROOM_POINTS, ListRoomPoints).WithMetadata(ctrlInfo);
+    apiGroup.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId).WithMetadata(ctrlInfo);
+    apiGroup.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid).WithMetadata(ctrlInfo);
+    apiGroup.MapGet("/ws", ConnectToWsAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom).WithMetadata(ctrlInfo);
+    apiGroup.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration).WithMetadata(ctrlInfo);
+    apiGroup.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms).WithMetadata(ctrlInfo);
   }
 
   public IResult GetVersion(HttpContext _httpContext)
@@ -97,58 +94,6 @@ internal class ApiControllerV1 : GenericController
     catch (Exception ex)
     {
       log.Error($"Error occured while trying to handle 'version' request: {ex}");
-      return InternalServerError(ex.Message);
-    }
-  }
-
-  public IResult GetIndexFile(HttpRequest _httpRequest)
-    => GetStaticFile(_httpRequest, "/");
-
-  public IResult GetRoomStaticFile(
-    HttpRequest _httpRequest,
-    [FromRoute(Name = "path")] string? _path)
-  {
-    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
-      _path = "index.html";
-
-    return GetStaticFile(_httpRequest, $"room/{_path}");
-  }
-
-  [FailToBan]
-  public IResult GetStaticFile(
-    HttpRequest _httpRequest,
-    [FromRoute(Name = "path")] string _path)
-  {
-    var log = GetLog(_httpRequest);
-    try
-    {
-      log.Info($"Requested **static path** __{_path}__");
-
-      if (string.IsNullOrWhiteSpace(_path) || _path == "/")
-        _path = "index.html";
-
-      var path = Path.Combine(p_appConfig.WebrootDirPath, _path);
-      if (!File.Exists(path))
-      {
-        log.Warn($"File '{_path}' is not found");
-        return NotFound();
-      }
-
-      if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
-      {
-        log.Warn($"Tried to get file not from webroot: '{_path}'");
-        return Forbidden(string.Empty);
-      }
-
-      var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
-      var stream = File.OpenRead(path);
-
-      log.Info($"**Handled** request of **static path** __{_path}__");
-      return Results.Stream(stream, mime);
-    }
-    catch (Exception ex)
-    {
-      log.Error($"Error occured while trying to handle 'static path {_path}' request: {ex}");
       return InternalServerError(ex.Message);
     }
   }

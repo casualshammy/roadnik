@@ -2,6 +2,7 @@
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
+using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
@@ -114,10 +115,23 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       _opt.Listen(_config.BindIp, _config.BindPort);
     });
 
+    builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
     builder.Services.AddSingleton(p_logger);
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
     builder.Services.AddSingleton<FailToBanMiddleware>();
+    builder.Services.AddScoped<LogMiddleware>();
+    builder.Services.AddScoped(_sp =>
+    {
+      var guid = Guid.NewGuid();
+      var httpCtx = _sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
+      var ctrlInfo = httpCtx?.GetEndpoint()?.Metadata.GetMetadata<ControllerInfo>();
+
+      if (ctrlInfo == null)
+        return (IScopedLog)new ScopedLog(p_logger["unknown-ctrl"][guid.ToString()[..8]]);
+
+      return new ScopedLog(p_logger[ctrlInfo.LogScope][guid.ToString()[..8]]);
+    });
 
     var app = builder.Build();
     app
@@ -132,19 +146,10 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         KeepAliveInterval = TimeSpan.FromSeconds(30)
       });
 
-    var controllerV0 = new ApiControllerV0(
-      _config,
-      p_documentStorage,
-      p_logger,
-      p_webSocketCtrl,
-      p_roomsController,
-      p_tilesCache,
-      p_reqRateLimiter,
-      p_fCMPublisher,
-      p_httpClientProvider);
-    controllerV0.RegisterPaths(app);
+    var webCtrl = new WebController(_config);
+    webCtrl.RegisterPaths(app);
 
-    var controllerV1 = new ApiControllerV1(
+    var apiCtrlV1 = new ApiControllerV1(
       _config,
       p_documentStorage,
       p_logger,
@@ -154,7 +159,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       p_reqRateLimiter,
       p_fCMPublisher,
       p_httpClientProvider);
-    controllerV1.RegisterPaths(app);
+    apiCtrlV1.RegisterPaths(app);
 
     return app;
   }

@@ -1,31 +1,30 @@
-﻿using Ax.Fw.SharedTypes.Interfaces;
+﻿using Roadnik.Server.Interfaces;
 using System.Net;
 
 namespace Roadnik.Server.Modules.WebServer.Middlewares;
 
-public class LogMiddleware
+internal class LogMiddleware : IMiddleware
 {
-  private readonly RequestDelegate p_next;
-  private readonly ILog p_log;
-  private long p_reqCount = -1;
-
+  private static long p_reqCount = -1;
+  private readonly IScopedLog p_log;
+  
   public LogMiddleware(
-    RequestDelegate _next,
-    ILog _log)
+    IScopedLog _log)
   {
-    p_next = _next;
     p_log = _log;
   }
 
-  public async Task Invoke(HttpContext _context)
+  public async Task InvokeAsync(
+    HttpContext _ctx, 
+    RequestDelegate _next)
   {
-    var request = _context.Request;
+    var request = _ctx.Request;
     var reqIndex = Interlocked.Increment(ref p_reqCount);
 
     p_log.Info($"[{reqIndex}] --> **{request.Method}** __{request.Path}__");
     var startTime = Environment.TickCount64;
-    await p_next(_context);
+    await _next(_ctx);
     var elapsedMs = Environment.TickCount64 - startTime;
-    p_log.Info($"[{reqIndex}] <-- **{request.Method}** __{request.Path}__ {(HttpStatusCode)_context.Response.StatusCode} (__{elapsedMs} ms__)");
+    p_log.Info($"[{reqIndex}] <-- **{request.Method}** __{request.Path}__ {(HttpStatusCode)_ctx.Response.StatusCode} (__{elapsedMs} ms__)");
   }
 }

@@ -7,7 +7,7 @@ using System.Reactive.Linq;
 
 namespace Roadnik.Server.Modules.WebServer.Middlewares;
 
-public class FailToBanMiddleware : IMiddleware
+internal class FailToBanMiddleware : IMiddleware
 {
   private readonly ConcurrentDictionary<IPAddress, int> p_failedReqLut;
   private readonly ILog p_log;

@@ -9,13 +9,10 @@ internal abstract class GenericController
 {
   private readonly JsonSerializerContext p_jsonCtx;
 
-  public GenericController(string _route, JsonSerializerContext _jsonCtx)
+  public GenericController(JsonSerializerContext _jsonCtx)
   {
-    Route = _route.TrimStart('/');
     p_jsonCtx = _jsonCtx;
   }
-
-  public string Route { get; }
 
   public abstract void RegisterPaths(WebApplication _app);
 

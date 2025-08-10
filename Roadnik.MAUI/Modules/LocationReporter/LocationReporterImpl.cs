@@ -1,11 +1,8 @@
 ﻿using Android.Content;
-using Android.OS;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
-using Javax.Security.Auth;
-using Microsoft.Maui.Controls.Shapes;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
@@ -16,11 +13,11 @@ using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using static Roadnik.MAUI.Data.Consts;
-using Debug = System.Diagnostics.Debug;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -141,18 +138,28 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Replay(1)
       .RefCount();
 
-    var hrFlow = new BehaviorSubject<int?>(null);
+    var hrRebuildSubj = new BehaviorSubject<Unit>(Unit.Default);
+    var hrSubj = new BehaviorSubject<int?>(null);
     p_enableFlow
+      .CombineLatest(hrRebuildSubj, (_enabled, _) => _enabled)
       .WithLatestFrom(prefsFlow, (_enabled, _prefs) => (Enabled: _enabled && _prefs.HrmReportEnabled, HrmInfo: _prefs.HrmDevice))
       .HotAlive(_lifetime, new EventLoopScheduler(), (_tuple, _life) =>
       {
         var (enabled, hrmInfo) = _tuple;
 
-        hrFlow.OnNext(null);
+        hrSubj.OnNext(null);
         if (!enabled || hrmInfo == null)
         {
           p_log.Info($"HRM reporting is disabled or no device is selected");
           return;
+        }
+
+        void scheduleRebuild()
+        {
+          hrSubj.OnNext(null);
+          Observable
+            .Timer(TimeSpan.FromMinutes(1))
+            .Subscribe(_ => hrRebuildSubj.OnNext(), _life);
         }
 
         _ = Task.Run(async () =>
@@ -165,12 +172,27 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             var device = await _bleDevicesManager.TryConnectToDeviceByIdAsync(hrmInfo.DeviceId, cts.Token)
               ?? throw new InvalidOperationException($"Device not found or could not be connected");
 
-            var subs = await _bleDevicesManager.SubscribeToHrmDataAsync(device, false, _hr => hrFlow.OnNext(_hr), cts.Token);
-            _life.ToDisposeOnEnding(subs);
+            var subsLife = await _bleDevicesManager.SubscribeToHrmDataAsync(
+              device, 
+              false,
+              _hr =>
+              {
+                // Debug.WriteLine($"[{DateTimeOffset.Now}] HR: {_hr}");
+                hrSubj.OnNext(_hr);
+              }, 
+              _ =>
+              {
+                p_log.Warn($"Device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}) seems to be disconnected, trying to reconnect...");
+                scheduleRebuild();
+              },
+              cts.Token);
+
+            _life.ToDisposeOnEnding(subsLife);
           }
           catch (Exception ex)
           {
             p_log.Error($"Error while subscribing to HRM data of device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}): {ex}");
+            scheduleRebuild();
           }
         });
       });
@@ -190,7 +212,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .ObserveOn(reportScheduler)
       .WithLatestFrom(batteryFlow, (_tuple, _battery) => (Location: _tuple.First, Prefs: _tuple.Second, Battery: _battery))
       .WithLatestFrom(signalLevelFlow, (_tuple, _signal) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, Signal: _signal))
-      .WithLatestFrom(hrFlow, (_tuple, _hr) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, _tuple.Signal, HeartRate: _hr))
+      .WithLatestFrom(hrSubj, (_tuple, _hr) => (_tuple.Location, _tuple.Prefs, _tuple.Battery, _tuple.Signal, HeartRate: _hr))
       .ScanAsync(ReportingCtx.Empty, async (_acc, _entry) =>
       {
         var (location, prefs, battery, signalStrength, hr) = _entry;

@@ -70,11 +70,17 @@ export function getHeartRateString(
 ): string | undefined {
   if (!_hr)
     return undefined;
-  if (_hr < 100)
+
+  const maxHr = 200;
+  var hrPercent = _hr / maxHr;
+
+  if (hrPercent < 0.6)
+    return `💙${_hr} bpm`
+  if (hrPercent < 0.7)
     return `💚${_hr} bpm`
-  if (_hr < 135)
+  if (hrPercent < 0.8)
     return `💛${_hr} bpm`
-  if (_hr < 170)
+  if (hrPercent < 0.9)
     return `🧡${_hr} bpm`;
 
   return `❤️${_hr} bpm`;

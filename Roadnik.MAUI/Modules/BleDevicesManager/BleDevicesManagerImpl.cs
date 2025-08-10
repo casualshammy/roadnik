@@ -1,4 +1,5 @@
 ﻿using Android.Gms.Common.Apis;
+using Ax.Fw;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
@@ -8,7 +9,9 @@ using Plugin.BLE.Abstractions.Contracts;
 using Plugin.BLE.Abstractions.EventArgs;
 using Plugin.BLE.Abstractions.Extensions;
 using Roadnik.MAUI.Interfaces;
-using System.Reactive.Disposables;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using static Roadnik.MAUI.Data.Consts;
 
 namespace Roadnik.MAUI.Modules.BleDevicesManager;
@@ -25,6 +28,7 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
   private readonly IBluetoothLE p_bluetoothLE;
   private readonly IAdapter p_adapter;
   private readonly SemaphoreSlim p_bleSemaphore = new(1, 1);
+  private readonly Subject<IDevice> p_deviceConnectionBrokenSubj = new();
 
   public BleDevicesManagerImpl(
     ILog _log)
@@ -32,6 +36,45 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     p_log = _log;
     p_bluetoothLE = CrossBluetoothLE.Current;
     p_adapter = p_bluetoothLE.Adapter;
+
+    p_adapter.DeviceConnectionError += (_s, _e) =>
+    {
+      var device = _e.Device;
+      if (device == null)
+      {
+        p_log.Error($"Unknown device connection error: {_e.ErrorMessage}");
+        return;
+      }
+
+      p_log.Error($"Connection error to device {_e.Device?.Name} ({_e.Device?.Id}) is occured: {_e.ErrorMessage}");
+      p_deviceConnectionBrokenSubj.OnNext(device);
+    };
+
+    p_adapter.DeviceConnectionLost += (_s, _e) =>
+    {
+      var device = _e.Device;
+      if (device == null)
+      {
+        p_log.Error($"Unknown device connection lost: {_e.ErrorMessage}");
+        return;
+      }
+
+      p_log.Error($"Connection to device '{device.Name}' ({device.Id}) is lost: {_e.ErrorMessage}");
+      p_deviceConnectionBrokenSubj.OnNext(device);
+    };
+
+    p_adapter.DeviceDisconnected += (_s, _e) =>
+    {
+      var device = _e.Device;
+      if (device == null)
+      {
+        p_log.Error($"Unknown device disconnected");
+        return;
+      }
+
+      p_log.Info($"Device '{device.Name}' ({device.Id}) is disconnected");
+      p_deviceConnectionBrokenSubj.OnNext(device);
+    };
   }
 
   public bool IsBluetoothAvailable => p_bluetoothLE.IsAvailable && p_bluetoothLE.IsOn;
@@ -218,19 +261,34 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     }
   }
 
-  public async Task<IDisposable> SubscribeToHrmDataAsync(
+  public async Task<ILifetime> SubscribeToHrmDataAsync(
     IDevice _device,
     bool _forceConnect,
     Action<int> _heartRateCallback,
+    Action<Unit> _deviceDisconnectedCallback,
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
     p_log.Info($"Subscribing to Heart Rate Monitor (HRM) data for device '{_device.Name}' ({_device.Id})...");
 
+    var lifetime = new Lifetime();
+
     try
     {
       if (_forceConnect)
         await p_adapter.ConnectToDeviceAsync(_device, cancellationToken: _ct);
+
+      lifetime.DoOnEnding(async () =>
+      {
+        try
+        {
+          await p_adapter.DisconnectDeviceAsync(_device);
+        }
+        catch (Exception ex)
+        {
+          p_log.Error($"Error while disconnecting from subscribed device '{_device.Name}' ({_device.Id}): {ex}");
+        }
+      });
 
       try
       {
@@ -255,21 +313,34 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
         }
 
         hrmCharacteristic.ValueUpdated += onValueUpdated;
+        lifetime.DoOnEnding(() =>
+        {
+          hrmCharacteristic.ValueUpdated -= onValueUpdated;
+        });
 
         await hrmCharacteristic.StartUpdatesAsync(_ct);
-
-        return Disposable.Create(() =>
+        lifetime.DoOnEnding(async () =>
         {
           try
           {
-            hrmCharacteristic.ValueUpdated -= onValueUpdated;
-            _ = p_adapter.DisconnectDeviceAsync(_device);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await hrmCharacteristic.StopUpdatesAsync(cts.Token);
           }
           catch (Exception ex)
           {
-            p_log.Error($"Error while unsubscribing from HRM data of device '{_device.Name}' ({_device.Id}): {ex}");
+            p_log.Error($"Error while stopping HR updates from subscribed device '{_device.Name}' ({_device.Id}): {ex}");
           }
         });
+
+        p_deviceConnectionBrokenSubj
+          .Where(_ => _.Id == _device.Id)
+          .Subscribe(_ =>
+          {
+            p_log.Info($"Device '{_device.Name}' ({_device.Id}) connection is broken, stopping HRM updates");
+            _deviceDisconnectedCallback(Unit.Default);
+          }, lifetime);
+
+        return lifetime;
       }
       catch (Exception ex)
       {

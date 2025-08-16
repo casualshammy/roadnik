@@ -1,8 +1,15 @@
 import L from "leaflet";
 import css from '@/css/map.module.css';
+import { getColorForString } from "./commonToolkit";
+
+const DEFAULT_MAX_ZOOM = 18;
+const p_arrowIconsMap = new Map<string, L.DivIcon>();
+const p_colorsMap = new Map<string, string>();
 
 export const DEFAULT_MAP_LAYER: string = "OpenStreetMap";
-const DEFAULT_MAX_ZOOM = 18;
+export const TOLERANT_RENDERER = L.canvas({
+	tolerance: 10
+});
 
 export interface ICookieMapState {
 	Lat: number;
@@ -24,9 +31,9 @@ export function GetMapLayers(_apiUrl: string): L.Control.LayersObject {
 
 	// Thunderstorm Transport
 	const transportLayer = new L.TileLayer(
-		`${_apiUrl}/api/v1/map-tile?type=tf-transport&x={x}&y={y}&z={z}`, 
+		`${_apiUrl}/api/v1/map-tile?type=tf-transport&x={x}&y={y}&z={z}`,
 		{ maxZoom: DEFAULT_MAX_ZOOM, attribution: thunderforestAttribution, noWrap: true });
-	
+
 	// CartoDb Dark
 	const cartoDbDarkUrl = `${_apiUrl}/api/v1/map-tile?type=carto-dark&x={x}&y={y}&z={z}`,
 		cartoDbAttribution = 'Maps © <a href="https://carto.com/attributions" target="_blank">CARTO</a>, Data © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
@@ -150,4 +157,52 @@ export function GetMapStateFromCookie(_cookie: string | undefined): ICookieMapSt
 	}
 
 	return null;
+}
+
+/**
+ * Calculates the initial bearing (forward azimuth) between two geographic points.
+ * @param lat1 Latitude of the first point in degrees.
+ * @param lon1 Longitude of the first point in degrees.
+ * @param lat2 Latitude of the second point in degrees.
+ * @param lon2 Longitude of the second point in degrees.
+ * @returns The initial bearing in degrees from the first point to the second point.
+ */
+export function initialBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+	const toRad = (d: number) => (d * Math.PI) / 180;
+	const toDeg = (r: number) => (r * 180) / Math.PI;
+
+	const φ1 = toRad(lat1);
+	const φ2 = toRad(lat2);
+	const Δλ = toRad(lon2 - lon1);
+
+	const y = Math.sin(Δλ) * Math.cos(φ2);
+	const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+
+	const θ = Math.atan2(y, x);
+	return (toDeg(θ) + 360) % 360; // normalize to [0..360)
+}
+
+export function getCachedArrowIcon(_color: string): L.DivIcon {
+	const existingIcon = p_arrowIconsMap.get(_color);
+	if (existingIcon)
+		return existingIcon;
+
+	const icon = new L.DivIcon({
+		className: css.heading_marker,
+		html: `<span style="font-size: 24px; color: ${_color}">➤</span>`, //➡
+		iconAnchor: [13, 18],
+	});
+
+	p_arrowIconsMap.set(_color, icon);
+	return icon;
+}
+
+export function getCachedColor(_id: string): string {
+	const existingColor = p_colorsMap.get(_id);
+	if (existingColor)
+		return existingColor;
+
+	const newColor = getColorForString(_id);
+	p_colorsMap.set(_id, newColor);
+	return newColor;
 }

@@ -5,14 +5,9 @@
   "type": "module",
   "scripts": {
     "debug": "vite",
-    "watch-e": "vite build --debug --watch",
-    "vue-tsc-watch": "vue-tsc --build --force --watch",
-    "watch": "concurrently --raw --kill-others \"npm run debug\" \"npm run vue-tsc-watch\"",
-    "build": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build --force",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+    "watch": "concurrently --raw --kill-others \"vite\" \"vue-tsc --build --force --watch\"",
+    "build": "npm run type-check && vite build --mode production",
+    "type-check": "vue-tsc --build --force"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.15",
@@ -20,10 +15,10 @@
     "js-base64": "^3.7.7",
     "js-cookie": "^3.0.5",
     "js-sha256": "^0.11.0",
+    "leaflet": "^1.9.4",
     "leaflet-rotatedmarker": "^0.2.0",
-    "leaflet-textpath": "^1.2.3",
     "rxjs": "^7.8.1",
-    "sweetalert2": "11.4.8",
+    "v-dialogs": "^3.0.3",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",
     "websocket-ts": "^2.1.5"
@@ -39,7 +34,6 @@
     "concurrently": "^9.1.0",
     "eslint": "^9.16.0",
     "eslint-plugin-vue": "^9.32.0",
-    "leaflet": "^1.9.4",
     "npm-run-all2": "^7.0.1",
     "typescript": "5.6.3",
     "vite": "^6.3.4",

@@ -14,3 +14,7 @@
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
   }
 }
+
+.heading_marker {
+  display: inline-table !important;
+}

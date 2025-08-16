@@ -10,7 +10,6 @@ export type AppCtx = {
   readonly apiUrl: string;
   readonly isRoadnikApp: boolean;
   readonly roomId: string | null;
-  readonly userColors: Map<string, string>;
   readonly mapState: Ref<MapState>;
   lastTracksOffset: number;
   currentLocation: CurrentLocationControl | null;
@@ -24,12 +23,12 @@ export function GetApiUrl() {
   const urlParams = new URLSearchParams(queryString);
   let apiUrlParam = urlParams.get('api_url');
 
-  if (import.meta.env.MODE === "development")
-    return "http://localhost:5544";
-  else if (apiUrlParam !== null)
+  if (apiUrlParam !== null)
     return apiUrlParam;
+  else if (import.meta.env.MODE === "development")
+    return "http://localhost:5544";
   else
-  return window.document.location.origin.replace(/\/+$/, "");
+    return window.document.location.origin.replace(/\/+$/, "");
 }
 
 export function CreateAppCtx(
@@ -146,7 +145,6 @@ export function CreateAppCtx(
     lastTracksOffset: 0,
     currentLocation: null,
     userColorIndex: 0,
-    userColors: new Map<string, string>(),
     firstTracksSyncCompleted: false,
     maxTrackPoints: 1000,
     mapState: ref({

@@ -27,8 +27,7 @@ import { ref, computed, type ComputedRef, type Ref, shallowRef, watch, onMounted
 import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
-import Swal from "sweetalert2";
-import "leaflet-textpath";
+import { DialogAlertError } from 'v-dialogs'
 
 import LeafletMap from './components/LeafletMap.vue';
 import SelectedUserPopup from './components/SelectedUserPopup.vue';
@@ -47,6 +46,7 @@ import { TimeSpan } from './toolkit/timespan';
 import { Pool } from './toolkit/Pool';
 import { MapInteractor } from "./parts/mapInteractor";
 import { getHeartRateString } from "./toolkit/commonToolkit";
+import { getCachedColor } from "./toolkit/mapToolkit";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
@@ -62,6 +62,7 @@ const p_mapLocation = ref<LatLngZoom>({
 const p_markers = new Map<string, L.Marker>();
 const p_circles = new Map<string, L.Circle>();
 const p_paths = reactive(new Map<string, L.Polyline>());
+const p_pathArrows = new Map<string, L.Marker[]>();
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 const p_gEntries = reactive(new Map<string, TimedStorageEntry[]>());
@@ -103,7 +104,7 @@ const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = comp
     speed: (lastEntry.Speed ?? 0) * 3.6,
     altitude: lastEntry.Altitude,
     accuracy: lastEntry.Accuracy ?? undefined,
-    color: p_appCtx.userColors.get(user) ?? 'black',
+    color: getCachedColor(user),
     hr: lastEntry.HR ?? undefined
   };
 
@@ -167,6 +168,9 @@ function setupMap(_map: L.Map) {
     p_mapState.value.lng = location.lng;
     p_mapState.value.zoom = _map.getZoom();
 
+    for (const [user, _] of p_pathArrows)
+      updatePathArrows(user);
+
     if (!p_appCtx.isRoadnikApp) {
       const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
       Cookies.set(Consts.COOKIE_MAP_STATE, stateString);
@@ -181,6 +185,9 @@ function setupMap(_map: L.Map) {
     p_mapState.value.lat = location.lat;
     p_mapState.value.lng = location.lng;
     p_mapState.value.zoom = _map.getZoom();
+
+    for (const [user, _] of p_pathArrows)
+      updatePathArrows(user);
 
     if (!p_appCtx.isRoadnikApp) {
       const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
@@ -259,6 +266,8 @@ function setupDataFlow(_map: L.Map) {
         const geoEntries = p_gEntries.get(user);
         if (geoEntries !== undefined)
           geoEntries.length = 0;
+
+        updatePathArrows(user);
       }
       else if (_data.Type == Consts.WS_MSG_ROOM_POINTS_UPDATED) {
         console.log("Points were changed, updating markers...");
@@ -289,12 +298,17 @@ function setupDataFlow(_map: L.Map) {
       const roomIdIsCorrect = await p_backendApi.isRoomIdValidAsync(p_appCtx.roomId);
       if (!roomIdIsCorrect) {
         console.log(`Incorrect room id: ${p_appCtx.roomId}`);
-        Swal.fire({
-          icon: "error",
-          title: "Room id is missed or invalid",
-          text: "Make sure room id is specified and valid",
-          footer: `Current room id: ${p_appCtx.roomId}`
-        });
+        DialogAlertError(
+          `Make sure room id is specified and valid.\nCurrent room id: ${p_appCtx.roomId}`,
+          undefined,
+          {
+            header: true,
+            title: "Room id is missed or invalid123",
+            messageType: 'error',
+            icon: true,
+            colorfulShadow: true
+          }
+        );
       }
     }, 1000);
 
@@ -475,12 +489,8 @@ async function updatePointsAsync() {
 }
 
 function initControlsForUser(_user: string): void {
-  let color = p_appCtx.userColors.get(_user);
-  if (color === undefined) {
-    color = CommonToolkit.getColorForString(_user); //TRACK_COLORS[p_appCtx.userColorIndex++ % TRACK_COLORS.length];
-    p_appCtx.userColors.set(_user, color);
-    console.log(`Color for user ${_user}: ${color}`);
-  }
+  const color = getCachedColor(_user);
+  console.log(`Color for user ${_user}: ${color}`);
 
   if (p_markers.get(_user) === undefined) {
     const icon = MapToolkit.GeneratePulsatingCircleIcon(15, color);
@@ -496,7 +506,7 @@ function initControlsForUser(_user: string): void {
     p_circles.set(_user, L.circle([51.4768, 0.0006], { radius: 100, color: color, fillColor: '*', fillOpacity: 0.3 })
       .addTo(p_map.value!));
   if (p_paths.get(_user) === undefined) {
-    const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6 })
+    const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6, renderer: MapToolkit.TOLERANT_RENDERER })
       .addTo(p_map.value!)
       .bindPopup("")
       .addEventListener("click", (_ev: LeafletMouseEvent) => {
@@ -520,19 +530,6 @@ function initControlsForUser(_user: string): void {
           path.openPopup(nearestLatLng);
         }
       });
-
-    (path as any).setText('  ➤  ', {
-      repeat: true,
-      offset: 11,
-      below: true,
-      bold: true,
-      attributes: {
-        fill: color,
-        'font-size': '30',
-        'font-family': 'monospace',
-        'font-weight': 'bold'
-      }
-    });
 
     p_paths.set(_user, path);
   }
@@ -593,6 +590,71 @@ function updateControlsForUser(
   const points = geoEntries.map(_ => new L.LatLng(_.Latitude, _.Longitude, _.Altitude));
   path.setLatLngs(points);
   console.log(`Path '${_user}' now contains ${points.length} points`);
+
+  updatePathArrows(_user);
+}
+
+function updatePathArrows(_user: string) {
+  const map = p_map.value;
+  if (!map)
+    return;
+
+  const existingArrows = p_pathArrows.get(_user) ?? [];
+  const geoEntries = p_gEntries.get(_user);
+
+  // If not enough points, remove any existing arrows and exit
+  if (!geoEntries || geoEntries.length < 2) {
+    for (const m of existingArrows)
+      m.remove();
+
+    return;
+  }
+
+  const mapBounds = map.getBounds();
+  const minPixelSpacing = 100; // px between arrows
+
+  // Start from the first point, compare with subsequent points
+  let prevGeoPoint = geoEntries[0];
+  let prevScreenPt = map.latLngToContainerPoint([prevGeoPoint.Latitude, prevGeoPoint.Longitude]);
+  let arrowsIndex = -1;
+  let newMarkersCounter = 0;
+
+  for (let i = 1; i < geoEntries.length - 1; i++) {
+    const entry = geoEntries[i];
+    const entryLatLng: L.LatLngExpression = [entry.Latitude, entry.Longitude];
+    const screenPt = map.latLngToContainerPoint(entryLatLng);
+    const isInView = mapBounds.contains(entryLatLng);
+
+    if (isInView && screenPt.distanceTo(prevScreenPt) >= minPixelSpacing) {
+      const bearing = MapToolkit.initialBearing(prevGeoPoint.Latitude, prevGeoPoint.Longitude, entry.Latitude, entry.Longitude);
+
+      let marker = existingArrows[++arrowsIndex];
+      if (marker === undefined) {
+        ++newMarkersCounter;
+        marker = L.marker([0, 0], { draggable: false, interactive: false, keyboard: false })
+          .setRotationOrigin("center")
+          .setIcon(MapToolkit.getCachedArrowIcon(getCachedColor(_user + "_arrow_color"))); // we want arrows to be different color
+      }
+
+      marker
+        .setLatLng(entryLatLng)
+        .setRotationAngle(bearing - 90)
+        .addTo(map);
+
+      existingArrows[arrowsIndex] = marker;
+
+      prevScreenPt = screenPt;
+    }
+
+    prevGeoPoint = entry;
+  }
+
+  // Remove any excess markers that are no longer needed
+  for (let i = arrowsIndex + 1; i < existingArrows.length; i++)
+    existingArrows[i].remove();
+
+  p_pathArrows.set(_user, existingArrows);
+  console.log(`Total arrow markers for user ${_user}: ${arrowsIndex + 1}/${existingArrows.length} (new: ${newMarkersCounter})`);
 }
 
 function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {

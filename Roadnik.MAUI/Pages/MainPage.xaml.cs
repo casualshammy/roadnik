@@ -100,31 +100,18 @@ public partial class MainPage : CContentPage
     p_prefs.PreferencesChanged
       .Select(_ =>
       {
-        var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
         var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
-
-        return (serverAddress, roomId);
+        return (IsDebug: DEBUG_APP_ADDRESS != null, RoomId: roomId);
       })
-      .DistinctUntilChanged(_ => HashCode.Combine(_.serverAddress, _.roomId))
-      //.Sample(TimeSpan.FromSeconds(1), scheduler)
-      .CombineLatest(p_pageIsVisible, (_prefs, _pageVisible) => (ServerAddress: _prefs.serverAddress, RoomId: _prefs.roomId, PageVisible: _pageVisible))
+      .DistinctUntilChanged(_ => HashCode.Combine(_.IsDebug, _.RoomId))
+      .CombineLatest(p_pageIsVisible, (_prefs, _pageVisible) => (IsDebug: _prefs.IsDebug, RoomId: _prefs.RoomId, PageVisible: _pageVisible))
       .ObserveOn(scheduler)
       .Subscribe(_entry =>
       {
-        var (serverAddress, roomId, pageShown) = _entry;
+        var (isDebug, roomId, pageShown) = _entry;
         if (!pageShown)
         {
           p_bindingCtx.WebViewUrl = p_backgroundPageUrl;
-          return;
-        }
-
-        if (serverAddress.IsNullOrWhiteSpace())
-        {
-          _ = MainThread.InvokeOnMainThreadAsync(async () =>
-          {
-            var page = new OptionsErrorPage(L.page_options_error_incorrect_server_address, L.page_options_error_open_settings);
-            await Navigation.PushModalAsync(page);
-          });
           return;
         }
 
@@ -141,9 +128,10 @@ public partial class MainPage : CContentPage
         var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
         var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
 
-        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make($"{serverAddress}\n{roomId}/{username}", ToastDuration.Long).Show());
+        var toastText = isDebug ? $"DEBUG MODE\n{roomId}\n{username}" : $"{roomId}\n{username}";
+        _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make(toastText, ToastDuration.Long).Show());
 
-        var url = GetWebAppAddress(serverAddress, roomId, mapState);
+        var url = GetWebAppAddress(DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS, roomId, mapState);
         p_bindingCtx.WebViewUrl = url;
       }, p_lifetime);
 

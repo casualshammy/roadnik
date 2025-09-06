@@ -13,7 +13,7 @@ public static partial class ReqResUtil
 
   public static int MaxUserMsgLength { get; } = 1024;
 
-  public const int MaxRoomIdLength = 16;
+  public const int MaxRoomIdLength = 32;
   public static int MinRoomIdLength { get; } = 8;
 
   public const int MinUsernameLength = 4;
@@ -23,8 +23,12 @@ public static partial class ReqResUtil
 
   public static FrozenSet<string> ValidMapTypes { get; } = new[] { "cycle", "transport", "landscape", "outdoors" }.ToFrozenSet();
 
-  public static bool IsRoomIdValid([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_roomIdRegex.IsMatch(_data);
-  public static bool IsUsernameSafe([NotNullWhen(true)] string? _data) => _data != null && _data.Length >= MinUsernameLength && _data.Length <= MaxUsernameLength && p_safeUsernameRegex.IsMatch(_data);
+  public static bool IsRoomIdValid([NotNullWhen(true)] string? _data) 
+    => _data != null && _data.Length >= MinRoomIdLength && _data.Length <= MaxRoomIdLength && p_roomIdRegex.IsMatch(_data);
+
+  public static bool IsUsernameSafe([NotNullWhen(true)] string? _data) 
+    => _data != null && _data.Length >= MinUsernameLength && _data.Length <= MaxUsernameLength && p_safeUsernameRegex.IsMatch(_data);
+
   public static bool IsUserDefinedStringSafe([NotNullWhen(true)] string? _data) => _data != null && _data.Length <= MaxUserMsgLength && p_safeUserMessageRegex.IsMatch(_data);
   public static string ClearUserMsg(string _data)
   {

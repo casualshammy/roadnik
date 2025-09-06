@@ -1,3 +1,6 @@
 ﻿namespace Roadnik.Server.Data.WebSockets;
 
-internal record WsMsgPathTruncated(string Username, uint PathPoints);
+internal record WsMsgPathTruncated(
+  string AppId, 
+  string UserName,
+  uint PathPoints);

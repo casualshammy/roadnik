@@ -80,6 +80,7 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
   public bool IsBluetoothAvailable => p_bluetoothLE.IsAvailable && p_bluetoothLE.IsOn;
 
   public async Task<IReadOnlyList<IDevice>> ListDevicesAsync(
+    ScanFilterOptions? _options,
     CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
@@ -103,7 +104,7 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
       try
       {
         await p_adapter.StopScanningForDevicesAsync();
-        await p_adapter.StartScanningForDevicesAsync(cancellationToken: _ct);
+        await p_adapter.StartScanningForDevicesAsync(scanFilterOptions: _options, cancellationToken: _ct);
         return devices;
       }
       catch (Exception ex)
@@ -167,24 +168,24 @@ internal class BleDevicesManagerImpl : IBleDevicesManager, IAppModule<IBleDevice
     }
   }
 
-  public async Task<IDevice?> TryConnectToDeviceByIdAsync(Guid _deviceGuid, CancellationToken _ct)
+  public async Task<bool> TryConnectToDeviceByIdAsync(
+    IDevice _device,
+    CancellationToken _ct)
   {
     await p_bleSemaphore.WaitAsync(_ct);
-    p_log.Info($"Trying to connect to BLE device with ID '{_deviceGuid}'...");
+    p_log.Info($"Trying to connect to BLE device with ID '{_device.Id}'...");
 
     try
     {
-      var device = await p_adapter.DiscoverDeviceAsync(_deviceGuid, _ct);
-      await p_adapter.ConnectToDeviceAsync(device, cancellationToken: _ct);
-      //var device = await p_adapter.ConnectToKnownDeviceAsync(_deviceGuid, cancellationToken: _ct);
+      await p_adapter.ConnectToDeviceAsync(_device, cancellationToken: _ct);
 
-      p_log.Info($"Connected to BLE device '{device.Name}' ({device.Id})");
-      return device;
+      p_log.Info($"Connected to BLE device '{_device.Name}' ({_device.Id})");
+      return true;
     }
     catch (Exception ex)
     {
-      p_log.Error($"Failed to connect to BLE device with ID '{_deviceGuid}': {ex}");
-      return null;
+      p_log.Error($"Failed to connect to BLE device with ID '{_device.Id}': {ex}");
+      return false;
     }
     finally
     {

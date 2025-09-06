@@ -117,18 +117,20 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
     builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
     builder.Services.AddSingleton(p_logger);
+    builder.Services.AddSingleton(p_documentStorage);
+    builder.Services.AddSingleton(p_fCMPublisher);
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
     builder.Services.AddSingleton<FailToBanMiddleware>();
     builder.Services.AddScoped<LogMiddleware>();
-    builder.Services.AddScoped(_sp =>
+    builder.Services.AddScoped<IScopedLog>(_sp =>
     {
       var guid = Guid.NewGuid();
       var httpCtx = _sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
       var ctrlInfo = httpCtx?.GetEndpoint()?.Metadata.GetMetadata<ControllerInfo>();
 
       if (ctrlInfo == null)
-        return (IScopedLog)new ScopedLog(p_logger["unknown-ctrl"][guid.ToString()[..8]]);
+        return new ScopedLog(p_logger["unknown-ctrl"][guid.ToString()[..8]]);
 
       return new ScopedLog(p_logger[ctrlInfo.LogScope][guid.ToString()[..8]]);
     });

@@ -3,15 +3,16 @@ using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
 using Ax.Fw.SharedTypes.Interfaces;
+using Plugin.BLE.Abstractions;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Platforms.Android.Services;
 using Roadnik.MAUI.Toolkit;
-using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Reactive;
 using System.Reactive.Concurrency;
@@ -75,7 +76,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         LocationProviders = _storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS),
         WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED),
         HrmReportEnabled = _storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED),
-        HrmDevice = _storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO)
+        HrmDevice = _storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO),
+        AppId = _storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid)
       })
       .Replay(1)
       .RefCount();
@@ -166,20 +168,40 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         {
           p_log.Info($"Subscribing to HRM data of device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId})");
 
+          using var bleScanCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
           using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
           try
           {
-            var device = await _bleDevicesManager.TryConnectToDeviceByIdAsync(hrmInfo.DeviceId, cts.Token)
-              ?? throw new InvalidOperationException($"Device not found or could not be connected");
+            // without scan options device cannot be discovered while screen is off
+            var scanOptions = new ScanFilterOptions
+            {
+              DeviceNames = [hrmInfo.DeviceName]
+            };
+            var devices = await _bleDevicesManager.ListDevicesAsync(scanOptions, bleScanCts.Token);
+            var device = devices.FirstOrDefault(_ => _.Id == hrmInfo.DeviceId);
+            if (device == null)
+            {
+              p_log.Warn($"Device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}) not found during scan");
+              scheduleRebuild();
+              return;
+            }
+
+            var connected = await _bleDevicesManager.TryConnectToDeviceByIdAsync(device, cts.Token);
+            if (!connected)
+            {
+              p_log.Warn($"Device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}) could not be connected");
+              scheduleRebuild();
+              return;
+            }
 
             var subsLife = await _bleDevicesManager.SubscribeToHrmDataAsync(
-              device, 
+              device,
               false,
               _hr =>
               {
                 // Debug.WriteLine($"[{DateTimeOffset.Now}] HR: {_hr}");
                 hrSubj.OnNext(_hr);
-              }, 
+              },
               _ =>
               {
                 p_log.Warn($"Device '{hrmInfo.DeviceName}' ({hrmInfo.DeviceId}) seems to be disconnected, trying to reconnect...");
@@ -252,6 +274,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
           var reqData = new StorePathPointReq
           {
+            AppId = prefs.AppId,
             SessionId = acc.SessionId.Value,
             RoomId = prefs.RoomId,
             Username = prefs.Username ?? prefs.RoomId,

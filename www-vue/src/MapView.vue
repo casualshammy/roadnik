@@ -14,9 +14,9 @@
                      @onCloseButton="() => p_mapInteractor.setObservedUser(null)" />
 
   <ComboBox
-            v-if="pathsComboBoxEntries?.length > 0"
+            v-if="p_appIds.size > 0"
             class="paths_combobox"
-            :options="pathsComboBoxEntries"
+            :options="p_appIds"
             :value="pathsComboBoxSelectedEntry"
             @changed="onUsersComboBoxChanged">
   </ComboBox>
@@ -47,6 +47,7 @@ import { Pool } from './toolkit/Pool';
 import { MapInteractor } from "./parts/mapInteractor";
 import { getHeartRateString } from "./toolkit/commonToolkit";
 import { getCachedColor } from "./toolkit/mapToolkit";
+import type { AppId } from "./data/Guid";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
@@ -59,13 +60,14 @@ const p_mapLocation = ref<LatLngZoom>({
   zoom: p_mapState.value.zoom
 });
 
-const p_markers = new Map<string, L.Marker>();
-const p_circles = new Map<string, L.Circle>();
-const p_paths = reactive(new Map<string, L.Polyline>());
+const p_appIds = reactive(new Map<AppId, string>());
+const p_markers = new Map<AppId, L.Marker>();
+const p_circles = new Map<AppId, L.Circle>();
+const p_paths = new Map<AppId, L.Polyline>();
 const p_pathArrows = new Map<string, L.Marker[]>();
 const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
-const p_gEntries = reactive(new Map<string, TimedStorageEntry[]>());
+const p_gEntries = reactive(new Map<AppId, TimedStorageEntry[]>());
 const p_tracksUpdateRequired$ = new Subject<void>();
 
 const p_map = shallowRef<L.Map>();
@@ -73,38 +75,26 @@ const p_backendApi = new BackendApi(p_appCtx.apiUrl);
 const p_hostApi = new HostApi(p_appCtx);
 const p_mapInteractor = new MapInteractor(p_appCtx, p_hostApi, p_map, p_paths, p_gEntries);
 
-const pathsComboBoxEntries: ComputedRef<string[]> = computed(() => {
-  const array: string[] = [];
-
-  p_paths.forEach((_value, _key) => {
-    array.push(_key);
-  });
-
-  array.sort((_a, _b) => _a > _b ? -1 : 1);
-  array.unshift('-- Paths --');
-
-  return array;
-});
-
 const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = computed(() => {
-  const user = p_mapState.value.selectedPath;
-  if (user === null)
+  const appId = p_mapState.value.selectedAppId;
+  if (appId === null)
     return undefined;
 
-  const entries = p_gEntries.get(user);
+  const entries = p_gEntries.get(appId);
   if (entries === undefined || entries.length === 0)
     return undefined;
 
   const lastEntry = entries[entries.length - 1];
   const data: SelectedUserPopupState = {
-    user: user,
+    appId: appId,
+    userName: lastEntry.Username,
     timestamp: lastEntry.UnixTimeMs,
     battery: lastEntry.Battery ?? undefined,
     gsmSignal: lastEntry.GsmSignal ?? undefined,
     speed: (lastEntry.Speed ?? 0) * 3.6,
     altitude: lastEntry.Altitude,
     accuracy: lastEntry.Accuracy ?? undefined,
-    color: getCachedColor(user),
+    color: getCachedColor(appId),
     hr: lastEntry.HR ?? undefined
   };
 
@@ -168,8 +158,8 @@ function setupMap(_map: L.Map) {
     p_mapState.value.lng = location.lng;
     p_mapState.value.zoom = _map.getZoom();
 
-    for (const [user, _] of p_pathArrows)
-      updatePathArrows(user);
+    for (const [appId, userName] of p_appIds.entries())
+      updatePathArrows(appId, userName);
 
     if (!p_appCtx.isRoadnikApp) {
       const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
@@ -186,8 +176,8 @@ function setupMap(_map: L.Map) {
     p_mapState.value.lng = location.lng;
     p_mapState.value.zoom = _map.getZoom();
 
-    for (const [user, _] of p_pathArrows)
-      updatePathArrows(user);
+    for (const [appId, userName] of p_appIds.entries())
+      updatePathArrows(appId, userName);
 
     if (!p_appCtx.isRoadnikApp) {
       const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
@@ -258,16 +248,15 @@ function setupDataFlow(_map: L.Map) {
       }
       else if (_data.Type == Consts.WS_MSG_PATH_WIPED) {
         const msgData: WsMsgPathWiped = _data.Payload;
-        const user = msgData.Username;
 
-        const path = p_paths.get(user);
+        const path = p_paths.get(msgData.AppId);
         path?.setLatLngs([]);
 
-        const geoEntries = p_gEntries.get(user);
+        const geoEntries = p_gEntries.get(msgData.AppId);
         if (geoEntries !== undefined)
           geoEntries.length = 0;
 
-        updatePathArrows(user);
+        updatePathArrows(msgData.AppId, msgData.UserName);
       }
       else if (_data.Type == Consts.WS_MSG_ROOM_POINTS_UPDATED) {
         console.log("Points were changed, updating markers...");
@@ -276,13 +265,13 @@ function setupDataFlow(_map: L.Map) {
       else if (_data.Type == Consts.WS_MSG_PATH_TRUNCATED) {
         const msgData: WsMsgPathTruncated = _data.Payload;
 
-        const geoEntries = p_gEntries.get(msgData.Username);
+        const geoEntries = p_gEntries.get(msgData.AppId);
         if (geoEntries !== undefined) {
           const entriesToDelete = geoEntries.length - msgData.PathPoints;
           if (entriesToDelete > 0) {
             geoEntries.splice(0, entriesToDelete);
 
-            const path = p_paths.get(msgData.Username);
+            const path = p_paths.get(msgData.AppId);
             if (path !== undefined) {
               const points = geoEntries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
               path.setLatLngs(points);
@@ -332,17 +321,17 @@ function setupDataFlow(_map: L.Map) {
 
   window.addEventListener("focus", () => {
     // fly to selected user's position
-    const selectedPath = p_mapState.value.selectedPath;
-    if (selectedPath === null)
+    const selectedAppId = p_mapState.value.selectedAppId;
+    if (selectedAppId === null)
       return;
 
-    const geoEntries = p_gEntries.get(selectedPath);
+    const geoEntries = p_gEntries.get(selectedAppId);
     const lastLocation = geoEntries !== undefined ? geoEntries[geoEntries.length - 1] : undefined;
     if (lastLocation === undefined)
       return;
 
     _map.flyTo([lastLocation.Latitude, lastLocation.Longitude]);
-    console.log(`Map is fly to the latest location of user ${selectedPath}`);
+    console.log(`Map is fly to the latest location of user '${selectedAppId}/${lastLocation.Username}'`);
   }, false);
 }
 
@@ -360,17 +349,16 @@ function onSelectedUserPopupMoved(_left: number, _bottom: number) {
 }
 
 function onSelectedUserPopupDblClick() {
-  const path = p_mapState.value.selectedPath;
-  if (path !== null)
-    p_mapInteractor.setMapCenterToUser(path);
+  const appId = p_mapState.value.selectedAppId;
+  if (appId !== null)
+    p_mapInteractor.setMapCenterToUser(appId);
 }
 
-function onUsersComboBoxChanged(_value: string) {
-  const user = p_paths.get(_value) !== undefined ? _value : null;
-  p_mapInteractor.setObservedUser(user, true);
+function onUsersComboBoxChanged(_appId: AppId | undefined, _userName: string | undefined) {
+  p_mapInteractor.setObservedUser(_appId ?? null, true);
 
-  if (user !== null)
-    p_mapInteractor.setMapCenterToUser(user);
+  if (_appId !== undefined)
+    p_mapInteractor.setMapCenterToUser(_appId);
 }
 
 async function updatePathsAsync() {
@@ -387,24 +375,17 @@ async function updatePathsAsync() {
     return;
   }
 
-  if (data === null)
-    return;
-
-  const prevOffset = p_appCtx.lastTracksOffset;
   p_appCtx.lastTracksOffset = data.LastUpdateUnixMs;
   console.log(`New last offset: ${p_appCtx.lastTracksOffset}; points to process: ${data.Entries.length}`);
 
-  const usersMap = CommonToolkit.groupBy(data.Entries, _ => _.Username);
-  const users = Object.keys(usersMap);
+  const userAppsMap = updateData(data.Entries);
 
-  // init users controls
-  for (const user of users)
-    initControlsForUser(user);
+  for (const [appId, userData] of userAppsMap) {
+    const username = userData[0].Username;
 
-  // update users controls
-  for (const user of users) {
-    const userData = usersMap[user];
-    updateControlsForUser(user, userData, prevOffset === 0);
+    initControlsForUser(appId, username);
+    updateControlsForUser(appId, username, userData);
+    updatePathArrows(appId, username);
   }
 
   document.title = `Roadnik: ${p_appCtx.roomId} (${p_paths.size})`;
@@ -414,17 +395,17 @@ async function updatePathsAsync() {
   }
 
   if (!p_appCtx.firstTracksSyncCompleted) {
-    const selectedPath = p_mapState.value.selectedPath;
-    if (selectedPath === null) {
-      console.log("Initial selected path is not set, setting default view...");
+    const selectedAppId = p_mapState.value.selectedAppId;
+    if (selectedAppId === null) {
+      console.log("Initial selected app id is not set, setting default view...");
     }
-    else if (!p_mapInteractor.setMapCenterToUser(selectedPath, p_map.value!.getZoom())) {
-      console.log("Initial selected path is set but not found, setting view to all paths...");
+    else if (!p_mapInteractor.setMapCenterToUser(selectedAppId, p_map.value!.getZoom())) {
+      console.log("Initial selected app id is set but not found, setting view to all paths...");
       p_mapInteractor.setMapCenterToAllUsers();
     }
     else {
-      console.log(`Initial selected path is ${selectedPath}`);
-      p_mapInteractor.setObservedUser(selectedPath);
+      console.log(`Initial selected path is ${selectedAppId}`);
+      p_mapInteractor.setObservedUser(selectedAppId);
     }
 
     if (p_appCtx.isRoadnikApp)
@@ -436,6 +417,45 @@ async function updatePathsAsync() {
     if (p_appCtx.isRoadnikApp)
       p_hostApi.sendTracksSynchronized(false);
   }
+}
+
+function updateData(_newEntries: TimedStorageEntry[]): [string, TimedStorageEntry[]][] {
+  const userAppsMap = CommonToolkit.groupBy(_newEntries, _ => _.AppId);
+
+  const entryPairs = Object.entries(userAppsMap);
+  for (const [appId, userData] of entryPairs) {
+    const userName = userData[0].Username;
+
+    if (!p_appIds.has(appId)) {
+      p_appIds.set(appId, userName);
+      console.log(`New user detected: '${appId}/${userName}'`);
+    }
+
+    let geoEntries = p_gEntries.get(appId);
+    if (geoEntries === undefined) {
+      geoEntries = [];
+      p_gEntries.set(appId, geoEntries);
+    }
+
+    const sortedEntries = _newEntries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
+    geoEntries.push(...sortedEntries);
+
+    const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
+    if (geoEntriesExcessiveCount > 0) {
+      const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
+      console.log(`${removedEntries.length} geo entries were removed for user '${appId}/${userName}'`);
+    }
+  }
+
+  const knownAppIds = new Set(p_gEntries.keys());
+  for (const appId of Object.keys(p_appIds)) {
+    if (!knownAppIds.has(appId)) {
+      p_appIds.delete(appId);
+      console.log(`User '${appId}' was removed`);
+    }
+  }
+
+  return entryPairs;
 }
 
 async function updatePointsAsync() {
@@ -488,29 +508,35 @@ async function updatePointsAsync() {
   console.log(`Points visible: ${validPointIds.length}; points in pool: ${p_pointMarkersPool.getAvailableCount()}`);
 }
 
-function initControlsForUser(_user: string): void {
-  const color = getCachedColor(_user);
-  console.log(`Color for user ${_user}: ${color}`);
+function initControlsForUser(_appId: string, _username: string): void {
+  const map = p_map.value;
+  if (map === undefined) {
+    console.error(`Error occured while trying to init controls for user '${_appId}': map is undefined`);
+    return;
+  }
 
-  if (p_markers.get(_user) === undefined) {
+  const color = getCachedColor(_appId);
+  console.log(`Color for user ${_appId}/${_username}: ${color}`);
+
+  if (p_markers.get(_appId) === undefined) {
     const icon = MapToolkit.GeneratePulsatingCircleIcon(15, color);
-    const marker = L.marker([51.4768, 0.0006], { title: _user, icon: icon })
-      .addTo(p_map.value!)
+    const marker = L.marker([51.4768, 0.0006], { title: _username, icon: icon })
+      .addTo(map)
       .addEventListener('click', () => {
-        p_mapInteractor.setObservedUser(_user);
+        p_mapInteractor.setObservedUser(_appId);
       });
 
-    p_markers.set(_user, marker);
+    p_markers.set(_appId, marker);
   }
-  if (p_circles.get(_user) === undefined)
-    p_circles.set(_user, L.circle([51.4768, 0.0006], { radius: 100, color: color, fillColor: '*', fillOpacity: 0.3 })
-      .addTo(p_map.value!));
-  if (p_paths.get(_user) === undefined) {
+  if (p_circles.get(_appId) === undefined)
+    p_circles.set(_appId, L.circle([51.4768, 0.0006], { radius: 100, color: color, fillColor: '*', fillOpacity: 0.3 })
+      .addTo(map));
+  if (p_paths.get(_appId) === undefined) {
     const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6, renderer: MapToolkit.TOLERANT_RENDERER })
-      .addTo(p_map.value!)
+      .addTo(map)
       .bindPopup("")
       .addEventListener("click", (_ev: LeafletMouseEvent) => {
-        const entries = p_gEntries.get(_user);
+        const entries = p_gEntries.get(_appId);
         if (entries === undefined)
           return;
 
@@ -525,82 +551,69 @@ function initControlsForUser(_user: string): void {
         }
 
         if (nearestLatLng !== undefined && nearestEntry !== undefined) {
-          const popupText = buildPathPointPopup(_user, nearestEntry);
+          const popupText = buildPathPointPopup(nearestEntry);
           path.setPopupContent(popupText);
           path.openPopup(nearestLatLng);
         }
       });
 
-    p_paths.set(_user, path);
+    p_paths.set(_appId, path);
   }
-
-  if (!p_gEntries.has(_user))
-    p_gEntries.set(_user, []);
 }
 
 function updateControlsForUser(
-  _user: string,
-  _entries: TimedStorageEntry[],
-  _isFirstDataChunk: boolean
+  _appId: string,
+  _username: string,
+  _entries: TimedStorageEntry[]
 ): void {
   if (_entries.length === 0)
     return;
 
-  const path = p_paths.get(_user);
+  const path = p_paths.get(_appId);
   if (path === undefined) {
-    console.error(`Error occured while trying to update path of user '${_user}': leaflet's polyline is undefined`);
+    console.error(`Error occured while trying to update path of user '${_appId}/${_username}': leaflet's polyline is undefined`);
     return;
   }
 
-  const geoEntries = p_gEntries.get(_user);
+  const geoEntries = p_gEntries.get(_appId);
   if (geoEntries === undefined) {
-    console.error(`Error occured while trying to update path of user '${_user}': path entries array is undefined`);
+    console.error(`Error occured while trying to update path of user '${_appId}/${_username}': geo entries are undefined`);
     return;
   }
 
-  const sortedEntries = _entries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
-  const lastEntry = sortedEntries[sortedEntries.length - 1];
-
-  geoEntries.push(...sortedEntries);
-  const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
-  if (geoEntriesExcessiveCount > 0) {
-    const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
-    console.log(`${removedEntries.length} geo entries were removed for user ${_user}`);
-  }
-
+  const lastEntry = geoEntries[geoEntries.length - 1];
   const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
 
-  const circle = p_circles.get(_user);
+  const circle = p_circles.get(_appId);
   if (circle !== undefined) {
     circle.setLatLng(lastLocation);
     circle.setRadius(lastEntry.Accuracy ?? 100);
     circle.bringToFront();
   }
 
-  const marker = p_markers.get(_user);
+  const marker = p_markers.get(_appId);
   if (marker !== undefined)
     marker.setLatLng(lastLocation);
 
-  if (p_mapState.value.selectedPath === _user) {
-    // p_mapInteractor.setObservedUser(_user); // why?
+  if (p_mapState.value.selectedAppId === _appId) {
     if (document.hasFocus()) // if we fly to location in background, path position will be uncorrect until next location update
       p_mapInteractor.setMapCenter(lastLocation.lat, lastLocation.lng, p_map.value!.getZoom(), 500);
   }
 
   const points = geoEntries.map(_ => new L.LatLng(_.Latitude, _.Longitude, _.Altitude));
   path.setLatLngs(points);
-  console.log(`Path '${_user}' now contains ${points.length} points`);
-
-  updatePathArrows(_user);
+  console.log(`Path '${_appId}/${_username}' now contains ${points.length} points`);
 }
 
-function updatePathArrows(_user: string) {
+function updatePathArrows(
+  _appId: string,
+  _username: string) {
   const map = p_map.value;
   if (!map)
     return;
 
-  const existingArrows = p_pathArrows.get(_user) ?? [];
-  const geoEntries = p_gEntries.get(_user);
+  const existingArrows = p_pathArrows.get(_appId) ?? [];
+  const geoEntries = p_gEntries.get(_appId);
 
   // If not enough points, remove any existing arrows and exit
   if (!geoEntries || geoEntries.length < 2) {
@@ -633,7 +646,7 @@ function updatePathArrows(_user: string) {
         ++newMarkersCounter;
         marker = L.marker([0, 0], { draggable: false, interactive: false, keyboard: false })
           .setRotationOrigin("center")
-          .setIcon(MapToolkit.getCachedArrowIcon(getCachedColor(_user + "_arrow_color"))); // we want arrows to be different color
+          .setIcon(MapToolkit.getCachedArrowIcon(getCachedColor(_appId + "_arrow_color"))); // we want arrows to be different color
       }
 
       marker
@@ -653,11 +666,11 @@ function updatePathArrows(_user: string) {
   for (let i = arrowsIndex + 1; i < existingArrows.length; i++)
     existingArrows[i].remove();
 
-  p_pathArrows.set(_user, existingArrows);
-  console.log(`Total arrow markers for user ${_user}: ${arrowsIndex + 1}/${existingArrows.length} (new: ${newMarkersCounter})`);
+  p_pathArrows.set(_appId, existingArrows);
+  console.log(`Total arrow markers for user '${_appId}/${_username}'': ${arrowsIndex + 1}/${existingArrows.length} (new: ${newMarkersCounter})`);
 }
 
-function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
+function buildPathPointPopup(_entry: TimedStorageEntry): string {
   const kmh = (_entry.Speed ?? 0) * 3.6;
 
   const elapsedSinceLastUpdate = TimeSpan.fromMilliseconds(Date.now() - _entry.UnixTimeMs);
@@ -669,7 +682,7 @@ function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
 
   const popUpText =
     `<center>
-      <b>${_user}</b> (${elapsedString})
+      <b>${_entry.Username}</b> (${elapsedString})
       </br>
       🔋${((_entry.Battery ?? 0) * 100).toFixed(0)}% 📶${((_entry.GsmSignal ?? 0) * 100).toFixed(0)}% ${hrData ?? ""}
     </center>
@@ -680,16 +693,13 @@ function buildPathPointPopup(_user: string, _entry: TimedStorageEntry): string {
   return popUpText;
 }
 
-let unwatchSelectedUser: WatchHandle;
-onMounted(() => {
-  unwatchSelectedUser = watch(computed(() => p_mapState.value.selectedPath), _newSelectedUser => {
-    pathsComboBoxSelectedEntry.value = _newSelectedUser ?? undefined;
-  }, { immediate: true });
-});
-
-onUnmounted(() => {
-  unwatchSelectedUser();
-});
+watch(computed(() => p_mapState.value.selectedAppId), _newAppId => {
+  const value = _newAppId !== null
+    ? (p_appIds.get(_newAppId) ?? undefined)
+    : undefined;
+    
+  pathsComboBoxSelectedEntry.value = value;
+}, { immediate: true });
 
 </script>
 

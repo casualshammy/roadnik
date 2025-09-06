@@ -9,6 +9,5 @@ namespace Roadnik.Common.JsonCtx;
   WriteIndented = true)]
 [JsonSerializable(typeof(PushMsg))]
 [JsonSerializable(typeof(PushMsgNewTrackStarted))]
-[JsonSerializable(typeof(PushMsgNotification))]
 [JsonSerializable(typeof(PushMsgRoomPointAdded))]
 public partial class AndroidPushJsonCtx : JsonSerializerContext { }

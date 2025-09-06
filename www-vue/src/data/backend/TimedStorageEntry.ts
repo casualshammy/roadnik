@@ -1,4 +1,7 @@
+import type { AppId } from "../Guid";
+
 export interface TimedStorageEntry {
+  AppId: AppId;
   UnixTimeMs: number;
   Username: string;
   Latitude: number;

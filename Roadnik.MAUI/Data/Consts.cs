@@ -4,7 +4,7 @@ namespace Roadnik.MAUI.Data;
 
 internal static class Consts
 {
-  public static string? DEBUG_APP_ADDRESS = null;
+  public static string? DEBUG_APP_ADDRESS = null; // "http://192.168.1.100:5544"; // null;
 
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";
@@ -28,6 +28,7 @@ internal static class Consts
   public const string PREF_LOCATION_PROVIDERS = "settings.report.location-providers";
   public const string PREF_BLE_HRM_ENABLED = "settings.report.ble-hrm-enabled";
   public const string PREF_BLE_HRM_DEVICE_INFO = "settings.report.ble-hrm-device-info";
+  public const string PREF_APP_INSTALLATION_ID = "app.installation-id";
 
   public const string PREF_BOOKMARKS_LIST = "bookmarks.list";
 

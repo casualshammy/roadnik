@@ -11,6 +11,8 @@ using CommunityToolkit.Maui.Views;
 using QRCoder;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
+using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.JsonBridge;
@@ -307,7 +309,7 @@ public partial class MainPage : CContentPage
       var agreed = false;
       var result = await this.ShowPopupAsync(new AgreementsPopup(_agreed => agreed = _agreed));
 
-      if ( !agreed)
+      if (!agreed)
         return;
 
       p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, PRIVACY_POLICY_VERSION);
@@ -329,7 +331,7 @@ public partial class MainPage : CContentPage
         return;
       }
 
-      await RequestIgnoreBattaryOptimizationAsync(p_lifetime.Token);
+      await RequestIgnoreBatteryOptimizationAsync(p_lifetime.Token);
       locationReporter.SetState(true);
 
       var providers = new List<string>();
@@ -501,6 +503,8 @@ public partial class MainPage : CContentPage
     if (username.IsNullOrWhiteSpace())
       return;
 
+    var appId = p_prefs.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+
     var latLng = _msg.Data.Deserialize<LatLng>(GenericSerializationOptions.CaseInsensitive);
     if (latLng == null)
     {
@@ -516,17 +520,12 @@ public partial class MainPage : CContentPage
     try
     {
       p_log.Info($"Sending request to create point [{(int)latLng.Lat}, {(int)latLng.Lng}] in room '{roomId}'");
-      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}/api/v1{ReqPaths.CREATE_ROOM_POINT}");
-      using var content = JsonContent.Create(new CreateRoomPointReq
-      {
-        RoomId = roomId,
-        Username = username,
-        Lat = latLng.Lat,
-        Lng = latLng.Lng,
-        Description = dialogResult
-      }, RestJsonCtx.Default.CreateRoomPointReq);
-      req.Content = content;
+
       using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+      using var content = JsonContent.Create(
+        CreateRoomPointReq.From(GenericToolkit.ConcealAppInstanceId(appId), roomId, username, latLng.Lat, latLng.Lng, dialogResult),
+        RestJsonCtx.Default.CreateRoomPointReq);
+      using var req = new HttpRequestMessage(HttpMethod.Post, $"{serverAddress.TrimEnd('/')}/api/v1{ReqPaths.CREATE_ROOM_POINT}") { Content = content };
       using var res = await p_httpClient.Value.SendAsync(req, cts.Token);
       res.EnsureSuccessStatusCode();
       p_log.Info($"Point [{(int)latLng.Lat}, {(int)latLng.Lng}] is successfully created in room '{roomId}'");
@@ -550,7 +549,7 @@ public partial class MainPage : CContentPage
 
       p_prefs.SetValue(PREF_WEBAPP_MAP_STATE, data, JsBridgeJsonCtx.Default.HostMsgMapStateData);
 
-      if (data.SelectedPath != null)
+      if (data.SelectedAppId != null)
         await CancelFollowCurrentLocationAsync();
     }
     catch (Exception ex)
@@ -566,7 +565,7 @@ public partial class MainPage : CContentPage
   {
     if (_e.NotificationId == PUSH_MSG_NEW_POINT)
     {
-      var data = _e.Data.Deserialize<LatLng>();
+      var data = _e.Data.Deserialize(typeof(PushMsgRoomPointAdded), AndroidPushJsonCtx.Default) as PushMsgRoomPointAdded;
       if (data == default)
         return;
 
@@ -577,13 +576,13 @@ public partial class MainPage : CContentPage
     }
     else if (_e.NotificationId == PUSH_MSG_NEW_TRACK)
     {
-      var username = _e.Data.Deserialize<string>();
-      if (username == null)
+      var data = _e.Data.Deserialize(typeof(PushMsgNewTrackStarted), AndroidPushJsonCtx.Default) as PushMsgNewTrackStarted;
+      if (data == null)
         return;
 
       await MainThread.InvokeOnMainThreadAsync(async () =>
       {
-        if (!await p_mapInteractor.SetMapCenterToUserAsync(username, 13, _ct))
+        if (!await p_mapInteractor.SetMapCenterToUserAsync(data.AppId, 13, _ct))
           await p_mapInteractor.SetMapCenterToAllUsersAsync(_ct);
       });
     }
@@ -594,7 +593,7 @@ public partial class MainPage : CContentPage
     Shell.Current.FlyoutIsPresented = true;
   }
 
-  private async Task RequestIgnoreBattaryOptimizationAsync(CancellationToken _ct)
+  private async Task RequestIgnoreBatteryOptimizationAsync(CancellationToken _ct)
   {
     var context = global::Android.App.Application.Context;
     if (p_powerManager.IsIgnoringBatteryOptimizations(context.PackageName))
@@ -642,8 +641,8 @@ public partial class MainPage : CContentPage
       var base64 = Convert.ToBase64String(jsonBytes);
       query["overlays"] = base64;
     }
-    if (_mapState != null && !_mapState.SelectedPath.IsNullOrWhiteSpace())
-      query["selected_path"] = _mapState.SelectedPath;
+    if (_mapState != null && !_mapState.SelectedAppId.IsNullOrWhiteSpace())
+      query["selected_app_id"] = _mapState.SelectedAppId;
     if (_mapState?.SelectedPathWindowLeft != null)
       query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
     if (_mapState?.SelectedPathWindowBottom != null)

@@ -1,3 +1,5 @@
 ﻿namespace Roadnik.Server.Data.WebSockets;
 
-internal record WsMsgPathWiped(string Username);
+internal record WsMsgPathWiped(
+  string AppId,
+  string UserName);

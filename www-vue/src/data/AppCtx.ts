@@ -101,14 +101,14 @@ export function CreateAppCtx(
   }
   console.log(`Initial overlays: ${overlays.length}`);
 
-  let selectedPath: string | null = null;
-  const urlParamSelectedUser = urlParams.get('selected_path');
+  let selectedAppId: string | null = null;
+  const urlParamSelectedUser = urlParams.get('selected_app_id');
   const cookieSelectedUser = !isRoadnikApp ? Cookies.get(Consts.COOKIE_SELECTED_PATH) : null;
   if (urlParamSelectedUser !== null)
-    selectedPath = urlParamSelectedUser;
+    selectedAppId = urlParamSelectedUser;
   else if (cookieSelectedUser !== null && cookieSelectedUser !== undefined)
-    selectedPath = cookieSelectedUser;
-  console.log(`Initial selected path: ${selectedPath}`);
+    selectedAppId = cookieSelectedUser;
+  console.log(`Initial selected app id: ${selectedAppId}`);
 
   let selectedPathWindowLeft: number | null = null;
   const urlParamSelectedPathWindowLeft = urlParams.get('selected_path_window_left');
@@ -153,7 +153,7 @@ export function CreateAppCtx(
       zoom: zoom,
       layer: layer,
       overlays: overlays,
-      selectedPath: selectedPath,
+      selectedAppId: selectedAppId,
       selectedPathWindowLeft: selectedPathWindowLeft,
       selectedPathWindowBottom: selectedPathWindowBottom
     })

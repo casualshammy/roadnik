@@ -8,8 +8,10 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Firebase.Messaging;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes.PushMessages;
+using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using System.Collections.Frozen;
 using System.Text.Json;
 using static Roadnik.MAUI.Data.Consts;
@@ -70,9 +72,9 @@ public class PushMessagesService : FirebaseMessagingService
           return;
         }
 
-        if (pushMsg == null || pushMsg.Type == PushMsgType.None)
+        if (pushMsg == null)
         {
-          log.Error($"Can't parse push msg: it is null or its type is {nameof(PushMsgType.None)}!");
+          log.Error($"Can't parse push msg: it is null!");
           return;
         }
 
@@ -82,19 +84,20 @@ public class PushMessagesService : FirebaseMessagingService
           if (msgData == null)
             return;
 
-          var myUsername = prefStorage.GetValueOrDefault<string>(PREF_USERNAME);
+          var appId = prefStorage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+          var concealedAppId = GenericToolkit.ConcealAppInstanceId(appId);
           var enabled = prefStorage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT);
-          if (enabled == true && myUsername != msgData.Username)
+          if (enabled == true && concealedAppId != msgData.AppId)
           {
-            var username = msgData.Username;
+            var username = msgData.UserName;
             if (username.IsNullOrWhiteSpace())
               username = "Unknown user";
 
-            log.Info($"RoomPointAdded: '{username}' / '{msgData.Description}' / {msgData.Lat};{msgData.Lng}");
+            log.Info($"RoomPointAdded: '{msgData.AppId}/{username}' / '{msgData.Description}' / {msgData.Lat};{msgData.Lng}");
 
             var pushMsgData = new PushNotificationEvent(
               PUSH_MSG_NEW_POINT,
-              JsonSerializer.SerializeToElement(new LatLng(msgData.Lat, msgData.Lng)));
+              pushMsg.Data);
 
             var title = L.notification_push_new_point_title
               .Replace("%username", username);
@@ -114,15 +117,16 @@ public class PushMessagesService : FirebaseMessagingService
           if (msgData == null)
             return;
 
-          var myUsername = prefStorage.GetValueOrDefault<string>(PREF_USERNAME);
+          var appId = prefStorage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+          var concealedAppId = GenericToolkit.ConcealAppInstanceId(appId);
           var enabled = prefStorage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK);
-          if (enabled == true && myUsername != msgData.Username)
+          if (enabled == true && concealedAppId != msgData.AppId)
           {
-            log.Info($"NewTrackStarted: '{msgData.Username}'");
+            log.Info($"NewTrackStarted: '{msgData.AppId}/{msgData.Username}'");
 
             var pushMsgData = new PushNotificationEvent(
               PUSH_MSG_NEW_TRACK,
-              JsonSerializer.SerializeToElement(msgData.Username));
+              pushMsg.Data);
 
             var title = L.notification_push_new_track_title
               .Replace("%username", msgData.Username);

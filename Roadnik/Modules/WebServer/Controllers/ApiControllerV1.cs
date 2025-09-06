@@ -13,6 +13,7 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
 using Roadnik.Server.Attributes;
 using Roadnik.Server.Data;
+using Roadnik.Server.Data.DbTypes;
 using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
@@ -182,66 +183,94 @@ internal class ApiControllerV1 : GenericController
   }
 
   public async Task<IResult> StorePathPointAsync(
+    IScopedLog _log,
+    IDbProvider _dbProvider,
+    IFCMPublisher _fcmPublisher,
     HttpRequest _httpRequest,
     [FromBody] StorePathPointReq _req,
     CancellationToken _ct)
   {
-    var log = GetLog(_httpRequest);
     try
     {
-      log.Info($"Requested to **store path point** of __{_req.RoomId}/{_req.Username}__");
+      _log.Info($"Got request to **store path point**: '__{_req.RoomId}__/**{_req.AppId}**/__{_req.Username}__'");
 
-      var savePointResult = await p_roomsController.SaveNewPathPointAsync(
-        log,
-        _httpRequest.HttpContext.Connection.RemoteIpAddress,
-        _req.RoomId,
-        _req.Username,
-        _req.SessionId,
-        _req.WipeOldPath ?? false,
-        _req.Lat,
-        _req.Lng,
-        _req.Alt,
-        _req.Acc,
-        _req.Speed,
-        _req.Battery,
-        _req.GsmSignal,
-        _req.Bearing,
-        _req.HR,
-        _ct);
+      if (!ReqResUtil.IsRoomIdValid(_req.RoomId))
+        return Problem(HttpStatusCode.BadRequest, "Room Id is incorrect!");
+      if (!ReqResUtil.IsUsernameSafe(_req.Username))
+        return Problem(HttpStatusCode.BadRequest, "Username is incorrect!");
 
-      if (savePointResult.ErrorCode != null)
-        return Problem(savePointResult.ErrorCode.Value, savePointResult.ErrorMsg);
+      var room = p_roomsController.GetRoom(_req.RoomId);
+      var maxPathPoints = room?.MaxPathPoints ?? p_appConfig.MaxPathPointsPerRoom;
+      if (maxPathPoints == 0)
+        return Problem(HttpStatusCode.Forbidden, "Publishing is forbidden!");
 
-      log.Info($"**Handled** request to **store path point** of __{_req.RoomId}/{_req.Username}__");
+      var minInterval = room?.MinPathPointIntervalMs ?? p_appConfig.MinPathPointIntervalMs;
+      if (!p_reqRateLimiter.IsReqOk($"{ReqPaths.STORE_PATH_POINT}/{_req.RoomId}", _httpRequest.HttpContext.Connection.RemoteIpAddress, minInterval))
+      {
+        _log.Warn($"Too many requests, time limit: {minInterval} ms");
+        return Problem(HttpStatusCode.TooManyRequests, string.Empty);
+      }
+
+      var now = DateTimeOffset.UtcNow;
+      var nowUnixMs = now.ToUnixTimeMilliseconds();
+
+      var sessionKey = $"{_req.RoomId}/{_req.AppId}";
+      var sessionDoc = _dbProvider.GenericData.ReadSimpleDocument<RoomUserSession>(sessionKey);
+      if (sessionDoc == null || sessionDoc.Data.SessionId != _req.SessionId)
+      {
+        _log.Info($"New session {_req.SessionId} is started, wipe: '{_req.WipeOldPath}'");
+
+        _dbProvider.GenericData.WriteSimpleDocument(sessionKey, new RoomUserSession(_req.SessionId));
+
+        if (_req.WipeOldPath == true)
+          p_roomsController.EnqueueUserWipe(_req.RoomId, _req.AppId, _req.Username, nowUnixMs);
+
+        var pushMsgPayload = new PushMsgNewTrackStarted(GenericToolkit.ConcealAppInstanceId(_req.AppId), _req.Username);
+        var pushMsgData = JsonSerializer.SerializeToElement(pushMsgPayload, AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
+        var pushMsg = new PushMsg(PushMsgType.NewTrackStarted, pushMsgData);
+        await _fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
+      }
+
+      var record = StorageEntry.From(_req);
+      _dbProvider.Paths.WriteDocument(_req.RoomId, nowUnixMs, record);
+
+      await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
+
+      if (room?.MaxPointsPerPath > 0)
+        p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.AppId, _req.Username);
+
+      _log.Info($"Successfully **stored path point**: '__{_req.RoomId}__/**{_req.AppId}**/__{_req.Username}__'");
+
       return Results.Ok();
     }
     catch (Exception ex)
     {
-      log.Error($"Error occured while trying to handle 'store path point of {_req.RoomId}/{_req.Username}' request: {ex}");
+      _log.Error($"Error occured while trying to handle 'store path point of {_req.RoomId}/{_req.AppId}/{_req.Username}' request: {ex}");
       return InternalServerError(ex.Message);
     }
   }
 
   public IResult ListRoomPathPoints(
+    IScopedLog _log,
+    IDbProvider _dbProvider,
     HttpRequest _httpRequest,
     [FromQuery(Name = "roomId")] string _roomId,
     [FromQuery(Name = "offset")] long _offsetUnixTimeMs)
   {
-    var log = GetLog(_httpRequest);
     try
     {
-      log.Info($"Requested **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
+      _log.Info($"Requested **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
 
       if (!ReqResUtil.IsRoomIdValid(_roomId))
       {
-        log.Info("Room Id is incorrect!");
+        _log.Warn("Room Id is incorrect!");
         return BadRequest("Room Id is incorrect!");
       }
 
       var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
       if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
       {
-        log.Warn($"Too many requests from ip '{ip}'");
+        _log.Warn($"Too many requests from ip '{ip}'");
         return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
       }
 
@@ -249,38 +278,34 @@ internal class ApiControllerV1 : GenericController
 
       const int maxReturnEntries = 250;
       var offset = DateTimeOffset.FromUnixTimeMilliseconds(_offsetUnixTimeMs + 1);
-      var documents = p_documentStorage.Paths
+      var entries = _dbProvider.Paths
         .ListDocuments<StorageEntry>(_roomId, _from: offset)
         .OrderBy(_ => _.Created)
         .Take(maxReturnEntries + 1)
+        .Select(TimedStorageEntry.FromStorageEntry)
         .ToArray();
 
       ListRoomPathPointsRes result;
-      if (documents.Length == 0)
+      if (entries.Length == 0)
       {
         result = new(now.ToUnixTimeMilliseconds(), false, []);
       }
-      else if (documents.Length <= maxReturnEntries)
+      else if (entries.Length <= maxReturnEntries)
       {
-        var entries = documents.Select(TimedStorageEntry.FromStorageEntry);
         result = new(now.ToUnixTimeMilliseconds(), false, entries);
       }
       else
       {
-        var lastEntryTime = documents[^2].Created.ToUnixTimeMilliseconds();
-        var entries = documents
-          .Take(maxReturnEntries)
-          .Select(TimedStorageEntry.FromStorageEntry);
-
-        result = new(lastEntryTime, true, entries);
+        var lastEntryTime = entries[^2].UnixTimeMs;
+        result = new(lastEntryTime, true, entries.Take(maxReturnEntries));
       }
 
-      log.Info($"**Handled** request **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
+      _log.Info($"**Handled** request **room path points** of __{_roomId}__ from timestamp __{_offsetUnixTimeMs}__");
       return Json(result);
     }
     catch (Exception ex)
     {
-      log.Error($"Error occured while trying to handle 'room path points of {_roomId} from timestamp {_offsetUnixTimeMs}' request: {ex}");
+      _log.Error($"Error occured while trying to handle 'room path points of {_roomId} from timestamp {_offsetUnixTimeMs}' request: {ex}");
       return InternalServerError(ex.Message);
     }
   }
@@ -315,12 +340,15 @@ internal class ApiControllerV1 : GenericController
 
       var description = ReqResUtil.ClearUserMsg(_req.Description);
       var now = DateTimeOffset.UtcNow;
-      var point = new RoomPointDocument(_req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
+      var point = new RoomPointDocument(_req.AppId, _req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
       p_documentStorage.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
       await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
 
-      var pushMsgData = JsonSerializer.SerializeToElement(new PushMsgRoomPointAdded(_req.Username, _req.Description, _req.Lat, _req.Lng), AndroidPushJsonCtx.Default.PushMsgRoomPointAdded);
+      var pushMsgData = JsonSerializer.SerializeToElement(
+        new PushMsgRoomPointAdded(_req.AppId, _req.Username, _req.Description, _req.Lat, _req.Lng),
+        AndroidPushJsonCtx.Default.PushMsgRoomPointAdded);
+
       var pushMsg = new PushMsg(PushMsgType.RoomPointAdded, pushMsgData);
       await p_fcmPublisher.SendDataAsync(_req.RoomId, pushMsg, _ct);
 

@@ -1,3 +1,5 @@
+import type { AppId } from "../Guid";
+
 export type WsBaseMsg = {
   Type: string;
   Payload: any;
@@ -9,10 +11,12 @@ export type WsMsgHello = {
 }
 
 export type WsMsgPathWiped = {
-  Username: string;
+  AppId: AppId;
+  UserName: string;
 }
 
 export type WsMsgPathTruncated = {
-  Username: string;
+  AppId: AppId;
+  UserName: string;
   PathPoints: number;
 }

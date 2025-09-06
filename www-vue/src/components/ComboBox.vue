@@ -3,8 +3,8 @@
     <select
             :value="props.value ?? '-- Paths --'"
             @change="onOptionSelected">
-      <template v-for="opt of props.options" :key="opt">
-        <option>{{ opt }}</option>
+      <template v-for="e of entries" :key="e.index">
+        <option>{{ e.userNameView }}</option>
       </template>
     </select>
     <div class="select-arrow"></div>
@@ -12,19 +12,46 @@
 </template>
 
 <script setup lang="ts">
+import type { AppId } from '@/data/Guid';
+import { computed } from 'vue';
+
+type Entry = {
+  appId: AppId;
+  userName: string;
+  index: number;
+  userNameView: string;
+}
 
 const props = defineProps<{
-  options: string[];
+  options: Map<AppId, string>;
   value?: string | undefined;
 }>();
 
 const emit = defineEmits<{
-  changed: [_value: string]
+  changed: [_appId: AppId | undefined, _userName: string | undefined]
 }>();
 
+const entries = computed<Entry[]>(() => {
+  const opts = props.options;
+  if (opts === undefined)
+    return [];
+
+  let counter = 0;
+  return Array.from(opts.entries()).map(([appId, userName]) => {
+    const c = counter++;
+    return ({
+      appId: appId,
+      userName: userName,
+      index: c,
+      userNameView: `[${c}] ${userName}`
+    });
+  });
+});
+
 function onOptionSelected(_e: Event) {
-  const value = (_e.target as HTMLSelectElement)?.value;
-  emit('changed', value);
+  const rawValue = (_e.target as HTMLSelectElement)?.value;
+  const value = entries.value.find(e => e.userNameView === rawValue);
+  emit('changed', value?.appId, value?.userName);
 }
 
 </script>
@@ -69,7 +96,4 @@ function onOptionSelected(_e: Event) {
   clip-path: polygon(50% 0%, 100% 40%, 0% 60%, 100% 60%, 50% 100%, 0% 60%, 100% 40%, 0% 40%);
 }
 
-option:first-child {
-  font-style: italic;
-}
 </style>

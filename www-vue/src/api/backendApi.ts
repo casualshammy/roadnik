@@ -1,4 +1,5 @@
 import type { GetPathResData, WsBaseMsg } from '@/data/backend';
+import type { AppId } from '@/data/Guid';
 import { LatLng } from 'leaflet';
 import { WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 
@@ -16,6 +17,7 @@ type DeleteRoomPointReq = {
 }
 
 type CreateNewPointReq = {
+  AppId: AppId | null;
   RoomId: string;
   Username: string;
   Lat: number;
@@ -54,6 +56,7 @@ export class BackendApi {
 
   public async createPointAsync(_roomId: string, _username: string, _latLng: LatLng, _description: string): Promise<boolean> {
     const data: CreateNewPointReq = {
+      AppId: null,
       RoomId: _roomId,
       Username: _username,
       Lat: _latLng.lat,

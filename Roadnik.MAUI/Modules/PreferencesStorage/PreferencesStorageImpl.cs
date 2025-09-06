@@ -7,6 +7,7 @@ using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using System.Reactive;
 using System.Reactive.Subjects;
 using System.Text.Json;
@@ -108,6 +109,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
     SetValue(PREF_BLE_HRM_ENABLED, false);
     SetValue(PREF_BLE_HRM_DEVICE_INFO, (HrmDeviceInfo?)null);
+    SetValue(PREF_APP_INSTALLATION_ID, Guid.NewGuid(), PrefsStorageJsonCtx.Default.Guid);
   }
 
   private void MigratePreferences()
@@ -145,6 +147,14 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
   private IReadOnlyDictionary<int, Action> GetMigrations()
   {
     var migrations = new Dictionary<int, Action>();
+
+    var appId = GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+    if (appId == default)
+    {
+      appId = Guid.NewGuid();
+      SetValue(PREF_APP_INSTALLATION_ID, appId, PrefsStorageJsonCtx.Default.Guid);
+      p_log.Info($"New app installation id: '{appId}'");
+    }
 
     migrations.Add(175, () =>
     {

@@ -1,8 +1,10 @@
 ﻿using Ax.Fw.Storage.Data;
+using Roadnik.Common.Toolkit;
 
 namespace Roadnik.Common.Data;
 
 public record TimedStorageEntry(
+  string AppId,
   long UnixTimeMs,
   string Username,
   float Latitude,
@@ -19,6 +21,7 @@ public record TimedStorageEntry(
   {
     var data = _document.Data;
     return new TimedStorageEntry(
+      GenericToolkit.ConcealAppInstanceId(data.AppId),
       _document.Created.ToUnixTimeMilliseconds(),
       data.Username,
       data.Latitude,

@@ -18,6 +18,8 @@ using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
 using System.Text.RegularExpressions;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
+using static Roadnik.MAUI.Data.Consts;
+using Roadnik.MAUI.JsonCtx;
 
 namespace Roadnik.MAUI;
 
@@ -87,6 +89,10 @@ public static partial class MauiProgram
     Container = appDeps;
 
     log.Info($"Dependencies are installed");
+
+    var prefsStorage = appDeps.Locate<IPreferencesStorage>();
+    var appId = prefsStorage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+    log.Info($"App installation ID: {appId}");
 
     log.Info($"Building maui app...");
 

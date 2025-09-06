@@ -4,6 +4,7 @@ namespace Roadnik.Common.Data.DocumentStorage;
 
 [SimpleDocument("geo-point")]
 public record RoomPointDocument(
+  string? AppId,
   string RoomId,
   string Username,
   double Lat,

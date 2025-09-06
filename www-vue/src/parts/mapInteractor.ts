@@ -5,20 +5,21 @@ import Cookies from "js-cookie";
 import type { Reactive, ShallowRef } from "vue";
 import * as Consts from '../data/Consts';
 import type { HostApi } from "@/api/hostApi";
+import type { AppId } from "@/data/Guid";
 
 export class MapInteractor {
   private readonly p_appCtx: AppCtx;
   private readonly p_hostApi: HostApi;
   private readonly p_map: ShallowRef<L.Map | undefined>;
-  private readonly p_paths: Reactive<Map<string, L.Polyline>>;
-  private readonly p_geoEntries: Reactive<Map<string, TimedStorageEntry[]>>;
+  private readonly p_paths: Map<AppId, L.Polyline>;
+  private readonly p_geoEntries: Reactive<Map<AppId, TimedStorageEntry[]>>;
 
   constructor(
     _appCtx: AppCtx,
     _hostApi: HostApi,
     _map: ShallowRef<L.Map | undefined>,
-    _paths: Reactive<Map<string, L.Polyline>>,
-    _geoEntries: Reactive<Map<string, TimedStorageEntry[]>>
+    _paths: Map<AppId, L.Polyline>,
+    _geoEntries: Reactive<Map<AppId, TimedStorageEntry[]>>
   ) {
     this.p_appCtx = _appCtx;
     this.p_hostApi = _hostApi;
@@ -88,14 +89,14 @@ export class MapInteractor {
   }
 
   public setMapCenterToUser(
-    _user: string,
+    _appId: AppId,
     _zoom?: number | undefined
   ): boolean {
     const map = this.p_map.value;
     if (map === undefined)
       return false;
 
-    const points = this.p_geoEntries.get(_user);
+    const points = this.p_geoEntries.get(_appId);
     if (points === undefined || points.length === 0)
       return false;
 
@@ -126,12 +127,12 @@ export class MapInteractor {
   }
 
   public setObservedUser(
-    _user: string | null,
+    _appId: string | null,
     _log: boolean = true
   ): boolean {
-    this.p_appCtx.mapState.value.selectedPath = _user;
+    this.p_appCtx.mapState.value.selectedAppId = _appId;
 
-    if (_user === null) {
+    if (_appId === null) {
       if (!this.p_appCtx.isRoadnikApp)
         Cookies.remove(Consts.COOKIE_SELECTED_PATH);
       else
@@ -144,12 +145,12 @@ export class MapInteractor {
     }
 
     if (!this.p_appCtx.isRoadnikApp)
-      Cookies.set(Consts.COOKIE_SELECTED_PATH, _user);
+      Cookies.set(Consts.COOKIE_SELECTED_PATH, _appId);
     else
       this.p_hostApi.sendMapStateToRoadnikApp();
 
     if (_log)
-      console.log(`Selected path is set to ${_user}`);
+      console.log(`Selected path is set to ${_appId}`);
 
     return true;
   }

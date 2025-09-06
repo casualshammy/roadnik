@@ -2,8 +2,6 @@
 
 public enum PushMsgType
 {
-  None = 0,
-  Notification,
-  RoomPointAdded,
-  NewTrackStarted
+  RoomPointAdded = 2,
+  NewTrackStarted = 3,
 }

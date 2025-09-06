@@ -1,4 +1,5 @@
-﻿using Roadnik.MAUI.Data;
+﻿using Roadnik.Common.Toolkit;
+using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Toolkit;
 using System.Globalization;
 
@@ -30,7 +31,7 @@ internal class MapInteractor
     var rawResult = await p_webView.EvaluateJavaScriptAsync($"setMapCenter({lat},{lng},{zoom},{animationMs})");
     if (rawResult == null || !bool.TryParse(rawResult, out var result))
       throw new InvalidOperationException($"Can't set map location: js code returned null");
-    
+
     return result;
   }
 
@@ -67,14 +68,14 @@ internal class MapInteractor
   }
 
   public async Task<bool> SetMapCenterToUserAsync(
-    string _user,
+    string _appId,
     int? _zoom,
     CancellationToken _ct)
   {
     _ct.ThrowIfCancellationRequested();
     var zoom = _zoom?.ToString(CultureInfo.InvariantCulture) ?? "undefined";
 
-    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setMapCenterToUser(\"{_user}\", {zoom})");
+    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setMapCenterToUser(\"{_appId}\", {zoom})");
     if (rawResult == null || !bool.TryParse(rawResult, out var result))
       throw new InvalidOperationException($"Can't set view to user: js code returned null");
 
@@ -94,16 +95,16 @@ internal class MapInteractor
   }
 
   public async Task<bool> SetObservedUserAsync(
-    string? _user,
+    string? _appId,
     bool _shouldLogInJsConsole,
     CancellationToken _ct)
   {
     _ct.ThrowIfCancellationRequested();
 
-    var user = _user != null ? $"\"{_user}\"" : "null";
+    var appId = _appId != null ? $"\"{_appId}\"" : "null";
     var shouldLogInJsConsole = _shouldLogInJsConsole ? "true" : "false";
 
-    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setObservedUser({user}, {shouldLogInJsConsole})");
+    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setObservedUser({appId}, {shouldLogInJsConsole})");
     if (rawResult == null || !bool.TryParse(rawResult, out var result))
       throw new InvalidOperationException($"Can't set observed user: js code returned null");
 

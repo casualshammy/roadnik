@@ -1,7 +1,8 @@
 ﻿namespace Roadnik.Common.ReqRes;
 
-public record StorePathPointReq
+public sealed record StorePathPointReq
 {
+  public required Guid AppId { get; init; }
   public required int SessionId { get; init; }
   public required string RoomId { get; init; }
   public required string Username { get; init; }

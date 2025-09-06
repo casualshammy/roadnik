@@ -28,7 +28,7 @@
         background: props.state?.color
       }">✘</a>
     <span class="upper-text">
-      <b>{{ props.state?.user }}</b> ({{ timestamp }})
+      <b>{{ props.state?.userName }}</b> ({{ timestamp }})
     </span>
     <span class="upper-text">
       🔋{{ battery }}% 📶{{ gsmSignal }}% {{ heartRate }}
@@ -43,9 +43,11 @@
 import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue';
 import * as CommonToolkit from '../toolkit/commonToolkit';
 import { TimeSpan } from '@/toolkit/timespan';
+import type { AppId } from '@/data/Guid';
 
 export type SelectedUserPopupState = {
-  user: string,
+  appId: AppId,
+  userName: string,
   timestamp: number,
   battery?: number | undefined,
   gsmSignal?: number | undefined,

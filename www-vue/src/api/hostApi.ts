@@ -7,7 +7,7 @@ export type MapState = {
   zoom: number;
   layer: string;
   overlays: string[];
-  selectedPath: string | null;
+  selectedAppId: string | null;
   selectedPathWindowLeft: number | null;
   selectedPathWindowBottom: number | null;
 }

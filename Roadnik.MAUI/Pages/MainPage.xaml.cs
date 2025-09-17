@@ -43,6 +43,7 @@ public partial class MainPage : CContentPage
   private const string p_backgroundPageUrl = "file:///android_asset/background.html";
 
   private readonly IPreferencesStorage p_prefs;
+  private readonly IPushMessagesController p_pushMsgCtrl;
   private readonly IReadOnlyLifetime p_lifetime;
   private readonly IHttpClientProvider p_httpClient;
   private readonly ILog p_log;
@@ -69,7 +70,7 @@ public partial class MainPage : CContentPage
     p_httpClient = Container.Locate<IHttpClientProvider>();
     var context = global::Android.App.Application.Context;
     p_powerManager = (PowerManager)context.GetSystemService(Android.Content.Context.PowerService)!;
-    var pushMsgCtrl = Container.Locate<IPushMessagesController>();
+    p_pushMsgCtrl = Container.Locate<IPushMessagesController>();
     var locationReporter = Container.Locate<ILocationReporter>();
 
     p_bindingCtx = (MainPageViewModel)BindingContext;
@@ -143,12 +144,12 @@ public partial class MainPage : CContentPage
       .SelectAsync(OnMsgFromWebAppAsync)
       .Subscribe(p_lifetime);
 
-    pushMsgCtrl.PushMessages
-      .CombineLatest(p_webAppTracksSynchonizedSubj, (_pushEvent, _webAppIsReady) => (PushEvent: _pushEvent, WebAppIsReady: _webAppIsReady))
-      .Where(_ => _.WebAppIsReady)
-      .Select(_ => _.PushEvent)
+    p_pushMsgCtrl.OnNewNotification
+      .CombineLatest(p_webAppTracksSynchonizedSubj, (_, _webAppIsReady) => _webAppIsReady)
+      .Where(_ => _)
+      .ToUnit()
       .Throttle(TimeSpan.FromMilliseconds(250))
-      .SelectAsync(OnNotificationAsync)
+      .SelectAsync(async (_, _ct) => await OnNotificationAsync(_ct))
       .Subscribe(p_lifetime);
 
     p_pageAppearedChangeFlow
@@ -549,11 +550,18 @@ public partial class MainPage : CContentPage
   private Task OnHostMsgMapDragStartedAsync()
     => CancelFollowCurrentLocationAsync();
 
-  private async Task OnNotificationAsync(PushNotificationEvent _e, CancellationToken _ct)
+  private async Task OnNotificationAsync(CancellationToken _ct)
   {
-    if (_e.NotificationId == PUSH_MSG_NEW_POINT)
+    PushNotificationEvent? ev = null;
+    while (p_pushMsgCtrl.Notifications.TryTake(out var e))
+      ev = e;
+
+    if (ev == null)
+      return;
+
+    if (ev.NotificationId == PUSH_MSG_NEW_POINT)
     {
-      var data = _e.Data.Deserialize(typeof(PushMsgRoomPointAdded), AndroidPushJsonCtx.Default) as PushMsgRoomPointAdded;
+      var data = ev.Data.Deserialize(AndroidPushJsonCtx.Default.PushMsgRoomPointAdded);
       if (data == default)
         return;
 
@@ -562,9 +570,9 @@ public partial class MainPage : CContentPage
         await p_mapInteractor.SetMapCenterAsync((float)data.Lat, (float)data.Lng, 15, 500, _ct);
       });
     }
-    else if (_e.NotificationId == PUSH_MSG_NEW_TRACK)
+    else if (ev.NotificationId == PUSH_MSG_NEW_TRACK)
     {
-      var data = _e.Data.Deserialize(typeof(PushMsgNewTrackStarted), AndroidPushJsonCtx.Default) as PushMsgNewTrackStarted;
+      var data = ev.Data.Deserialize(AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
       if (data == null)
         return;
 

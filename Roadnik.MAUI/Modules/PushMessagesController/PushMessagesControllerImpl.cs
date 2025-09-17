@@ -4,6 +4,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Platforms.Android.Toolkit;
+using System.Collections.Concurrent;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -22,7 +23,8 @@ internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<
       => new PushMessagesControllerImpl(_preferencesStorage, _lifetime, _log));
   }
 
-  private readonly ReplaySubject<PushNotificationEvent> p_pushMessagesSubj = new(1);
+  private readonly BehaviorSubject<Unit> p_notificationsSubj = new(Unit.Default);
+  private readonly ConcurrentQueue<PushNotificationEvent> p_notifications = new();
 
   private PushMessagesControllerImpl(
     IPreferencesStorage _preferencesStorage,
@@ -82,8 +84,13 @@ internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<
       .Subscribe(_lifetime);
   }
 
-  public IObservable<PushNotificationEvent> PushMessages => p_pushMessagesSubj;
+  public IObservable<Unit> OnNewNotification => p_notificationsSubj;
 
-  public void AddPushMsg(PushNotificationEvent _event) => p_pushMessagesSubj.OnNext(_event);
+  public IProducerConsumerCollection<PushNotificationEvent> Notifications => p_notifications;
 
+  public void AddPushMsg(PushNotificationEvent _event)
+  {
+    p_notifications.Enqueue(_event);
+    p_notificationsSubj.OnNext();
+  }
 }

@@ -325,7 +325,7 @@ internal class ApiControllerV1 : GenericController
         log.Warn($"Incorrect room id!");
         return BadRequest($"Incorrect room id!");
       }
-      if (!ReqResUtil.IsUserDefinedStringSafe(_req.Username))
+      if (!ReqResUtil.IsUsernameSafe(_req.Username))
       {
         log.Warn($"Incorrect username!");
         return BadRequest($"Incorrect username!");

@@ -3,7 +3,9 @@ using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Data;
 
-internal record BookmarkEntry(string ServerAddress, string RoomId, string Username);
+internal record BookmarkEntry(
+  string RoomId, 
+  string Username);
 
 internal record BookmarkEntryWrapper(
   BookmarkEntry Bookmark, 
@@ -15,8 +17,8 @@ internal record BookmarkEntryWrapper(
   {
     return new BookmarkEntryWrapper(
       _bookmark,
-      $"{L.page_bookmarks_room}: {_bookmark.RoomId}",
-      $"{L.page_bookmarks_username}: {_bookmark.Username}",
+      $"🗺️ {L.page_bookmarks_room}: {_bookmark.RoomId}",
+      $"👨‍💼 {L.page_bookmarks_username}: {_bookmark.Username}",
       _onDeleteCommand);
   }
 }

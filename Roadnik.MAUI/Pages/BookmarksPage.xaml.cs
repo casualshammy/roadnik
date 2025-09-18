@@ -4,7 +4,6 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Collections.Concurrent;
-using System.Windows.Input;
 using static Roadnik.MAUI.Data.Consts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
@@ -26,7 +25,7 @@ public partial class BookmarksPage : CContentPage
     p_onDeleteCommand = new Command<BookmarkEntryWrapper>(_o =>
     {
       var bookmark = _o.Bookmark;
-      var hashCode = HashCode.Combine(bookmark.ServerAddress, bookmark.RoomId, bookmark.Username);
+      var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
       if (p_bookmarks.TryRemove(hashCode, out _))
       {
         p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
@@ -37,7 +36,7 @@ public partial class BookmarksPage : CContentPage
     var bookmarks = p_preferences.GetValueOrDefault<List<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
     foreach (var bookmark in bookmarks)
     {
-      var hashCode = HashCode.Combine(bookmark.ServerAddress, bookmark.RoomId, bookmark.Username);
+      var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
       p_bookmarks.TryAdd(hashCode, BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand));
     }
 
@@ -77,13 +76,6 @@ public partial class BookmarksPage : CContentPage
 
   private async void AddCurrentCredentials_Clicked(object _sender, EventArgs _e)
   {
-    var server = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
-    if (server.IsNullOrWhiteSpace())
-    {
-      await DisplayAlert("Current server address is empty", "Please go to options page and fill it", "Close");
-      return;
-    }
-
     var roomId = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
     if (roomId.IsNullOrWhiteSpace())
     {
@@ -98,8 +90,8 @@ public partial class BookmarksPage : CContentPage
       return;
     }
 
-    var hashCode = HashCode.Combine(server, roomId, username);
-    var bookmark = new BookmarkEntry(server, roomId, username);
+    var hashCode = HashCode.Combine(roomId, username);
+    var bookmark = new BookmarkEntry(roomId, username);
     if (!p_bookmarks.TryAdd(hashCode, BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand)))
     {
       await DisplayAlert("These credentials are already added to bookmarks", null, "Close");

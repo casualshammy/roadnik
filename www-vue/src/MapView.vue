@@ -437,7 +437,7 @@ function updateData(_newEntries: TimedStorageEntry[]): [string, TimedStorageEntr
       p_gEntries.set(appId, geoEntries);
     }
 
-    const sortedEntries = _newEntries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
+    const sortedEntries = userData.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
     geoEntries.push(...sortedEntries);
 
     const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;

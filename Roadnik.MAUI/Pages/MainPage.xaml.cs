@@ -1,5 +1,6 @@
 ﻿using Android.OS;
 using Android.Provider;
+using Android.Views;
 using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -8,6 +9,7 @@ using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using QRCoder;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Common.ReqRes;
@@ -273,6 +275,32 @@ public partial class MainPage : CContentPage
           }
         });
       });
+
+    p_pageIsVisible
+      .Subscribe(_ =>
+      {
+        //if (Build.VERSION.SdkInt >= BuildVersionCodes.VanillaIceCream)
+        //  return;
+
+        //var window = Platform.CurrentActivity?.Window;
+        //if (window == null)
+        //  return;
+
+       
+
+        //if (_)
+        //{
+        //  window.AddFlags(WindowManagerFlags.LayoutNoLimits);
+        //  window.AddFlags(WindowManagerFlags.TranslucentStatus);
+        //}
+        //else
+        //{
+        //  window.ClearFlags(WindowManagerFlags.LayoutNoLimits);
+        //  window.ClearFlags(WindowManagerFlags.TranslucentStatus);
+        //}
+
+        //window.SetStatusBarColor(Android.Graphics.Color.AliceBlue);
+      }, p_lifetime);
 
     p_log.Info($"Main page is opened");
   }

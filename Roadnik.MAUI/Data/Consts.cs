@@ -45,6 +45,7 @@ internal static class Consts
   public const int PUSH_MSG_NEW_TRACK = 10001;
 
   public const string DEEP_LINK_INTENT_KEY = "open-link";
+  public const string INTENT_STOP_LOC_SHARING = "stop-sharing";
 
   public static Guid BLE_SERVICE_ID_HEART_RATE { get; } = GuidExtension.UuidFromPartial(0x180d);
   public static Guid BLE_CHARACTERISTIC_ID_HEART_RATE_MEASUREMENT { get; } = GuidExtension.UuidFromPartial(0x2A37);

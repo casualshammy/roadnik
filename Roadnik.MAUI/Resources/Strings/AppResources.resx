@@ -313,4 +313,7 @@ Passive mode uses data obtained from other applications.</value>
   <data name="page.options.passive.tooltip" xml:space="preserve">
     <value>Passive mode uses data obtained from other applications</value>
   </data>
+  <data name="generic.stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
 </root>

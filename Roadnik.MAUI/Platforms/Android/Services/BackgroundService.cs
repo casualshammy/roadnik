@@ -6,6 +6,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.Platforms.Android.BroadcastReceivers;
 using Roadnik.MAUI.Toolkit;
 using System.Reactive.Linq;
 using System.Text;
@@ -16,6 +17,10 @@ namespace Roadnik.MAUI.Platforms.Android.Services;
 [Service(ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeLocation)]
 public class BackgroundService : CAndroidService
 {
+  private static readonly global::Android.Graphics.Drawables.Icon p_stopIcon = global::Android.Graphics.Drawables.Icon.CreateWithResource(
+    global::Android.App.Application.Context, 
+    Resource.Drawable.letter_r);
+
   private readonly IReadOnlyLifetime p_globalLifetime;
   private readonly ILocationReporter p_locationReporter;
   private readonly NotificationManager p_notificationMgr;
@@ -102,6 +107,11 @@ public class BackgroundService : CAndroidService
     var channelId = "ServiceChannel";
     var channel = new NotificationChannel(channelId, "Notify when recording is active", NotificationImportance.Max);
     p_notificationMgr.CreateNotificationChannel(channel);
+
+    var stopIntent = new Intent(Consts.INTENT_STOP_LOC_SHARING, global::Android.Net.Uri.Empty!, context, typeof(StopLocationSharingReceiver));
+    var stopPendingIntent = PendingIntent.GetBroadcast(context, 0, stopIntent, PendingIntentFlags.Immutable);
+    var stopActionBuilder = new Notification.Action.Builder(p_stopIcon, L.generic_stop, stopPendingIntent);
+
     var builder = new Notification.Builder(this, channelId)
      .SetContentTitle(_title)
      .SetContentText(_text)
@@ -109,7 +119,8 @@ public class BackgroundService : CAndroidService
      .SetSmallIcon(Resource.Drawable.letter_r)
      .SetOnlyAlertOnce(true)
      .SetOngoing(true)
-     .SetVisibility(NotificationVisibility.Public);
+     .SetVisibility(NotificationVisibility.Public)
+     .AddAction(stopActionBuilder.Build());
 
     if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
 #pragma warning disable CA1416 // Validate platform compatibility

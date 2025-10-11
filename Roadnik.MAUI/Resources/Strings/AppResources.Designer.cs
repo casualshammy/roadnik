@@ -106,6 +106,15 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Stop に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string generic_stop {
+            get {
+                return ResourceManager.GetString("generic.stop", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Success: %success%/%total% (last: %last-successful-report%)
         ///Last location fix: %last-location-fix% (%last-location-fix-accuracy%m) に類似しているローカライズされた文字列を検索します。
         /// </summary>

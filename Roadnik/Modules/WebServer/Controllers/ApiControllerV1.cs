@@ -539,11 +539,8 @@ internal class ApiControllerV1 : GenericController
       var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
       log.Info($"**Establishing ws connection** '__{sessionIndex}__' for room '__{_roomId}__'...");
 
-      var roomInfo = p_roomsController.GetRoom(_roomId);
-      var maxPointsInRoom = roomInfo?.MaxPathPoints ?? p_appConfig.MaxPathPointsPerRoom;
-
       using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
-      _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId, maxPointsInRoom);
+      _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId);
       log.Info($"**Ws connection** '__{sessionIndex}__' for room '__{_roomId}__' is **closed**");
 
       return Results.Empty;
@@ -555,7 +552,7 @@ internal class ApiControllerV1 : GenericController
     }
   }
 
-  [ApiTokenRequiredAttribute]
+  [ApiTokenRequired]
   public IResult RegisterRoom(
     HttpRequest _httpRequest,
     [FromBody] RoomInfo _req)
@@ -577,7 +574,7 @@ internal class ApiControllerV1 : GenericController
     }
   }
 
-  [ApiTokenRequiredAttribute]
+  [ApiTokenRequired]
   public IResult DeleteRoomRegistration(
     HttpRequest _httpRequest,
     [FromBody] DeleteRoomReq _req)
@@ -599,7 +596,7 @@ internal class ApiControllerV1 : GenericController
     }
   }
 
-  [ApiTokenRequiredAttribute]
+  [ApiTokenRequired]
   public IResult ListRooms(
     HttpRequest _httpRequest)
   {

@@ -8,6 +8,7 @@ export type WsBaseMsg = {
 export type WsMsgHello = {
   UnixTimeMs: number;
   MaxPathPointsPerRoom: number;
+  RoomOldestTimestampUnixMs: number;
 }
 
 export type WsMsgPathWiped = {

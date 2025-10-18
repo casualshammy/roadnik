@@ -1,3 +1,6 @@
 ﻿namespace Roadnik.Server.Data.WebSockets;
 
-internal record WsMsgHello(long UnixTimeMs, uint MaxPathPointsPerRoom);
+internal readonly record struct WsMsgHello(
+  long UnixTimeMs, 
+  uint MaxPathPointsPerRoom,
+  long RoomOldestTimestampUnixMs);

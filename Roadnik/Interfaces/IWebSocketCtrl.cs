@@ -10,8 +10,7 @@ public interface IWebSocketCtrl
 
   Task<bool> AcceptSocketAsync(
     WebSocket _webSocket,
-    string _roomId,
-    uint _maxPointsInRoom);
+    string _roomId);
 
   Task<int> BroadcastMsgAsync<T>(T _msg, CancellationToken _ct) where T : notnull;
   Task SendMsgAsync<T>(WebSocketSession _session, T _msg, CancellationToken _ct) where T : notnull;

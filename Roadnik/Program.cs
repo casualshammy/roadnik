@@ -15,6 +15,7 @@ using Roadnik.Server.Modules.StravaCredentialsController;
 using Roadnik.Server.Modules.TilesCache;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
+using Roadnik.Server.Modules.WsMsgController;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 
@@ -66,8 +67,10 @@ public partial class Program
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .AddModule<StravaCredentialsControllerImpl, IStravaCredentialsController>()
+      .AddModule<WsMsgControllerImpl, IWsMsgController>()
       .ActivateOnStart<IWebServer>()
       .ActivateOnStart<IStravaCredentialsController>()
+      .ActivateOnStart<IWsMsgController>()
       .Build();
 
     lifetime.InstallConsoleCtrlCHook();

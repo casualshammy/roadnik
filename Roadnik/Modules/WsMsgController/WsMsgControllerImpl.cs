@@ -1,6 +1,8 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
+using Roadnik.Common.Data;
+using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
@@ -44,15 +46,22 @@ internal sealed class WsMsgControllerImpl : IWsMsgController, IAppModule<IWsMsgC
           var roomInfo = _roomsController.GetRoom(_client.RoomId);
           var maxPointsInRoom = roomInfo?.MaxPathPoints ?? _appConfig.MaxPathPointsPerRoom;
 
-          var oldestEntryMeta = _dbProvider.Paths
-            .ListDocumentsMeta(_client.RoomId)
-            .OrderBy(_ => _.Created)
-            .FirstOrDefault();
+          var oldestEntriesLut = new Dictionary<Guid, DateTimeOffset>();
+          foreach (var doc in _dbProvider.Paths.ListDocuments<StorageEntry>(_client.RoomId))
+          {
+            var appId = doc.Data.AppId;
+            var created = doc.Created;
+
+            if (!oldestEntriesLut.TryGetValue(appId, out var value) || value > created)
+              oldestEntriesLut[appId] = created;
+          }
 
           var helloMsgData = new WsMsgHello(
             DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
             maxPointsInRoom,
-            oldestEntryMeta?.Created.ToUnixTimeMilliseconds() ?? 0L);
+            oldestEntriesLut.ToDictionary(
+              _ => GenericToolkit.ConcealAppInstanceId(_.Key),
+              _ => _.Value.ToUnixTimeMilliseconds()));
 
           var helloMsg = WsHelper.CreateWsMessage(helloMsgData);
           await _client.Socket.SendAsync(helloMsg, WebSocketMessageType.Text, true, _ct);

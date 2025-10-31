@@ -1,4 +1,5 @@
-﻿using Roadnik.Common.ReqRes;
+﻿using Ax.Fw.Storage.Data;
+using Roadnik.Common.ReqRes;
 
 namespace Roadnik.Common.Data;
 
@@ -29,5 +30,14 @@ public record StorageEntry(
       _req.GsmSignal,
       _req.Bearing,
       _req.HR);
+  }
+
+  public static Guid GetAppIdFromDocumentKey(DocumentEntryMeta _meta)
+  {
+    var keyParts = _meta.Key.Split('.', 2);
+    if (keyParts.Length != 2 || !Guid.TryParse(keyParts[0], out var appId))
+      throw new FormatException($"Invalid document key format: {_meta.Key}");
+
+    return appId;
   }
 }

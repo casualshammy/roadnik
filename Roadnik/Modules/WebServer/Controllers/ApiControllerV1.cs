@@ -232,7 +232,7 @@ internal class ApiControllerV1 : GenericController
       }
 
       var record = StorageEntry.From(_req);
-      _dbProvider.Paths.WriteDocument(_req.RoomId, nowUnixMs, record);
+      _dbProvider.Paths.WriteDocument(_req.RoomId, $"{record.AppId}.{nowUnixMs}", record);
 
       await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
 

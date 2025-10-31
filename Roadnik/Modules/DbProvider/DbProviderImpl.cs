@@ -43,35 +43,6 @@ internal class DbProviderImpl : IDbProvider
           _log.Error($"Error occured while trying to flush: {ex}");
         }
       }, _lifetime);
-
-    // migration
-    Observable
-      .Return(Unit.Default)
-      .Subscribe(_ =>
-      {
-        try
-        {
-          var convertedCount = 0;
-          foreach (var entry in GenericData.ListDocuments<StorageEntry>("geo-data"))
-          {
-            var split = entry.Key.Split('.');
-            if (split.Length != 2)
-              continue;
-
-            var roomId = split[0];
-            var timestamp = split[1];
-            Paths.WriteDocument(roomId, timestamp, entry.Data);
-            GenericData.DeleteDocuments(entry.Namespace, entry.Key);
-            ++convertedCount;
-          }
-          if (convertedCount > 0)
-            _log.Warn($"{convertedCount} path entries were transferred");
-        }
-        catch (Exception ex)
-        {
-          _log.Error($"Error occured while trying to transfer path entries: {ex}");
-        }
-      }, _lifetime);
   }
 
   public IDocumentStorage GenericData { get; }

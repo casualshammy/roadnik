@@ -1,17 +1,19 @@
 import os
-import argparse
 from build_common import git, docker, packages, utils
 
 sourceDirName = "Roadnik"
 
 dockerRepo = os.getenv('DOCKER_REPO')
-dockerLogin = os.getenv('DOCKER_LOGIN')
-dockerPassword = os.getenv('DOCKER_PASSWORD')
+if not dockerRepo:
+  raise Exception("DOCKER_REPO environment variable is not set")
 
-argParser = argparse.ArgumentParser()
-argParser.add_argument('--platform', type=str, default= "linux-amd64", required = False)
-args = argParser.parse_args()
-platform: str = args.platform
+dockerLogin = os.getenv('DOCKER_LOGIN')
+if not dockerLogin:
+  raise Exception("DOCKER_LOGIN environment variable is not set")
+
+dockerPassword = os.getenv('DOCKER_PASSWORD')
+if not dockerPassword:
+  raise Exception("DOCKER_PASSWORD environment variable is not set")
 
 version = f"{git.get_version_from_current_branch()}.{git.get_last_commit_index()}"
 
@@ -20,11 +22,8 @@ print(f"Creating docker image...", flush=True)
 print(f"Version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
 packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
-if (platform == "linux-arm64"):
-  packages.csproj_switch_aot(os.path.join(os.getcwd(), sourceDirName), False)
-
-docker.buildPush(f"{dockerRepo}:{version}-{platform}", f"Roadnik/Dockerfile.{platform}", dockerLogin, dockerPassword)
-docker.buildPush(f"{dockerRepo}:latest-{platform}", f"Roadnik/Dockerfile.{platform}", dockerLogin, dockerPassword)
+docker.buildPushMultiArch(f"{dockerRepo}:{version}", "Roadnik/Dockerfile", dockerLogin, dockerPassword)
+docker.buildPushMultiArch(f"{dockerRepo}:latest", "Roadnik/Dockerfile", dockerLogin, dockerPassword)
 
 print(f"===========================================", flush=True)
 print(f"Done!", flush=True)

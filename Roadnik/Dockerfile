@@ -4,7 +4,7 @@ RUN apt-get update && apt-get -y install clang zlib1g-dev
 COPY ./ ./
 RUN dotnet publish -r linux-x64 -o out Roadnik && chmod +x /app/out/roadnik-server
 
-FROM node:20-alpine AS build-node
+FROM node:alpine AS build-node
 WORKDIR /app
 COPY ./www-vue ./
 RUN npm i

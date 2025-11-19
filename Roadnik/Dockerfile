@@ -4,6 +4,7 @@ WORKDIR /app
 RUN apt-get update && apt-get -y install clang zlib1g-dev
 COPY ./ ./
 COPY ./Roadnik/dotnet_publish.sh ./
+RUN chmod +x ./dotnet_publish.sh
 RUN ./dotnet_publish.sh $TARGETARCH
 
 FROM node:alpine AS build-node

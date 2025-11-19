@@ -1,8 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-dotnet
+ARG TARGETARCH
 WORKDIR /app
 RUN apt-get update && apt-get -y install clang zlib1g-dev
 COPY ./ ./
-RUN dotnet publish -r linux-x64 -o out Roadnik && chmod +x /app/out/roadnik-server
+COPY ./Roadnik/dotnet_publish.sh ./
+RUN ./dotnet_publish.sh $TARGETARCH
 
 FROM node:alpine AS build-node
 WORKDIR /app

@@ -24,6 +24,7 @@ public partial class OptionsPage : CContentPage
     p_notifyNewTrack.SwitchIsToggled = p_bindingCtx.NotificationOnNewTrack;
     p_notifyNewPoint.SwitchIsToggled = p_bindingCtx.NotificationOnNewPoint;
     p_hrReporting.SwitchIsToggled = p_bindingCtx.BleHrmEnabled;
+    p_displayOnLockScreen.SwitchIsToggled = p_bindingCtx.DisplayOnLockScreenEnabled;
 
     p_bleHrmDevice.TapCommand = new Command(OnBleHrmDeviceChanged);
   }

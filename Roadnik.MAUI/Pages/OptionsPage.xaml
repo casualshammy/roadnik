@@ -96,6 +96,15 @@
                 Title="BLE HRM device"
                 IsEnabled="{Binding BleHrmEnabled}"
                 ValueText="{Binding BleHrmDeviceName}"/>
+            
+            <!-- DISPLAY -->
+            <controls:OptionsHeader
+                Title="Display" />
+            <controls:OptionsSwitch
+                x:Name="p_displayOnLockScreen"
+                Title="{x:Static l:AppResources.page_options_display_on_lockscreen_title}"
+                DetailsText="{x:Static l:AppResources.page_options_display_on_lockscreen_desc}"
+                SwitchTapped="{Binding DisplayOnLockScreenCommand}"/>
 
             <!-- NOTIFICATIONS -->
             <controls:OptionsHeader

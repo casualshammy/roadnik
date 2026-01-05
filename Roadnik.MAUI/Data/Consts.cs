@@ -28,6 +28,7 @@ internal static class Consts
   public const string PREF_LOCATION_PROVIDERS = "settings.report.location-providers";
   public const string PREF_BLE_HRM_ENABLED = "settings.report.ble-hrm-enabled";
   public const string PREF_BLE_HRM_DEVICE_INFO = "settings.report.ble-hrm-device-info";
+  public const string PREF_DISPLAY_ON_LOCK_SCREEN = "settings.display.display-on-lock-screen";
 
   public const string PREF_BOOKMARKS_LIST = "bookmarks.list";
 

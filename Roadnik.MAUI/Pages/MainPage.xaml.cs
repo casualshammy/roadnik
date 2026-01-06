@@ -196,6 +196,17 @@ public partial class MainPage : CContentPage
       .Where(_ => !_)
       .Subscribe(_ => p_webAppTracksSynchonizedSubj.OnNext(false), p_lifetime);
 
+    p_pageIsVisible
+      .Subscribe(_ =>
+      {
+        var showOnLockScreen = p_prefs.GetValueOrDefault<bool>(PREF_DISPLAY_ON_LOCK_SCREEN);
+
+        if (pageController.CurrentPage == this)
+          Platform.CurrentActivity?.SetShowWhenLocked(showOnLockScreen);
+        else
+          Platform.CurrentActivity?.SetShowWhenLocked(false);
+      }, p_lifetime);
+
     var compassProvider = Container.Locate<ICompassProvider>();
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
     p_webAppTracksSynchonizedSubj

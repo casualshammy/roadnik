@@ -33,6 +33,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private bool p_notificationOnNewPoint;
   private bool p_bleHrmEnabled;
   private HrmDeviceInfo? p_bleHrmDeviceInfo;
+  private bool p_displayOnLockScreenEnabled;
 
   public OptionsPageViewModel()
   {
@@ -54,6 +55,7 @@ internal class OptionsPageViewModel : BaseViewModel
     NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
     BleHrmEnabledCommand = new Command(OnBleHrmEnabled);
+    DisplayOnLockScreenCommand = new Command(OnDisplayOnLockScreen);
 
     var lifetime = Container.Locate<IReadOnlyLifetime>();
     p_storage.PreferencesChanged
@@ -77,6 +79,7 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT), nameof(NotificationOnNewPoint));
         SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED), nameof(BleHrmEnabled));
         SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
+        SetProperty(ref p_displayOnLockScreenEnabled, p_storage.GetValueOrDefault<bool>(PREF_DISPLAY_ON_LOCK_SCREEN), nameof(DisplayOnLockScreenEnabled));
       }, lifetime);
   }
 
@@ -258,6 +261,17 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
+  public bool DisplayOnLockScreenEnabled
+  {
+    get => p_displayOnLockScreenEnabled;
+    set
+    {
+      SetProperty(ref p_displayOnLockScreenEnabled, value);
+      p_storage.SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, p_displayOnLockScreenEnabled);
+    }
+  }
+
+
   public ICommand RoomIdCommand { get; }
   public ICommand UsernameCommand { get; }
   public ICommand MinimumIntervalCommand { get; }
@@ -271,6 +285,7 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand NotifyNewTrackCommand { get; }
   public ICommand NotifyNewPointCommand { get; }
   public ICommand BleHrmEnabledCommand { get; }
+  public ICommand DisplayOnLockScreenCommand { get; }
 
   private async void OnRoomIdCommand(object _arg)
   {
@@ -485,6 +500,12 @@ internal class OptionsPageViewModel : BaseViewModel
   {
     if (_arg is bool toggled)
       BleHrmEnabled = toggled;
+  }
+
+  private void OnDisplayOnLockScreen(object? _arg)
+  {
+    if (_arg is bool toggled)
+      DisplayOnLockScreenEnabled = toggled;
   }
 
 }

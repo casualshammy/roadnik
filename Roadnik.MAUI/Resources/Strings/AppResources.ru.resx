@@ -316,4 +316,10 @@ WiFi потребляет меньше энергии, но его точнос�
   <data name="generic.stop" xml:space="preserve">
     <value>Остановить</value>
   </data>
+  <data name="page.options.display_on_lockscreen_title" xml:space="preserve">
+    <value>Показывать карту на экране блокировки</value>
+  </data>
+  <data name="page.options.display_on_lockscreen_desc" xml:space="preserve">
+    <value>Карта будет отображаться на заблокированном экране</value>
+  </data>
 </root>

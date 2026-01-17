@@ -110,6 +110,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     SetValue(PREF_BLE_HRM_ENABLED, false);
     SetValue(PREF_BLE_HRM_DEVICE_INFO, (HrmDeviceInfo?)null);
     SetValue(PREF_APP_INSTALLATION_ID, Guid.NewGuid(), PrefsStorageJsonCtx.Default.Guid);
+    SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, false);
   }
 
   private void MigratePreferences()

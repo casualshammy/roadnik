@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -315,5 +315,11 @@ Passive mode uses data obtained from other applications.</value>
   </data>
   <data name="generic.stop" xml:space="preserve">
     <value>Stop</value>
+  </data>
+  <data name="page.options.display_on_lockscreen_title" xml:space="preserve">
+    <value>Pin map to lock screen</value>
+  </data>
+  <data name="page.options.display_on_lockscreen_desc" xml:space="preserve">
+    <value>Keep the map visible on the lock screen</value>
   </data>
 </root>

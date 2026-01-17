@@ -1,4 +1,5 @@
 ﻿using Ax.Fw;
+using Ax.Fw.App.Interfaces;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage.Data;
@@ -35,7 +36,6 @@ internal class ApiControllerV1 : GenericController
   private readonly IDbProvider p_documentStorage;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
-  private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fcmPublisher;
   private readonly IHttpClientProvider p_httpClientProvider;
@@ -47,7 +47,6 @@ internal class ApiControllerV1 : GenericController
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _usersController,
-    ITilesCache _tilesCache,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fcmPublisher,
     IHttpClientProvider _httpClientProvider) : base(RestJsonCtx.Default)
@@ -57,7 +56,6 @@ internal class ApiControllerV1 : GenericController
     p_log = _logger;
     p_webSocketCtrl = _webSocketCtrl;
     p_roomsController = _usersController;
-    p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fcmPublisher = _fcmPublisher;
     p_httpClientProvider = _httpClientProvider;
@@ -118,18 +116,21 @@ internal class ApiControllerV1 : GenericController
         return BadRequest($"Incorrect query!");
       }
 
-      if (p_tilesCache.TryGet(_x.Value, _y.Value, _z.Value, _mapType, out var cachedStream, out var hash))
+      var cacheKey = $"{_z}/{_x}/{_y}";
       {
-        log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**cached**)");
-        _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, hash);
-        return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
+        if (p_documentStorage.Tiles.TryReadBlob(_mapType, cacheKey, out BlobStream? cachedStream, out var cachedMeta))
+        {
+          log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**cached**)");
+          _httpCtx.Response.Headers.Append(CustomHeaders.XRoadnikCachedTile, $"{cachedMeta.DocId}/{cachedMeta.Version}");
+          return Results.Stream(cachedStream, MimeMapping.KnownMimeTypes.Png);
+        }
       }
 
       var tfApiKey = p_appConfig.ThunderforestApiKey;
       var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
       var url = _mapType switch
       {
-        TILE_TYPE_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
+        TILE_TYPE_TF_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://strava-heatmap.tiles.freemap.sk/ride/red/{_z}/{_x}/{_y}.jpg",
@@ -144,17 +145,17 @@ internal class ApiControllerV1 : GenericController
         return BadRequest($"Map type is not available: '{_mapType}'");
       }
 
-      var mapCacheSize = p_appConfig.MapTilesCacheSize;
-      if (mapCacheSize != null && mapCacheSize.Value > 0)
-        p_tilesCache.EnqueueUrl(_x.Value, _y.Value, _z.Value, _mapType, url);
-
       try
       {
         using var httpReq = new HttpRequestMessage(HttpMethod.Get, url);
-        using var httpRes = await p_httpClientProvider.Value.SendAsync(httpReq, _ct);
+        using var httpRes = await p_httpClientProvider.HttpClient.SendAsync(httpReq, _ct);
         httpRes.EnsureSuccessStatusCode();
 
         var imageBytes = await httpRes.Content.ReadAsByteArrayAsync(_ct);
+
+        var mapCacheSize = p_appConfig.MapTilesCacheSize;
+        if (mapCacheSize != null && mapCacheSize.Value > 0)
+          await p_documentStorage.Tiles.WriteBlobAsync(_mapType, cacheKey, imageBytes, _ct);
 
         log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
         return Results.Bytes(imageBytes, httpRes.Content.Headers.ContentType?.ToString());
@@ -470,7 +471,7 @@ internal class ApiControllerV1 : GenericController
       var roomIdValid = false;
       while (!cts.IsCancellationRequested && !roomIdValid)
       {
-        roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
+        roomId = CommonUtilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
         roomIdValid = !p_documentStorage.Paths
           .ListDocumentsMeta(roomId)
           .Any();
@@ -483,7 +484,7 @@ internal class ApiControllerV1 : GenericController
       }
 
       log.Info($"**Handled** request **free room id** (__{roomId}__)");
-      return Results.Content(roomId, MimeTypes.Text, Encoding.UTF8);
+      return Results.Content(roomId, MimeTypes.Text.Mime, Encoding.UTF8);
     }
     catch (Exception ex)
     {

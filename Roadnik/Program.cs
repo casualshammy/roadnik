@@ -1,6 +1,6 @@
-﻿using Ax.Fw;
-using Ax.Fw.DependencyInjection;
-using Ax.Fw.Log;
+﻿using Ax.Fw.App;
+using Ax.Fw.App.Data;
+using Ax.Fw.App.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data;
@@ -8,11 +8,9 @@ using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
-using Roadnik.Server.Modules.HttpClientProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
 using Roadnik.Server.Modules.StravaCredentialsController;
-using Roadnik.Server.Modules.TilesCache;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
 using Roadnik.Server.Modules.WsMsgController;
@@ -31,65 +29,51 @@ public partial class Program
       return;
     }
 
-    var lifetime = new Lifetime();
-    using var log = new GenericLog();
-    log.AttachConsoleLog();
-
     if (!Directory.Exists(appConfig.LogDirPath))
       Directory.CreateDirectory(appConfig.LogDirPath);
     if (!Directory.Exists(appConfig.DataDirPath))
       Directory.CreateDirectory(appConfig.DataDirPath);
 
-    log.AttachFileLog(() => Path.Combine(appConfig.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"), TimeSpan.FromSeconds(5));
-    lifetime.ToDisposeOnEnding(FileLoggerCleaner.Create(new DirectoryInfo(appConfig.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true, TimeSpan.FromHours(1)));
-
-    var version = Consts.AppVersion;
-    log.Info($"\n" +
-      $"-------------------------------------------\n" +
-      $"**Roadnik Server Started**\n" +
-      $"Version: __{version}__\n" +
-      $"Address: __{appConfig.BindIp}:{appConfig.BindPort}__\n" +
-      $"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}\n" +
-      $"-------------------------------------------");
-
-    var depMgr = AppDependencyManager
-      .Create()
-      .AddSingleton<ILog>(log)
-      .AddSingleton<IDbProvider>(new DbProviderImpl(lifetime, log["db-provider"], appConfig))
-      .AddSingleton<ILifetime>(lifetime)
-      .AddSingleton<IReadOnlyLifetime>(lifetime)
+    var app = AppBase.Create()
+      .UseConsoleLog()
+      .UseFileLog(() => Path.Combine(appConfig.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"))
+      .UseFileLogRotate(new FileLogRotateDescription(new DirectoryInfo(appConfig.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true))
+      .UseHttpClient(new Dictionary<string, string> {
+        { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" }
+      })
       .AddSingleton<IAppConfig>(appConfig)
+      .AddSingleton<IDbProvider>(_ctx => new DbProviderImpl(_ctx.Locate<IReadOnlyLifetime>(), _ctx.Locate<ILog>()["db-provider"], appConfig))
       .AddSingleton<IReqRateLimiter>(new ReqRateLimiterImpl())
       .AddModule<FCMPublisherImpl, IFCMPublisher>()
       .AddModule<RoomsControllerImpl, IRoomsController>()
-      .AddModule<TilesCacheImpl, ITilesCache>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
-      .AddModule<HttpClientProviderImpl, IHttpClientProvider>()
       .AddModule<StravaCredentialsControllerImpl, IStravaCredentialsController>()
       .AddModule<WsMsgControllerImpl, IWsMsgController>()
+      .ActivateOnStart((ILog _log, IReadOnlyLifetime _lifetime) =>
+      {
+        var version = Consts.AppVersion;
+        _log.Info($"\n" +
+          $"-------------------------------------------\n" +
+          $"**Roadnik Server Started**\n" +
+          $"Version: __{version}__\n" +
+          $"Address: __{appConfig.BindIp}:{appConfig.BindPort}__\n" +
+          $"OS: {Environment.OSVersion} {(Environment.Is64BitOperatingSystem ? "x64" : "x86")}\n" +
+          $"-------------------------------------------");
+
+        _lifetime.DoOnEnded(() =>
+        {
+          _log.Info($"\n" +
+            $"-------------------------------------------\n" +
+            $"Roadnik Server stopped\n" +
+            $"-------------------------------------------");
+        });
+      })
       .ActivateOnStart<IWebServer>()
       .ActivateOnStart<IStravaCredentialsController>()
-      .ActivateOnStart<IWsMsgController>()
-      .Build();
+      .ActivateOnStart<IWsMsgController>();
 
-    lifetime.InstallConsoleCtrlCHook();
-
-    try
-    {
-      await Task.Delay(-1, lifetime.Token);
-    }
-    catch (OperationCanceledException) { }
-
-    var lifetimeEndDeadline = DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1);
-    await lifetime.OnEnd
-      .TakeUntil(lifetimeEndDeadline)
-      .LastOrDefaultAsync();
-
-    log.Info($"\n" +
-      $"-------------------------------------------\n" +
-      $"Server stopped\n" +
-      $"-------------------------------------------");
+    await app.RunWaitAsync();
   }
 
   [GeneratedRegex(@".+\.log")]

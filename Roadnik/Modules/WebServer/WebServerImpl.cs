@@ -1,4 +1,5 @@
-﻿using Ax.Fw.DependencyInjection;
+﻿using Ax.Fw.App.Interfaces;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
@@ -21,7 +22,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       ILog _logger,
       IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
-      ITilesCache _tilesCache,
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
@@ -31,7 +31,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         _logger["kestrel"],
         _webSocketCtrl,
         _roomsController,
-        _tilesCache,
         _reqRateLimiter,
         _fCMPublisher,
         _lifetime,
@@ -42,7 +41,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private readonly ILog p_logger;
   private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
-  private readonly ITilesCache p_tilesCache;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fCMPublisher;
   private readonly IHttpClientProvider p_httpClientProvider;
@@ -53,7 +51,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     ILog _logger,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,
-    ITilesCache _tilesCache,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fCMPublisher,
     IReadOnlyLifetime _lifetime,
@@ -63,7 +60,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_logger = _logger;
     p_webSocketCtrl = _webSocketCtrl;
     p_roomsController = _roomsController;
-    p_tilesCache = _tilesCache;
     p_reqRateLimiter = _reqRateLimiter;
     p_fCMPublisher = _fCMPublisher;
     p_httpClientProvider = _httpClientProvider;
@@ -157,7 +153,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       p_logger,
       p_webSocketCtrl,
       p_roomsController,
-      p_tilesCache,
       p_reqRateLimiter,
       p_fCMPublisher,
       p_httpClientProvider);

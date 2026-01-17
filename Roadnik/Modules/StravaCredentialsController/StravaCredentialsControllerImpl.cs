@@ -1,4 +1,5 @@
-﻿using Ax.Fw.DependencyInjection;
+﻿using Ax.Fw.App.Interfaces;
+using Ax.Fw.DependencyInjection;
 using Roadnik.Server.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -26,7 +27,7 @@ internal class StravaCredentialsControllerImpl : IStravaCredentialsController, I
     CancellationToken _ct)
   {
     using var loginFormReq = new HttpRequestMessage(HttpMethod.Get, "https://www.strava.com/login");
-    using var loginFormRes = await _httpClientProvider.Value.SendAsync(loginFormReq, _ct);
+    using var loginFormRes = await _httpClientProvider.HttpClient.SendAsync(loginFormReq, _ct);
     loginFormRes.EnsureSuccessStatusCode();
 
     var loginFormText = await loginFormRes.Content.ReadAsStringAsync(_ct);

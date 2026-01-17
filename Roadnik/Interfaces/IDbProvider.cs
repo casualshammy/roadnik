@@ -6,4 +6,5 @@ internal interface IDbProvider
 {
   IDocumentStorage GenericData { get; }
   IDocumentStorage Paths { get; }
+  IBlobStorage Tiles { get; }
 }

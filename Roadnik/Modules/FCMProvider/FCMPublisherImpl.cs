@@ -1,4 +1,5 @@
-﻿using Ax.Fw.DependencyInjection;
+﻿using Ax.Fw;
+using Ax.Fw.DependencyInjection;
 using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.JsonCtx;
@@ -83,7 +84,7 @@ internal class FCMPublisherImpl : IFCMPublisher, IAppModule<IFCMPublisher>
 #endif
 
     message.Headers.Add("Authorization", $"Bearer {token}");
-    using var content = new StringContent(json, Encoding.UTF8, Ax.Fw.MimeTypes.Json);
+    using var content = new StringContent(json, Encoding.UTF8, MimeTypes.Json.Mime);
     message.Content = content;
 
     using var response = await p_httpClient.SendAsync(message, _ct);

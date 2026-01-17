@@ -311,7 +311,7 @@ internal class OptionsPageViewModel : BaseViewModel
         }
       }
       if (roomId.IsNullOrEmpty())
-        roomId = Utilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
+        roomId = CommonUtilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false);
     }
 
     if (roomId == null)

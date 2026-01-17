@@ -7,10 +7,10 @@ export interface TimedStorageEntry {
   Latitude: number;
   Longitude: number;
   Altitude: number;
-  Speed?: number | undefined | null;
-  Accuracy?: number | undefined | null;
-  Battery?: number | undefined | null;
-  GsmSignal?: number | undefined | null;
-  Bearing?: number | undefined | null;
+  Speed?: number | null;
+  Accuracy?: number | null;
+  Battery?: number | null;
+  GsmSignal?: number | null;
+  Bearing?: number | null;
   HR?: number | null;
 }

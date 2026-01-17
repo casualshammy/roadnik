@@ -3,10 +3,9 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Storage.Interfaces;
-using Roadnik.Common.Data;
+using Roadnik.Server.Data;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
-using System.Reactive;
 using System.Reactive.Linq;
 
 namespace Roadnik.Server.Modules.DbProvider;
@@ -28,6 +27,24 @@ internal class DbProviderImpl : IDbProvider
       DocStorageJsonCtx.Default,
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
+    Tiles = _lifetime.ToDisposeOnEnding(new SqliteBlobStorage(
+      Path.Combine(_appConfig.DataDirPath, "tiles.v0.db"),
+      new StorageRetentionOptions(
+        [
+          new StorageRetentionRule(Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE, TimeSpan.FromDays(365), null),
+          new StorageRetentionRule(Consts.TILE_TYPE_STRAVA_HEATMAP_RUN, TimeSpan.FromDays(365), null),
+          new StorageRetentionRule(Consts.TILE_TYPE_TF_OPENCYCLEMAP, TimeSpan.FromDays(30), null),
+          new StorageRetentionRule(Consts.TILE_TYPE_TF_OUTDOORS, TimeSpan.FromDays(30), null),
+          new StorageRetentionRule(Consts.TILE_TYPE_TF_TRANSPORT, TimeSpan.FromDays(30), null),
+          new StorageRetentionRule(Consts.TILE_TYPE_CARTO_DARK, TimeSpan.FromDays(30), null)
+        ],
+        TimeSpan.FromDays(7),
+        _docs =>
+        {
+          foreach (var group in _docs.GroupBy(_ => _.Namespace))
+            _log.Info($"**Removed** __{group.Count()}__ **old tiles** from ns __'{group.Key}'__");
+        })));
+
     Observable
       .Interval(TimeSpan.FromHours(6))
       .StartWithDefault()
@@ -37,6 +54,7 @@ internal class DbProviderImpl : IDbProvider
         {
           GenericData.Flush(true);
           Paths.Flush(true);
+          Tiles.Flush(true);
         }
         catch (Exception ex)
         {
@@ -47,5 +65,6 @@ internal class DbProviderImpl : IDbProvider
 
   public IDocumentStorage GenericData { get; }
   public IDocumentStorage Paths { get; }
+  public IBlobStorage Tiles { get; }
 
 }

@@ -55,18 +55,17 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     {
       var context = global::Android.App.Application.Context;
       var stream = context.Assets?.Open("webApp/index.html");
-      return new WebResourceResponse(MimeTypes.Html, null, 200, "OK", p_corsAllowAllHeaders, stream);
+      return new WebResourceResponse(MimeTypes.Html.Mime, null, 200, "OK", p_corsAllowAllHeaders, stream);
     }
 
     var localFileMatch = GetLocalFileRegex().Match(url);
     if (localFileMatch.Success)
     {
       var relativePath = localFileMatch.Groups[1].Value;
-      var ext = Path.GetExtension(relativePath)?.TrimStart('.');
-
       var context = global::Android.App.Application.Context;
       var stream = context.Assets?.Open($"webApp/{relativePath}");
-      if (MimeLut.MimeLutTable.TryFindMimeTypeByExtension(ext, out var mime))
+      var mime = MimeTypes.GetMimeByExtension(relativePath);
+      if (mime != MimeTypes.Bin.Mime)
         return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, stream);
       else
         return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, stream);
@@ -76,7 +75,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     {
       if (p_webDataCache.TryGetStream(url, out var cachedStream, out var mime))
       {
-        if (mime == MimeTypes.Bin)
+        if (mime == MimeTypes.Bin.Mime)
           mime = null;
 
         return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, cachedStream);

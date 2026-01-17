@@ -64,8 +64,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
       var relativePath = localFileMatch.Groups[1].Value;
       var context = global::Android.App.Application.Context;
       var stream = context.Assets?.Open($"webApp/{relativePath}");
-      var mime = MimeTypes.GetMimeByExtension(relativePath);
-      if (mime != MimeTypes.Bin.Mime)
+      if (MimeTypes.TryGetMimeByExtension(relativePath, out var mime))
         return new WebResourceResponse(mime, null, 200, "OK", p_corsAllowAllHeaders, stream);
       else
         return new WebResourceResponse(null, null, 200, "OK", p_corsAllowAllHeaders, stream);

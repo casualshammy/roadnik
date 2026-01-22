@@ -17,5 +17,7 @@ internal interface IAppConfig
   public string? ThunderforestApiKey { get; init; }
   public long? MapTilesCacheSize { get; init; }
   public string? AdminApiKey { get; init; }
-
+  string? StravaTilesRideUrl { get; init; }
+  string? StravaTilesRunUrl { get; init; }
+  IReadOnlyDictionary<string, string> StravaTilesHeaders { get; init; }
 }

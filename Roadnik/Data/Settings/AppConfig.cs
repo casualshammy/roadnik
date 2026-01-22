@@ -1,26 +1,31 @@
 ﻿using Ax.Fw.Extensions;
 using Roadnik.Server.Interfaces;
+using Roadnik.Server.JsonCtx;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 
 namespace Roadnik.Server.Data.Settings;
 
-internal class AppConfig : IAppConfig
+internal record AppConfig(
+  string WebrootDirPath,
+  string LogDirPath,
+  string DataDirPath,
+  IPAddress BindIp,
+  int BindPort,
+  uint MaxPathPointsPerRoom,
+  double MaxPathPointAgeHours,
+  uint MinPathPointIntervalMs,
+  string FirebaseServiceAccountJsonPath,
+  string FirebaseProjectId,
+  string? ThunderforestApiKey,
+  long? MapTilesCacheSize,
+  string? AdminApiKey,
+  string? StravaTilesRideUrl,
+  string? StravaTilesRunUrl,
+  IReadOnlyDictionary<string, string> StravaTilesHeaders) : IAppConfig
 {
-  public required string WebrootDirPath { get; init; }
-  public required string LogDirPath { get; init; }
-  public required string DataDirPath { get; init; }
-  public required IPAddress BindIp { get; init; }
-  public required int BindPort { get; init; }
-  public required uint MaxPathPointsPerRoom { get; init; }
-  public required double MaxPathPointAgeHours { get; init; }
-  public required uint MinPathPointIntervalMs { get; init; }
-  public required string FirebaseServiceAccountJsonPath { get; init; }
-  public required string FirebaseProjectId { get; init; }
-  public required string? ThunderforestApiKey { get; init; }
-  public required long? MapTilesCacheSize { get; init; }
-  public required string? AdminApiKey { get; init; }
-
   public static bool TryCreateAppConfig(
     [NotNullWhen(true)] out AppConfig? _config)
   {
@@ -65,22 +70,29 @@ internal class AppConfig : IAppConfig
     if (long.TryParse(Environment.GetEnvironmentVariable("ROADNIK_MAP_TILES_CACHE_SIZE"), out var confMapTilesCacheSize))
       mapTilesCacheSize = confMapTilesCacheSize;
 
-    _config = new AppConfig
-    {
-      WebrootDirPath = webrootDirPath,
-      LogDirPath = logDirPath,
-      DataDirPath = dataDirPath,
-      BindIp = bindIp,
-      BindPort = bindPort,
-      MaxPathPointsPerRoom = maxPathPointsPerRoom,
-      MaxPathPointAgeHours = maxPathPointAgeHours,
-      MinPathPointIntervalMs = minPathPointIntervalMs,
-      FirebaseServiceAccountJsonPath = firebaseServiceAccountJsonPath,
-      FirebaseProjectId = firebaseProjectId,
-      ThunderforestApiKey = Environment.GetEnvironmentVariable("ROADNIK_TF_API_KEY"),
-      MapTilesCacheSize = mapTilesCacheSize,
-      AdminApiKey = Environment.GetEnvironmentVariable("ROADNIK_ADMIN_API_KEY"),
-    };
+    IReadOnlyDictionary<string, string>? stravaTilesHeaders = null;
+    var rawStravaTilesHeaders = Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_HEADERS");
+    if (!rawStravaTilesHeaders.IsNullOrWhiteSpace())
+      stravaTilesHeaders = JsonSerializer.Deserialize(rawStravaTilesHeaders, AppConfigJsonCtx.Default.IReadOnlyDictionaryStringString);
+
+    _config = new AppConfig(
+      webrootDirPath,
+      logDirPath,
+      dataDirPath,
+      bindIp,
+      bindPort,
+      maxPathPointsPerRoom,
+      maxPathPointAgeHours,
+      minPathPointIntervalMs,
+      firebaseServiceAccountJsonPath,
+      firebaseProjectId,
+      Environment.GetEnvironmentVariable("ROADNIK_TF_API_KEY"),
+      mapTilesCacheSize,
+      Environment.GetEnvironmentVariable("ROADNIK_ADMIN_API_KEY"),
+      Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_RIDE_URL"),
+      Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_RUN_URL"),
+      stravaTilesHeaders ?? ImmutableDictionary<string, string>.Empty);
+
     return true;
   }
 

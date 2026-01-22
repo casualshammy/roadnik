@@ -19,6 +19,7 @@ using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Toolkit;
+using System.Collections.Immutable;
 using System.Net;
 using System.Reactive.Linq;
 using System.Text;
@@ -133,8 +134,8 @@ internal class ApiControllerV1 : GenericController
         TILE_TYPE_TF_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
         TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-        TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://strava-heatmap.tiles.freemap.sk/ride/red/{_z}/{_x}/{_y}.jpg",
-        TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://strava-heatmap.tiles.freemap.sk/run/blue/{_z}/{_x}/{_y}.jpg",
+        TILE_TYPE_STRAVA_HEATMAP_RIDE => p_appConfig.StravaTilesRideUrl?.Replace("%z%", _z.ToString()).Replace("%x%", _x.ToString()).Replace("%y%", _y.ToString()),
+        TILE_TYPE_STRAVA_HEATMAP_RUN => p_appConfig.StravaTilesRunUrl?.Replace("%z%", _z.ToString()).Replace("%x%", _x.ToString()).Replace("%y%", _y.ToString()),
         TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
         _ => null
       };
@@ -148,6 +149,11 @@ internal class ApiControllerV1 : GenericController
       try
       {
         using var httpReq = new HttpRequestMessage(HttpMethod.Get, url);
+
+        if (_mapType == TILE_TYPE_STRAVA_HEATMAP_RIDE || _mapType == TILE_TYPE_STRAVA_HEATMAP_RUN)
+          foreach (var (headerName, headerValue) in p_appConfig.StravaTilesHeaders)
+            httpReq.Headers.Add(headerName, headerValue);
+
         using var httpRes = await p_httpClientProvider.HttpClient.SendAsync(httpReq, _ct);
         httpRes.EnsureSuccessStatusCode();
 
@@ -170,15 +176,10 @@ internal class ApiControllerV1 : GenericController
         log.Warn($"Can't download map tile (unauthorized)");
         return Results.Unauthorized();
       }
-      catch (OperationCanceledException)
-      {
-        log.Warn($"Operation cancelled");
-        return Results.NoContent();
-      }
     }
     catch (Exception ex)
     {
-      log.Error($"Error occured while trying to handle 'map tile {_mapType}/{_z}/{_x}/{_y}' request: {ex}");
+      log.Error($"Error occured while trying to handle map tile '{_mapType}/{_z}/{_x}/{_y}' request: {ex}");
       return InternalServerError(ex.Message);
     }
   }

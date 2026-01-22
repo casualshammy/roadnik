@@ -39,7 +39,7 @@ public partial class Program
       .UseFileLog(() => Path.Combine(appConfig.LogDirPath, $"{DateTimeOffset.UtcNow:yyyy-MM-dd}.log"))
       .UseFileLogRotate(new FileLogRotateDescription(new DirectoryInfo(appConfig.LogDirPath), false, GetLogFilesCleanerRegex(), TimeSpan.FromDays(30), true))
       .UseHttpClient(new Dictionary<string, string> {
-        { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36" }
+        { "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" },
       })
       .AddSingleton<IAppConfig>(appConfig)
       .AddSingleton<IDbProvider>(_ctx => new DbProviderImpl(_ctx.Locate<IReadOnlyLifetime>(), _ctx.Locate<ILog>()["db-provider"], appConfig))

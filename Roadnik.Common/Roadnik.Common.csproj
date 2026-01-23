@@ -9,8 +9,8 @@
 		</PropertyGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw" Version="14.5.269" />
-				<PackageReference Include="Ax.Fw.Storage" Version="14.5.269" />
+				<PackageReference Include="Ax.Fw" Version="14.5.271" />
+				<PackageReference Include="Ax.Fw.Storage" Version="14.5.271" />
 		</ItemGroup>
 
 </Project>

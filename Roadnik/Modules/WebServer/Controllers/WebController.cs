@@ -1,24 +1,24 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Roadnik.Common.JsonCtx;
-using Roadnik.Server.Attributes;
-using Roadnik.Server.Data.WebServer;
+﻿using Ax.Fw;
+using Ax.Fw.Web.Data;
+using Ax.Fw.Web.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.Toolkit;
+using System.Net;
 
 namespace Roadnik.Server.Modules.WebServer.Controllers;
 
-internal class WebController : GenericController
+internal class WebController
 {
   private readonly IAppConfig p_appConfig;
 
-  public WebController(IAppConfig _appConfig) : base(RestJsonCtx.Default)
+  public WebController(IAppConfig _appConfig)
   {
     p_appConfig = _appConfig;
   }
 
-  public override void RegisterPaths(WebApplication _app)
+  public void RegisterPaths(WebApplication _app)
   {
-    var ctrlInfo = new ControllerInfo("web-ctrl");
+    var ctrlInfo = new RestControllerInfo("web-ctrl", "web-ctrl");
 
     _app.MapMethods("/r/", ["HEAD"], () => Results.Ok()).WithMetadata(ctrlInfo);
     _app.MapGet("/", GetIndexFile).WithMetadata(ctrlInfo);
@@ -27,58 +27,43 @@ internal class WebController : GenericController
   }
 
   public IResult GetIndexFile(
-    HttpRequest _httpRequest,
-    IScopedLog _log)
-    => GetStaticFile(_httpRequest, _log, "/");
+    IScopedLog _log,
+    IRequestToolkit _reqToolkit)
+    => GetStaticFile(_log, _reqToolkit, "/");
 
   public IResult GetRoomStaticFile(
-    HttpRequest _httpRequest,
     IScopedLog _log,
+    IRequestToolkit _reqToolkit,
     [FromRoute(Name = "path")] string? _path)
   {
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
 
-    return GetStaticFile(_httpRequest, _log, $"room/{_path}");
+    return GetStaticFile(_log, _reqToolkit, $"room/{_path}");
   }
 
-  [FailToBan]
+  [FailToBan(10, HttpStatusCode.NotFound)]
   public IResult GetStaticFile(
-    HttpRequest _httpRequest,
     IScopedLog _log,
+    IRequestToolkit _reqToolkit,
     [FromRoute(Name = "path")] string _path)
   {
-    try
-    {
-      _log.Info($"Requested **static path** __{_path}__");
+    _log.Info($"Requested **static path** __{_path}__");
 
-      if (string.IsNullOrWhiteSpace(_path) || _path == "/")
-        _path = "index.html";
+    if (string.IsNullOrWhiteSpace(_path) || _path == "/")
+      _path = "index.html";
 
-      var path = Path.Combine(p_appConfig.WebrootDirPath, _path);
-      if (!File.Exists(path))
-      {
-        _log.Warn($"File '{_path}' is not found");
-        return NotFound();
-      }
+    var path = Path.Combine(p_appConfig.WebrootDirPath, _path);
+    if (!File.Exists(path))
+      return _reqToolkit.NotFound();
 
-      if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
-      {
-        _log.Warn($"Tried to get file not from webroot: '{_path}'");
-        return Forbidden(string.Empty);
-      }
+    if (_path.Contains("./") || _path.Contains(".\\") || _path.Contains("../") || _path.Contains("..\\"))
+      return _reqToolkit.Forbidden($"Tried to get file not from webroot: '{_path}'");
 
-      var mime = MimeMapping.MimeUtility.GetMimeMapping(path);
-      var stream = File.OpenRead(path);
+    var mime = MimeTypes.GetMimeByExtension(path);
+    var stream = File.OpenRead(path);
 
-      _log.Info($"**Handled** request of **static path** __{_path}__");
-      return Results.Stream(stream, mime);
-    }
-    catch (Exception ex)
-    {
-      _log.Error($"Error occured while trying to handle 'static path {_path}' request: {ex}");
-      return InternalServerError(ex.Message);
-    }
+    return Results.Stream(stream, mime);
   }
 
 }

@@ -10,7 +10,6 @@ using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
-using Roadnik.Server.Modules.StravaCredentialsController;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
 using Roadnik.Server.Modules.WsMsgController;
@@ -48,7 +47,6 @@ public partial class Program
       .AddModule<RoomsControllerImpl, IRoomsController>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
-      .AddModule<StravaCredentialsControllerImpl, IStravaCredentialsController>()
       .AddModule<WsMsgControllerImpl, IWsMsgController>()
       .ActivateOnStart((ILog _log, IReadOnlyLifetime _lifetime) =>
       {
@@ -70,7 +68,6 @@ public partial class Program
         });
       })
       .ActivateOnStart<IWebServer>()
-      .ActivateOnStart<IStravaCredentialsController>()
       .ActivateOnStart<IWsMsgController>();
 
     await app.RunWaitAsync();

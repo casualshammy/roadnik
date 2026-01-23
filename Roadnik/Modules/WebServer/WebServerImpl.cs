@@ -1,9 +1,10 @@
 ﻿using Ax.Fw.App.Interfaces;
 using Ax.Fw.DependencyInjection;
 using Ax.Fw.SharedTypes.Interfaces;
+using Ax.Fw.Web.Extensions;
+using Ax.Fw.Web.Middlewares;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
-using Roadnik.Server.Data.WebServer;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using Roadnik.Server.Modules.WebServer.Controllers;
@@ -48,7 +49,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private WebServerImpl(
     IAppConfig _appConfig,
     IDbProvider _documentStorage,
-    ILog _logger,
+    ILog _log,
     IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,
     IReqRateLimiter _reqRateLimiter,
@@ -57,7 +58,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     IHttpClientProvider _httpClientProvider)
   {
     p_documentStorage = _documentStorage;
-    p_logger = _logger;
+    p_logger = _log;
     p_webSocketCtrl = _webSocketCtrl;
     p_roomsController = _roomsController;
     p_reqRateLimiter = _reqRateLimiter;
@@ -68,20 +69,23 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     {
       try
       {
-        _logger.Info($"Starting server on {_appConfig.BindIp}:{_appConfig.BindPort}...");
+        _log.Info($"**Starting** server on __{_appConfig.BindIp}:{_appConfig.BindPort}__...");
 
         var life = _lifetime.GetChildLifetime();
         if (life == null)
           throw new InvalidOperationException("Failed to create child lifetime");
 
         using (var host = CreateWebHost(_appConfig, life))
+        {
+          _log.Info($"__Host__ **created**, **starting**...");
           await host.RunAsync(_lifetime.Token);
+        }
 
-        _logger.Info($"Server on {_appConfig.BindIp}:{_appConfig.BindPort} is stopped");
+        _log.Info($"**Server** on __{_appConfig.BindIp}:{_appConfig.BindPort}__ is **stopped**");
       }
       catch (Exception ex)
       {
-        _logger.Error($"Error in thread: {ex}");
+        _log.Error($"Error in thread: {ex}");
       }
     });
 
@@ -117,27 +121,27 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     builder.Services.AddSingleton(p_fCMPublisher);
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
+    builder.Services.AddCustomProblemDetails();
+    builder.Services.AddCustomRequestId();
+    builder.Services.AddCustomRequestLog();
+    builder.Services.AddRequestToolkit(RestJsonCtx.Default);
+    builder.Services.AddCorsMiddleware(
+      new HashSet<string>(["http://localhost:5173", "https://webapp.local", "http://webapp.local:5544"]),
+      new HashSet<string>(["GET", "POST", "OPTIONS", "HEAD"]),
+      new HashSet<string>(["User-Agent", "X-Requested-With", "If-Modified-Since", "Cache-Control", "Content-Type", "Range"]),
+      false);
     builder.Services.AddSingleton<FailToBanMiddleware>();
     builder.Services.AddScoped<LogMiddleware>();
-    builder.Services.AddScoped<IScopedLog>(_sp =>
-    {
-      var guid = Guid.NewGuid();
-      var httpCtx = _sp.GetRequiredService<IHttpContextAccessor>().HttpContext;
-      var ctrlInfo = httpCtx?.GetEndpoint()?.Metadata.GetMetadata<ControllerInfo>();
-
-      if (ctrlInfo == null)
-        return new ScopedLog(p_logger["unknown-ctrl"][guid.ToString()[..8]]);
-
-      return new ScopedLog(p_logger[ctrlInfo.LogScope][guid.ToString()[..8]]);
-    });
+    builder.Services.AddScoped<CommonErrorsHandlerMiddleware>();
 
     var app = builder.Build();
     app
       .UseMiddleware<LogMiddleware>()
-      .UseMiddleware<CorsMiddleware>(p_logger)
+      .UseMiddleware<CorsMiddleware>()
       .UseMiddleware<ForwardProxyMiddleware>()
       .UseMiddleware<FailToBanMiddleware>()
       .UseMiddleware<ApiTokenAuthMiddleware>(p_logger)
+      .UseMiddleware<CommonErrorsHandlerMiddleware>()
       .UseResponseCompression()
       .UseWebSockets(new WebSocketOptions()
       {
@@ -149,12 +153,9 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
     var apiCtrlV1 = new ApiControllerV1(
       _config,
-      p_documentStorage,
-      p_logger,
       p_webSocketCtrl,
       p_roomsController,
       p_reqRateLimiter,
-      p_fCMPublisher,
       p_httpClientProvider);
     apiCtrlV1.RegisterPaths(app);
 

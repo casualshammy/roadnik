@@ -12,6 +12,8 @@ internal static class Consts
   public const string TILE_TYPE_TF_TRANSPORT = "tf-transport";
   public const string TILE_TYPE_CARTO_DARK = "carto-dark";
 
+  public const string HEADER_CACHED_TILE = "X-Roadnik-Cached-Tile";
+
   public static SerializableVersion AppVersion { get; } = new(Assembly.GetExecutingAssembly()?.GetName()?.Version ?? new Version(0, 0, 0, 0));
 
 }

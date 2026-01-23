@@ -42,7 +42,7 @@ internal class WebController
     return GetStaticFile(_log, _reqToolkit, $"room/{_path}");
   }
 
-  [FailToBan(10, HttpStatusCode.NotFound)]
+  [FailToBan(10, 600, HttpStatusCode.NotFound)]
   public IResult GetStaticFile(
     IScopedLog _log,
     IRequestToolkit _reqToolkit,

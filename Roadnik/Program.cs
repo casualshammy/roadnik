@@ -1,6 +1,7 @@
 ﻿using Ax.Fw.App;
 using Ax.Fw.App.Data;
 using Ax.Fw.App.Extensions;
+using Ax.Fw.App.Interfaces;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Interfaces;
 using Roadnik.Server.Data;
@@ -13,6 +14,7 @@ using Roadnik.Server.Modules.RoomsController;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
 using Roadnik.Server.Modules.WsMsgController;
+using Roadnik.Server.Toolkit;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 
@@ -68,7 +70,11 @@ public partial class Program
         });
       })
       .ActivateOnStart<IWebServer>()
-      .ActivateOnStart<IWsMsgController>();
+      .ActivateOnStart<IWsMsgController>()
+      .ActivateOnStart((IReadOnlyLifetime _lifetime, ILog _log, IHttpClientProvider _httpClientProvider, IAppConfig _appConfig) =>
+      {
+        _ = new StravaTokenRefresher(_lifetime, _log["strava-token-refresher"], _httpClientProvider, _appConfig);
+      });
 
     await app.RunWaitAsync();
   }

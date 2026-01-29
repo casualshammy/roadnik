@@ -11,6 +11,7 @@ using Roadnik.Server.Modules.DbProvider;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
+using Roadnik.Server.Modules.StravaTilesProvider;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
 using Roadnik.Server.Modules.WsMsgController;
@@ -50,6 +51,7 @@ public partial class Program
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<WsMsgControllerImpl, IWsMsgController>()
+      .AddModule<StravaTilesProviderImpl, IStravaTilesProvider>()
       .ActivateOnStart((ILog _log, IReadOnlyLifetime _lifetime) =>
       {
         var version = Consts.AppVersion;
@@ -71,10 +73,7 @@ public partial class Program
       })
       .ActivateOnStart<IWebServer>()
       .ActivateOnStart<IWsMsgController>()
-      .ActivateOnStart((IReadOnlyLifetime _lifetime, ILog _log, IHttpClientProvider _httpClientProvider, IAppConfig _appConfig) =>
-      {
-        _ = new StravaTokenRefresher(_lifetime, _log["strava-token-refresher"], _httpClientProvider, _appConfig);
-      });
+      .ActivateOnStart<IStravaTilesProvider>();
 
     await app.RunWaitAsync();
   }

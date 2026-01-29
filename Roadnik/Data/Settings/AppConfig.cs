@@ -22,9 +22,7 @@ internal record AppConfig(
   string? ThunderforestApiKey,
   long? MapTilesCacheSize,
   string? AdminApiKey,
-  string? StravaTilesRideUrl,
-  string? StravaTilesRunUrl,
-  IReadOnlyDictionary<string, string> StravaTilesHeaders) : IAppConfig
+  string? StravaSession) : IAppConfig
 {
   public static bool TryCreateAppConfig(
     [NotNullWhen(true)] out AppConfig? _config)
@@ -70,11 +68,6 @@ internal record AppConfig(
     if (long.TryParse(Environment.GetEnvironmentVariable("ROADNIK_MAP_TILES_CACHE_SIZE"), out var confMapTilesCacheSize))
       mapTilesCacheSize = confMapTilesCacheSize;
 
-    IReadOnlyDictionary<string, string>? stravaTilesHeaders = null;
-    var rawStravaTilesHeaders = Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_HEADERS");
-    if (!rawStravaTilesHeaders.IsNullOrWhiteSpace())
-      stravaTilesHeaders = JsonSerializer.Deserialize(rawStravaTilesHeaders, AppConfigJsonCtx.Default.IReadOnlyDictionaryStringString);
-
     _config = new AppConfig(
       webrootDirPath,
       logDirPath,
@@ -89,9 +82,7 @@ internal record AppConfig(
       Environment.GetEnvironmentVariable("ROADNIK_TF_API_KEY"),
       mapTilesCacheSize,
       Environment.GetEnvironmentVariable("ROADNIK_ADMIN_API_KEY"),
-      Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_RIDE_URL"),
-      Environment.GetEnvironmentVariable("ROADNIK_STRAVA_TILES_RUN_URL"),
-      stravaTilesHeaders ?? ImmutableDictionary<string, string>.Empty);
+      Environment.GetEnvironmentVariable("ROADNIK_STRAVA_SESSION"));
 
     return true;
   }

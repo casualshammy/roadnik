@@ -82,6 +82,7 @@ internal class ApiControllerV1
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
+    IStravaTilesProvider _stravaTilesProvider,
     HttpContext _httpCtx,
     [FromQuery(Name = "x")] int? _x,
     [FromQuery(Name = "y")] int? _y,
@@ -89,13 +90,8 @@ internal class ApiControllerV1
     [FromQuery(Name = "type")] string? _mapType,
     CancellationToken _ct)
   {
-    _log.Info($"Requested **map tile** __{_mapType}/{_z}/{_x}/{_y}__");
-
     if (_x == null || _y == null || _z == null || _mapType == null)
-    {
-      _log.Warn($"Incorrect query!");
-      return _reqToolkit.BadRequest($"Incorrect query!");
-    }
+      return _reqToolkit.BadRequest($"Incorrect query ({_mapType}/{_z}/{_x}/{_y})!");
 
     var cacheKey = $"{_z}/{_x}/{_y}";
     {
@@ -114,24 +110,21 @@ internal class ApiControllerV1
       TILE_TYPE_TF_OPENCYCLEMAP => $"https://tile.thunderforest.com/cycle/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       TILE_TYPE_TF_OUTDOORS => $"https://tile.thunderforest.com/outdoors/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
       TILE_TYPE_TF_TRANSPORT => $"https://tile.thunderforest.com/transport/{_z}/{_x}/{_y}.png{tfApiKeyParam}",
-      TILE_TYPE_STRAVA_HEATMAP_RIDE => p_appConfig.StravaTilesRideUrl?.Replace("%z%", _z.ToString()).Replace("%x%", _x.ToString()).Replace("%y%", _y.ToString()),
-      TILE_TYPE_STRAVA_HEATMAP_RUN => p_appConfig.StravaTilesRunUrl?.Replace("%z%", _z.ToString()).Replace("%x%", _x.ToString()).Replace("%y%", _y.ToString()),
+      TILE_TYPE_STRAVA_HEATMAP_RIDE => $"https://content-a.strava.com/identified/globalheat/ride/red/{_z}/{_x}/{_y}.png",
+      TILE_TYPE_STRAVA_HEATMAP_RUN => $"https://content-a.strava.com/identified/globalheat/run/blue/{_z}/{_x}/{_y}.png",
       TILE_TYPE_CARTO_DARK => $"https://basemaps.cartocdn.com/dark_all/{_z}/{_x}/{_y}.png",
       _ => null
     };
 
     if (url == null)
-    {
-      _log.Warn($"Map type is not available: '{_mapType}'");
       return _reqToolkit.BadRequest($"Map type is not available: '{_mapType}'");
-    }
 
     try
     {
       using var httpReq = new HttpRequestMessage(HttpMethod.Get, url);
 
       if (_mapType == TILE_TYPE_STRAVA_HEATMAP_RIDE || _mapType == TILE_TYPE_STRAVA_HEATMAP_RUN)
-        foreach (var (headerName, headerValue) in p_appConfig.StravaTilesHeaders)
+        foreach (var (headerName, headerValue) in _stravaTilesProvider.Headers)
           httpReq.Headers.Add(headerName, headerValue);
 
       using var httpRes = await p_httpClientProvider.HttpClient.SendAsync(httpReq, _ct);
@@ -142,6 +135,8 @@ internal class ApiControllerV1
       var mapCacheSize = p_appConfig.MapTilesCacheSize;
       if (mapCacheSize != null && mapCacheSize.Value > 0)
         await _dbProvider.Tiles.WriteBlobAsync(_mapType, cacheKey, imageBytes, _ct);
+
+      _log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
 
       return Results.Bytes(imageBytes, httpRes.Content.Headers.ContentType?.ToString());
     }

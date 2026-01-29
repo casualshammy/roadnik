@@ -26,7 +26,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
-      IHttpClientProvider _httpClientProvider) => new WebServerImpl(
+      IHttpClientProvider _httpClientProvider,
+      IStravaTilesProvider _stravaTilesProvider) => new WebServerImpl(
         _appConfig,
         _documentStorage,
         _logger["kestrel"],
@@ -35,7 +36,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         _reqRateLimiter,
         _fCMPublisher,
         _lifetime,
-        _httpClientProvider));
+        _httpClientProvider,
+        _stravaTilesProvider));
   }
 
   private readonly IDbProvider p_documentStorage;
@@ -45,6 +47,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fCMPublisher;
   private readonly IHttpClientProvider p_httpClientProvider;
+  private readonly IStravaTilesProvider p_stravaTilesProvider;
 
   private WebServerImpl(
     IAppConfig _appConfig,
@@ -55,7 +58,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fCMPublisher,
     IReadOnlyLifetime _lifetime,
-    IHttpClientProvider _httpClientProvider)
+    IHttpClientProvider _httpClientProvider,
+    IStravaTilesProvider _stravaTilesProvider)
   {
     p_documentStorage = _documentStorage;
     p_logger = _log;
@@ -64,6 +68,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     p_reqRateLimiter = _reqRateLimiter;
     p_fCMPublisher = _fCMPublisher;
     p_httpClientProvider = _httpClientProvider;
+    p_stravaTilesProvider = _stravaTilesProvider;
 
     var thread = new Thread(async () =>
     {
@@ -121,6 +126,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     builder.Services.AddSingleton(p_fCMPublisher);
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
+    builder.Services.AddSingleton(p_stravaTilesProvider);
     builder.Services.AddCustomProblemDetails();
     builder.Services.AddCustomRequestId();
     builder.Services.AddCustomRequestLog();

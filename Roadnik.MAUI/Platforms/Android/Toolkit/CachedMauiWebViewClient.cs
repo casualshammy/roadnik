@@ -92,7 +92,7 @@ public partial class CachedMauiWebViewClient : MauiWebViewClient
     return base.ShouldInterceptRequest(_view, _request);
   }
 
-  [GeneratedRegex(@"map-tile\?type=[\w\-]+?&x=\d+&y=\d+&z=\d+$")]
+  [GeneratedRegex(@"map-tile/[\w\-]+/\d+/\d+/\d+\.png$")]
   private static partial Regex CacheRegexMapTiles();
   [GeneratedRegex(@"\.js$")]
   private static partial Regex CacheRegexJs();

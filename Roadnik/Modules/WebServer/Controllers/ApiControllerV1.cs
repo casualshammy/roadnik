@@ -56,7 +56,7 @@ internal class ApiControllerV1
     var apiGroup = _app.MapGroup("/api/v1/");
     apiGroup.MapGet(ReqPaths.GET_VERSION, GetVersion).WithMetadata(ctrlInfo);
     apiGroup.MapGet("/ping", () => Results.Ok()).WithMetadata(ctrlInfo);
-    apiGroup.MapGet("/map-tile", GetMapTileAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapGet("/map-tile/{type}/{z:int}/{x:int}/{y:int}.png", GetMapTileAsync).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.STORE_PATH_POINT, StorePathPointAsync).WithMetadata(ctrlInfo);
     apiGroup.MapGet(ReqPaths.LIST_ROOM_PATH_POINTS, ListRoomPathPoints).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.CREATE_ROOM_POINT, CreateRoomPointAsync).WithMetadata(ctrlInfo);
@@ -84,15 +84,12 @@ internal class ApiControllerV1
     IDbProvider _dbProvider,
     IStravaTilesProvider _stravaTilesProvider,
     HttpContext _httpCtx,
-    [FromQuery(Name = "x")] int? _x,
-    [FromQuery(Name = "y")] int? _y,
-    [FromQuery(Name = "z")] int? _z,
-    [FromQuery(Name = "type")] string? _mapType,
+    [FromRoute(Name = "type")] string _mapType,
+    [FromRoute(Name = "z")] int _z,
+    [FromRoute(Name = "x")] int _x,
+    [FromRoute(Name = "y")] int _y,
     CancellationToken _ct)
   {
-    if (_x == null || _y == null || _z == null || _mapType == null)
-      return _reqToolkit.BadRequest($"Incorrect query ({_mapType}/{_z}/{_x}/{_y})!");
-
     var cacheKey = $"{_z}/{_x}/{_y}";
     {
       if (_dbProvider.Tiles.TryReadBlob(_mapType, cacheKey, out BlobStream? cachedStream, out var cachedMeta))

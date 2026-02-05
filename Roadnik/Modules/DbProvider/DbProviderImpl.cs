@@ -2,6 +2,7 @@
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Storage;
 using Ax.Fw.Storage.Data;
+using Ax.Fw.Storage.Data.Retention;
 using Ax.Fw.Storage.Interfaces;
 using Roadnik.Server.Data;
 using Roadnik.Server.Interfaces;
@@ -17,13 +18,13 @@ internal class DbProviderImpl : IDbProvider
     ILog _log,
     IAppConfig _appConfig)
   {
-    GenericData = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(_appConfig.DataDirPath, "data.v1.db"),
+    GenericData = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorageV2(
+      Path.Combine(_appConfig.DataDirPath, "data.v2.db"),
       DocStorageJsonCtx.Default,
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
-    Paths = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorage(
-      Path.Combine(_appConfig.DataDirPath, "paths.v1.db"),
+    Paths = _lifetime.ToDisposeOnEnding(new SqliteDocumentStorageV2(
+      Path.Combine(_appConfig.DataDirPath, "paths.v2.db"),
       DocStorageJsonCtx.Default,
       new StorageCacheOptions(1000, TimeSpan.FromHours(1))));
 
@@ -31,12 +32,18 @@ internal class DbProviderImpl : IDbProvider
       Path.Combine(_appConfig.DataDirPath, "tiles.v0.db"),
       new StorageRetentionOptions(
         [
-          new StorageRetentionRule(Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE, TimeSpan.FromDays(365), null),
-          new StorageRetentionRule(Consts.TILE_TYPE_STRAVA_HEATMAP_RUN, TimeSpan.FromDays(365), null),
-          new StorageRetentionRule(Consts.TILE_TYPE_TF_OPENCYCLEMAP, TimeSpan.FromDays(30), null),
-          new StorageRetentionRule(Consts.TILE_TYPE_TF_OUTDOORS, TimeSpan.FromDays(30), null),
-          new StorageRetentionRule(Consts.TILE_TYPE_TF_TRANSPORT, TimeSpan.FromDays(30), null),
-          new StorageRetentionRule(Consts.TILE_TYPE_CARTO_DARK, TimeSpan.FromDays(30), null)
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE, TimeSpan.FromDays(365), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_STRAVA_HEATMAP_RIDE, 1024*1024*1024),
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_STRAVA_HEATMAP_RUN, TimeSpan.FromDays(365), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_STRAVA_HEATMAP_RUN, 1024*1024*1024),
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_TF_OPENCYCLEMAP, TimeSpan.FromDays(30), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_TF_OPENCYCLEMAP, 1024*1024*1024),
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_TF_OUTDOORS, TimeSpan.FromDays(30), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_TF_OUTDOORS, 1024*1024*1024),
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_TF_TRANSPORT, TimeSpan.FromDays(30), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_TF_TRANSPORT, 1024*1024*1024),
+          new StorageRetentionRuleAge(Consts.TILE_TYPE_CARTO_DARK, TimeSpan.FromDays(30), null),
+          new StorageRetentionRuleTotalSize(Consts.TILE_TYPE_CARTO_DARK, 1024*1024*1024),
         ],
         TimeSpan.FromDays(7),
         _docs =>

@@ -17,7 +17,7 @@ public record TimedStorageEntry(
   float? Bearing = null,
   int? HR = null)
 {
-  public static TimedStorageEntry FromStorageEntry(DocumentEntry<StorageEntry> _document)
+  public static TimedStorageEntry FromStorageEntry(BlobEntry<StorageEntry> _document)
   {
     var data = _document.Data;
     return new TimedStorageEntry(

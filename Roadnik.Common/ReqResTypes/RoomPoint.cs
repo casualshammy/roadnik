@@ -10,7 +10,7 @@ public record RoomPoint(
   float Lng,
   string Description)
 {
-  public static RoomPoint From(DocumentEntry<RoomPointDocument> _doc)
+  public static RoomPoint From(BlobEntry<RoomPointDocument> _doc)
   {
     return new(
       _doc.Created.ToUnixTimeMilliseconds(),

@@ -17,9 +17,9 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.App" Version="14.5.277" />
-				<PackageReference Include="Ax.Fw.Log" Version="14.5.277" />
-				<PackageReference Include="Ax.Fw.Web" Version="14.5.277" />
+				<PackageReference Include="Ax.Fw.App" Version="15.0.278" />
+				<PackageReference Include="Ax.Fw.Log" Version="15.0.278" />
+				<PackageReference Include="Ax.Fw.Web" Version="15.0.278" />
 				<PackageReference Include="System.Linq.Async" Version="7.0.0" />
 		</ItemGroup>
 

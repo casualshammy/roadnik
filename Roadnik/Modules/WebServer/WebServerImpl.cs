@@ -129,7 +129,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     builder.Services.AddSingleton(p_stravaTilesProvider);
     builder.Services.AddCustomProblemDetails();
     builder.Services.AddCustomRequestId();
-    builder.Services.AddCustomRequestLog();
+    builder.Services.AddCustomRequestLog(true);
     builder.Services.AddRequestToolkit(RestJsonCtx.Default);
     builder.Services.AddCorsMiddleware(
       new HashSet<string>(["http://localhost:5173", "https://webapp.local", "http://webapp.local:5544"]),

@@ -32,7 +32,7 @@ public record StorageEntry(
       _req.HR);
   }
 
-  public static Guid GetAppIdFromDocumentKey(DocumentEntryMeta _meta)
+  public static Guid GetAppIdFromDocumentKey(BlobEntryMeta _meta)
   {
     var keyParts = _meta.Key.Split('.', 2);
     if (keyParts.Length != 2 || !Guid.TryParse(keyParts[0], out var appId))

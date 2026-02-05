@@ -5,7 +5,9 @@ using Ax.Fw.Log;
 using Ax.Fw.SharedTypes.Data.Log;
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui;
+using Maui.Android.InAppUpdates;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.BleDevicesManager;
 using Roadnik.MAUI.Modules.CompassProvider;
 using Roadnik.MAUI.Modules.DeepLinksController;
@@ -17,9 +19,8 @@ using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
 using System.Text.RegularExpressions;
-using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 using static Roadnik.MAUI.Data.Consts;
-using Roadnik.MAUI.JsonCtx;
+using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.MAUI;
 
@@ -100,6 +101,7 @@ public static partial class MauiProgram
       .CreateBuilder()
       .UseMauiApp<App>()
       .UseMauiCommunityToolkit()
+      .UseAndroidInAppUpdates()
       .ConfigureFonts(_fonts =>
       {
         _fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");

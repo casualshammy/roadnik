@@ -12,14 +12,14 @@ internal static class AndroidTaskExtensions
       p_tcs = _tcs;
     }
 
-    public void OnComplete(Android.Gms.Tasks.Task task)
+    public void OnComplete(Android.Gms.Tasks.Task _task)
     {
-      if (task.IsCanceled)
+      if (_task.IsCanceled)
         p_tcs.SetCanceled();
-      else if (task.IsSuccessful)
-        p_tcs.SetResult(task.Result);
-      else
-        p_tcs.SetException(task.Exception);
+      else if (_task.IsSuccessful)
+        p_tcs.SetResult(_task.Result);
+      else if (_task.Exception != null)
+        p_tcs.SetException(_task.Exception);
     }
   }
 

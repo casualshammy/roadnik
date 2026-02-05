@@ -40,7 +40,7 @@ jobs:
     - name: Install dotnet
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '9.0.x'
+        dotnet-version: '10.0.x'
       
     - name: Install python3   
       uses: actions/setup-python@v4
@@ -59,7 +59,7 @@ jobs:
         fetch-depth: 0
 
     - name: Build Client Android
-      run: python build-client.py --framework net9.0-android
+      run: python build-client.py --framework net10.0-android
       env:
         ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }} 
 

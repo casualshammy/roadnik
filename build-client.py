@@ -11,7 +11,7 @@ webAppSrcDir = os.path.join(os.getcwd(), "www-vue")
 webAppTargetDir = os.path.join(os.getcwd(), sourceDirName, "Resources\\Raw\\webApp")
 
 argParser = argparse.ArgumentParser()
-argParser.add_argument('--framework', type=str, default= "net9.0-android", required=False, help='Target framework of server')
+argParser.add_argument('--framework', type=str, default= "net10.0-android", required=False, help='Target framework of server')
 args = argParser.parse_args()
 framework: str = args.framework
 

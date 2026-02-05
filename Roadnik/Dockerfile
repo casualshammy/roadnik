@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-dotnet
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-dotnet
 ARG TARGETARCH
 WORKDIR /app
 RUN apt-get update && apt-get -y install clang zlib1g-dev
@@ -14,7 +14,7 @@ RUN npm i
 RUN npm run build
 COPY ./www-main-page ./dist
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0 as final
+FROM mcr.microsoft.com/dotnet/runtime:10.0 as final
 EXPOSE 8080
 WORKDIR /app
 COPY --from=build-dotnet /app/out ./bin

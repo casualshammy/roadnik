@@ -16,52 +16,48 @@
         <VerticalStackLayout
             AbsoluteLayout.LayoutFlags="All"
             AbsoluteLayout.LayoutBounds="0,0,1,1">
-            <ListView 
+            <CollectionView 
                 x:Name="p_listView"
-                HasUnevenRows="True"
-                ItemTapped="ListView_ItemTapped"
                 SelectionMode="None"
-                SeparatorVisibility="None">
-                <ListView.ItemTemplate>
+                SelectionChanged="CollectionView_SelectionChanged">
+                <CollectionView.ItemTemplate>
                     <DataTemplate
                         x:DataType="data:BookmarkEntryWrapper">
-                        <ViewCell>
-                            <SwipeView 
-                                Threshold="60">
-                                <SwipeView.RightItems>
-                                    <SwipeItems 
-                                        Mode="Execute">
-                                        <SwipeItem
-                                            Text="{x:Static l:AppResources.page_bookmarks_delete}"
-                                            BackgroundColor="OrangeRed"
-                                            IconImageSource="trash_bin.svg"
-                                            Command="{Binding OnDeleteCommand}"
-                                            CommandParameter="{Binding}" />
-                                    </SwipeItems>
-                                </SwipeView.RightItems>
-                                <Border 
-                                    BackgroundColor="{AppThemeBinding Light=LightGray, Dark=DarkGray}"
-                                    Margin="6, 2"
-                                    VerticalOptions="Fill">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="10,10,10,10" />
-                                    </Border.StrokeShape>
-                                    <VerticalStackLayout
-                                        Margin="10, 0"
-                                        VerticalOptions="Center">
-                                        <Label 
-                                            Text="{Binding LocalizedRoomId}"
-                                            TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
-                                        <Label 
-                                            Text="{Binding LocalizedUsername }"
-                                            TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
-                                    </VerticalStackLayout>
-                                </Border>
-                            </SwipeView>
-                        </ViewCell>
+                        <SwipeView 
+                            Threshold="60">
+                            <SwipeView.RightItems>
+                                <SwipeItems 
+                                    Mode="Execute">
+                                    <SwipeItem
+                                        Text="{x:Static l:AppResources.page_bookmarks_delete}"
+                                        BackgroundColor="OrangeRed"
+                                        IconImageSource="trash_bin.svg"
+                                        Command="{Binding OnDeleteCommand}"
+                                        CommandParameter="{Binding}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <Border 
+                                BackgroundColor="{AppThemeBinding Light=LightGray, Dark=DarkGray}"
+                                Margin="6, 2"
+                                VerticalOptions="Fill">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10,10,10,10" />
+                                </Border.StrokeShape>
+                                <VerticalStackLayout
+                                    Margin="10, 0"
+                                    VerticalOptions="Center">
+                                    <Label 
+                                        Text="{Binding LocalizedRoomId}"
+                                        TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
+                                    <Label 
+                                        Text="{Binding LocalizedUsername }"
+                                        TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </SwipeView>
                     </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
             <HorizontalStackLayout
                 HorizontalOptions="Center"
                 Margin="0, 20, 0, 0"

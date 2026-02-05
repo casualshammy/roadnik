@@ -295,7 +295,7 @@ internal class OptionsPageViewModel : BaseViewModel
 
     var modeEdit = "Edit value manually";
     var modeGenerate = "Generate new random id";
-    var mode = await currentPage.DisplayActionSheet("What would you like to do?", "Cancel", null, modeEdit, modeGenerate);
+    var mode = await currentPage.DisplayActionSheetAsync("What would you like to do?", "Cancel", null, modeEdit, modeGenerate);
     if (mode == null)
       return;
 
@@ -401,7 +401,7 @@ internal class OptionsPageViewModel : BaseViewModel
 
     var and = "Time AND distance";
     var or = "Time OR distance";
-    var result = await currentPage.DisplayActionSheet("Trackpoint reporting condition", null, null, and, or);
+    var result = await currentPage.DisplayActionSheetAsync("Trackpoint reporting condition", null, null, and, or);
     if (result == null)
       return;
 
@@ -459,7 +459,7 @@ internal class OptionsPageViewModel : BaseViewModel
       var body = L.page_options_power_mode_accuracy_warning
         .Replace("%min-location-accuracy%", L.page_options_tracking_required_accuracy);
 
-      await currentPage.DisplayAlert(
+      await currentPage.DisplayAlertAsync(
         L.page_options_power_mode_accuracy_warning_title,
         body,
         "OK");

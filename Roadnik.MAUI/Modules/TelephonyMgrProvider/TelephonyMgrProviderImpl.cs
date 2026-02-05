@@ -61,11 +61,13 @@ internal class TelephonyMgrProviderImpl : ITelephonyMgrProvider, IAppModule<ITel
       // we cast to specific type because getting value of abstract field `CellSignalStrength` raises exception
       if (info is CellInfoWcdma wcdma && wcdma.CellSignalStrength != null)
         signalStrength = Math.Max(signalStrength, NormalizeSignalLevel(wcdma.CellSignalStrength.Level));
+      else if (OperatingSystem.IsAndroidVersionAtLeast(29) && info is CellInfoNr nr && nr.CellSignalStrength != null)
+        signalStrength = Math.Max(signalStrength, NormalizeSignalLevel(nr.CellSignalStrength.Level));
       else if (info is CellInfoGsm gsm && gsm.CellSignalStrength != null)
         signalStrength = Math.Max(signalStrength, NormalizeSignalLevel(gsm.CellSignalStrength.Level));
       else if (info is CellInfoLte lte && lte.CellSignalStrength != null)
         signalStrength = Math.Max(signalStrength, NormalizeSignalLevel(lte.CellSignalStrength.Level));
-      else if (info is CellInfoCdma cdma && cdma.CellSignalStrength != null)
+      else if (OperatingSystem.IsAndroidVersionAtLeast(29) && info is CellInfoTdscdma cdma && cdma.CellSignalStrength != null)
         signalStrength = Math.Max(signalStrength, NormalizeSignalLevel(cdma.CellSignalStrength.Level));
     }
     return signalStrength;

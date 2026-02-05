@@ -73,7 +73,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
       return;
     }
 
-    var result = await p_pagesController.CurrentPage.Dispatcher.DispatchAsync(() => p_pagesController.CurrentPage.DisplayAlert(
+    var result = await p_pagesController.CurrentPage.Dispatcher.DispatchAsync(() => p_pagesController.CurrentPage.DisplayAlertAsync(
       $"Do you want to switch server/room?",
       $"New address: '{newServerAddress}'.\nNew room id: '{newRoomId}'\nYour previous address will be not saved.",
       "Yes",

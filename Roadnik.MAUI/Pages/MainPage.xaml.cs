@@ -440,7 +440,7 @@ public partial class MainPage : CContentPage
     {
       animation.Dispose();
       button.IsEnabled = true;
-      await p_goToMyLocationImage.RotateTo(0, 250);
+      await p_goToMyLocationImage.RotateToAsync(0, 250);
     }
   }
 
@@ -450,7 +450,7 @@ public partial class MainPage : CContentPage
     var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
     if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
     {
-      await DisplayAlert("Room id is invalid", null, "Ok");
+      await DisplayAlertAsync("Room id is invalid", null, "Ok");
       return;
     }
 
@@ -458,7 +458,7 @@ public partial class MainPage : CContentPage
 
     var methodUrlLink = "Share link as text";
     var methodQrCode = "Share link as QR code";
-    var method = await DisplayActionSheet(null, null, null, methodUrlLink, methodQrCode);
+    var method = await DisplayActionSheetAsync(null, null, null, methodUrlLink, methodQrCode);
     if (method == null)
       return;
 
@@ -634,7 +634,7 @@ public partial class MainPage : CContentPage
     if (p_powerManager.IsIgnoringBatteryOptimizations(context.PackageName))
       return;
 
-    var dialogResult = await DisplayAlert(
+    var dialogResult = await DisplayAlertAsync(
       L.page_main_battery_optimization_title,
       L.page_main_battery_optimization_body,
       "OK",

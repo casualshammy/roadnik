@@ -4,6 +4,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using static Roadnik.MAUI.Data.Consts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
@@ -13,6 +14,7 @@ public partial class BookmarksPage : CContentPage
 {
   private readonly IPreferencesStorage p_preferences;
   private readonly ConcurrentDictionary<int, BookmarkEntryWrapper> p_bookmarks = new();
+  private readonly ObservableCollection<BookmarkEntryWrapper> p_bookmarksObservable = new();
   private readonly Command<BookmarkEntryWrapper> p_onDeleteCommand;
 
   public BookmarksPage()
@@ -26,10 +28,10 @@ public partial class BookmarksPage : CContentPage
     {
       var bookmark = _o.Bookmark;
       var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
-      if (p_bookmarks.TryRemove(hashCode, out _))
+      if (p_bookmarks.TryRemove(hashCode, out var removed))
       {
         p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
-        p_listView.ItemsSource = p_bookmarks.Values.ToArray();
+        p_bookmarksObservable.Remove(removed);
       }
     });
 
@@ -37,10 +39,12 @@ public partial class BookmarksPage : CContentPage
     foreach (var bookmark in bookmarks)
     {
       var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
-      p_bookmarks.TryAdd(hashCode, BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand));
+      var wrapper = BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand);
+      if (p_bookmarks.TryAdd(hashCode, wrapper))
+        p_bookmarksObservable.Add(wrapper);
     }
 
-    p_listView.ItemsSource = p_bookmarks.Values.ToArray();
+    p_listView.ItemsSource = p_bookmarksObservable;
   }
 
   protected override void OnAppearing()
@@ -54,12 +58,14 @@ public partial class BookmarksPage : CContentPage
     animation.Commit(p_pullRightLabel, "pullRightOpacity", 16, 5000);
   }
 
-  private async void ListView_ItemTapped(object _sender, ItemTappedEventArgs _e)
+  private async void CollectionView_SelectionChanged(object _sender, SelectionChangedEventArgs _e)
   {
-    if (_e.Item is not BookmarkEntryWrapper wrapper)
+    if (_e.CurrentSelection.FirstOrDefault() is not BookmarkEntryWrapper wrapper)
       return;
 
-    var dialogResult = await DisplayAlert(
+    ((CollectionView)_sender).SelectedItem = null;
+
+    var dialogResult = await DisplayAlertAsync(
       "Do you want to use the following credentials?",
       $"Room: {wrapper.Bookmark.RoomId}\nUsername: {wrapper.Bookmark.Username}",
       "Yes",
@@ -79,27 +85,28 @@ public partial class BookmarksPage : CContentPage
     var roomId = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
     if (roomId.IsNullOrWhiteSpace())
     {
-      await DisplayAlert("Current room id is empty", "Please go to options page and fill it", "Close");
+      await DisplayAlertAsync("Current room id is empty", "Please go to options page and fill it", "Close");
       return;
     }
 
     var username = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
     if (username.IsNullOrWhiteSpace())
     {
-      await DisplayAlert("Current username is empty", "Please go to options page and fill it", "Close");
+      await DisplayAlertAsync("Current username is empty", "Please go to options page and fill it", "Close");
       return;
     }
 
     var hashCode = HashCode.Combine(roomId, username);
     var bookmark = new BookmarkEntry(roomId, username);
-    if (!p_bookmarks.TryAdd(hashCode, BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand)))
+    var wrapper = BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand);
+    if (!p_bookmarks.TryAdd(hashCode, wrapper))
     {
-      await DisplayAlert("These credentials are already added to bookmarks", null, "Close");
+      await DisplayAlertAsync("These credentials are already added to bookmarks", null, "Close");
       return;
     }
 
     p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
-    p_listView.ItemsSource = p_bookmarks.Values.ToArray();
+    p_bookmarksObservable.Add(wrapper);
   }
 
 }

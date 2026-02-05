@@ -52,7 +52,7 @@ public partial class BleDevicesPageViewModel : BaseViewModel
 
     if (!p_deviceSearcher.IsBluetoothAvailable)
     {
-      await Shell.Current.DisplayAlert("Bluetooth is not available or turned off", "Please enable Bluetooth to scan for devices.", "OK");
+      await Shell.Current.DisplayAlertAsync("Bluetooth is not available or turned off", "Please enable Bluetooth to scan for devices.", "OK");
       return;
     }
 

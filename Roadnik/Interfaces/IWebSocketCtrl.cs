@@ -1,18 +1,16 @@
-﻿using Roadnik.Modules.WebSocketController.Parts;
+﻿using Ax.Fw.Web.Data.WsServer;
 using System.Net.WebSockets;
 
-namespace Roadnik.Interfaces;
+namespace Roadnik.Server.Interfaces;
 
 public interface IWebSocketCtrl
 {
-  IObservable<object> IncomingMessages { get; }
-  IObservable<WebSocketSession> ClientConnected { get; }
+  IObservable<WebSocketSession<Guid, string>> ClientConnected { get; }
 
   Task<bool> AcceptSocketAsync(
     WebSocket _webSocket,
     string _roomId);
 
-  Task<int> BroadcastMsgAsync<T>(T _msg, CancellationToken _ct) where T : notnull;
-  Task SendMsgAsync<T>(WebSocketSession _session, T _msg, CancellationToken _ct) where T : notnull;
+  Task SendMsgAsync<T>(WebSocketSession<Guid, string> _session, T _msg, CancellationToken _ct) where T : notnull;
   Task SendMsgByRoomIdAsync<T>(string _roomId, T _msg, CancellationToken _ct) where T : notnull;
 }

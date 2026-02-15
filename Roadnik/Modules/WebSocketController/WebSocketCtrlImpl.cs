@@ -1,16 +1,11 @@
 ﻿using Ax.Fw.DependencyInjection;
 using Ax.Fw.SharedTypes.Interfaces;
-using Roadnik.Interfaces;
-using Roadnik.Modules.WebSocketController.Parts;
+using Ax.Fw.Web.Data.WsServer;
+using Ax.Fw.Web.Modules.WebSocketServer;
 using Roadnik.Server.Data.WebSockets;
+using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
-using Roadnik.Server.Toolkit;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.Server.Modules.WebSocketController;
@@ -21,179 +16,41 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   {
     return _ctx.CreateInstance((
       ILog _log,
-      IReadOnlyLifetime _lifetime) => new WebSocketCtrlImpl(_log, _lifetime));
+      IReadOnlyLifetime _lifetime) 
+      => new WebSocketCtrlImpl(_log["ws"], _lifetime));
   }
 
-  private readonly ILog p_log;
-  private readonly IReadOnlyLifetime p_lifetime;
-  private readonly ConcurrentDictionary<int, WebSocketSession> p_sessions = new();
-  private readonly Subject<object> p_incomingMsgs = new();
-  private readonly Subject<WebSocketSession> p_clientConnectedFlow = new();
-  private int p_sessionsCount = 0;
+  private readonly WebSocketServer<Guid, string> p_wsServer;
 
   private WebSocketCtrlImpl(
     ILog _log,
     IReadOnlyLifetime _lifetime)
   {
-    p_log = _log["ws"];
-    p_lifetime = _lifetime;
-
-    WsHelper.RegisterMsType("ws-msg-hello", typeof(WsMsgHello));
-    WsHelper.RegisterMsType("ws-msg-path-wiped", typeof(WsMsgPathWiped));
-    WsHelper.RegisterMsType("ws-msg-room-points-updated", typeof(WsMsgRoomPointsUpdated));
-    WsHelper.RegisterMsType("ws-msg-data-updated", typeof(WsMsgUpdateAvailable));
-    WsHelper.RegisterMsType("ws-msg-path-truncated", typeof(WsMsgPathTruncated));
-    WsHelper.RegisterSerializationContext(WebSocketJsonCtx.Default);
+    p_wsServer = new WebSocketServer<Guid, string>(
+      _lifetime,
+      WebSocketJsonCtx.Default,
+      new Dictionary<string, Type>
+      {
+        {"ws-msg-hello", typeof(WsMsgHello) },
+        {"ws-msg-path-wiped", typeof(WsMsgPathWiped) },
+        {"ws-msg-room-points-updated", typeof(WsMsgRoomPointsUpdated) },
+        {"ws-msg-data-updated", typeof(WsMsgUpdateAvailable) },
+        {"ws-msg-path-truncated", typeof(WsMsgPathTruncated) },
+      },
+      _onError: _e => _log.Error($"Error is ws server: {_e}"));
   }
 
-  public IObservable<object> IncomingMessages => p_incomingMsgs;
-  public IObservable<WebSocketSession> ClientConnected => p_clientConnectedFlow;
+  public IObservable<WebSocketSession<Guid, string>> ClientConnected => p_wsServer.ClientConnected;
 
   public async Task<bool> AcceptSocketAsync(
     WebSocket _webSocket,
     string _roomId)
-  {
-    if (_webSocket.State != WebSocketState.Open)
-      return false;
+    => await p_wsServer.AcceptSocketAsync(Guid.NewGuid(), _roomId, _webSocket);
 
-    var session = new WebSocketSession(_roomId, _webSocket);
-    using var semaphore = new SemaphoreSlim(0, 1);
-    using var scheduler = new EventLoopScheduler();
-
-    scheduler.ScheduleAsync(async (_s, _ct) => await CreateNewLoopAsync(session, semaphore));
-
-    try
-    {
-      await semaphore.WaitAsync(p_lifetime.Token);
-    }
-    catch (OperationCanceledException) { }
-    catch (Exception ex)
-    {
-      p_log.Error($"Waiting for loop is failed", ex);
-    }
-
-    return true;
-  }
-
-  public async Task<int> BroadcastMsgAsync<T>(T _msg, CancellationToken _ct) where T : notnull
-  {
-    var buffer = WsHelper.CreateWsMessage(_msg);
-
-    var totalSent = 0;
-    foreach (var (index, session) in p_sessions)
-    {
-      try
-      {
-        if (session.Socket.State == WebSocketState.Open)
-        {
-          await session.Socket.SendAsync(buffer, WebSocketMessageType.Text, true, _ct);
-          totalSent++;
-        }
-      }
-      catch (Exception ex)
-      {
-        p_log.Warn($"Can't send msg to socket '{index}': {ex}");
-      }
-    }
-    return totalSent;
-  }
-
-  public async Task SendMsgAsync<T>(WebSocketSession _session, T _msg, CancellationToken _ct) where T : notnull
-  {
-    var buffer = WsHelper.CreateWsMessage(_msg);
-
-    try
-    {
-      if (_session.Socket.State == WebSocketState.Open)
-        await _session.Socket.SendAsync(buffer, WebSocketMessageType.Text, true, _ct);
-    }
-    catch (Exception ex)
-    {
-      p_log.Warn($"Can't send msg to socket: {ex}");
-    }
-  }
+  public async Task SendMsgAsync<T>(WebSocketSession<Guid, string> _session, T _msg, CancellationToken _ct) where T : notnull
+    => await p_wsServer.SendMsgAsync(_session, _msg, false, _ct);
 
   public async Task SendMsgByRoomIdAsync<T>(string _roomId, T _msg, CancellationToken _ct) where T : notnull
-  {
-    foreach (var (_, session) in p_sessions)
-    {
-      if (session.RoomId != _roomId)
-        continue;
-
-      await SendMsgAsync(session, _msg, _ct);
-    }
-  }
-
-  private async Task CreateNewLoopAsync(
-    WebSocketSession _session,
-    SemaphoreSlim _completeSignal)
-  {
-    var session = _session;
-    var sessionIndex = Interlocked.Increment(ref p_sessionsCount);
-    p_sessions.TryAdd(sessionIndex, session);
-
-    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(60));
-
-    WebSocketReceiveResult? receiveResult = null;
-
-    var buffer = ArrayPool<byte>.Shared.Rent(100 * 1024);
-
-    try
-    {
-      p_clientConnectedFlow.OnNext(session);
-
-      receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
-
-      while (!receiveResult.CloseStatus.HasValue && !cts.IsCancellationRequested)
-      {
-        cts.CancelAfter(TimeSpan.FromMinutes(5));
-
-        try
-        {
-          var msg = WsHelper.ParseWsMessage(buffer, receiveResult.Count);
-          if (msg != null)
-            p_incomingMsgs.OnNext(msg);
-        }
-        finally
-        {
-          receiveResult = await session.Socket.ReceiveAsync(buffer, cts.Token);
-        }
-      }
-    }
-    catch (OperationCanceledException)
-    {
-      // don't care
-    }
-    catch (WebSocketException wsEx) when (wsEx.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
-    {
-      // don't care
-    }
-    catch (Exception ex)
-    {
-      p_log.Error($"Error occured in loop: {ex}");
-    }
-    finally
-    {
-      ArrayPool<byte>.Shared.Return(buffer, false);
-      p_sessions.TryRemove(sessionIndex, out _);
-    }
-
-    try
-    {
-      if (session.Socket.State == WebSocketState.Open)
-      {
-        if (receiveResult is not null)
-          await session.Socket.CloseAsync(receiveResult.CloseStatus ?? WebSocketCloseStatus.NormalClosure, receiveResult.CloseStatusDescription, CancellationToken.None);
-        else
-          await session.Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, $"Closed normally (session: '{sessionIndex}')", CancellationToken.None);
-      }
-    }
-    catch (Exception ex)
-    {
-      p_log.Error($"Error occured while closing websocket: {ex}");
-    }
-
-    _completeSignal.Release();
-  }
+    => await p_wsServer.BroadcastMsgAsync(_roomId, _msg, false, _ct);
 
 }

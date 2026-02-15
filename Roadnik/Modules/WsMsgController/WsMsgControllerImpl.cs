@@ -3,11 +3,8 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.Data;
 using Roadnik.Common.Toolkit;
-using Roadnik.Interfaces;
 using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
-using Roadnik.Server.Toolkit;
-using System.Net.WebSockets;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 
@@ -43,11 +40,11 @@ internal sealed class WsMsgControllerImpl : IWsMsgController, IAppModule<IWsMsgC
       {
         try
         {
-          var roomInfo = _roomsController.GetRoom(_client.RoomId);
+          var roomInfo = _roomsController.GetRoom(_client.SessionGroup);
           var maxPointsInRoom = roomInfo?.MaxPathPoints ?? _appConfig.MaxPathPointsPerRoom;
 
           var oldestEntriesLut = new Dictionary<Guid, DateTimeOffset>();
-          foreach (var doc in _dbProvider.Paths.ListDocuments<StorageEntry>(_client.RoomId))
+          foreach (var doc in _dbProvider.Paths.ListDocuments<StorageEntry>(_client.SessionGroup))
           {
             var appId = doc.Data.AppId;
             var created = doc.Created;
@@ -63,12 +60,11 @@ internal sealed class WsMsgControllerImpl : IWsMsgController, IAppModule<IWsMsgC
               _ => GenericToolkit.ConcealAppInstanceId(_.Key),
               _ => _.Value.ToUnixTimeMilliseconds()));
 
-          var helloMsg = WsHelper.CreateWsMessage(helloMsgData);
-          await _client.Socket.SendAsync(helloMsg, WebSocketMessageType.Text, true, _ct);
+          await _webSocketCtrl.SendMsgAsync(_client, helloMsgData, _ct);
         }
         catch (Exception ex)
         {
-          _log.Error($"Error while sending hello message to ws client in room {_client.RoomId}: {ex}");
+          _log.Error($"Error while sending hello message to ws client in room {_client.SessionGroup}: {ex}");
         }
       }, scheduler)
       .Subscribe(_lifetime);

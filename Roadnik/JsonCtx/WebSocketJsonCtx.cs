@@ -1,5 +1,5 @@
-﻿using Roadnik.Server.Data.WebSockets;
-using Roadnik.Server.Toolkit;
+﻿using Ax.Fw.Web.Data.WsServer;
+using Roadnik.Server.Data.WebSockets;
 using System.Text.Json.Serialization;
 
 namespace Roadnik.Server.JsonCtx;
@@ -11,6 +11,4 @@ namespace Roadnik.Server.JsonCtx;
 [JsonSerializable(typeof(WsMsgRoomPointsUpdated))]
 [JsonSerializable(typeof(WsMsgPathTruncated))]
 internal partial class WebSocketJsonCtx : JsonSerializerContext
-{
-
-}
+{ }

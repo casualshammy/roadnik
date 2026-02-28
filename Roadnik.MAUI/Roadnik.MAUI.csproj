@@ -10,6 +10,7 @@
 				<ImplicitUsings>enable</ImplicitUsings>
 				<Nullable>enable</Nullable>
 				<NeutralLanguage>en-US</NeutralLanguage>
+				<!--<UseMaterial3>true</UseMaterial3>-->
 
 				<ApplicationTitle>Roadnik</ApplicationTitle>
 				<ApplicationId>com.axiolab.roadnik</ApplicationId>
@@ -26,9 +27,9 @@
 				<AndroidSigningKeyStore>com.axiolab.roadnik</AndroidSigningKeyStore>
 				<AndroidSigningKeyAlias>key</AndroidSigningKeyAlias>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
-				<!--<EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>-->
-		</PropertyGroup>
+		<!--<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
+				<EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+		</PropertyGroup>-->
 
 		<ItemGroup>
 				<MauiIcon Include="Resources\AppIcon\appicon.svg" Color="CornflowerBlue" />

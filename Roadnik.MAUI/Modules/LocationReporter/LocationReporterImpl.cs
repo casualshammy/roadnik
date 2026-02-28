@@ -363,10 +363,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
-        //var interval = conf.TimeInterval.TotalSeconds < 2
-        //  ? conf.TimeInterval
-        //  : conf.TimeInterval.Add(-TimeSpan.FromSeconds(1));
-
         locationProvider.StartLocationWatcher(
           conf.LocationProviders,
           conf.TimeInterval);

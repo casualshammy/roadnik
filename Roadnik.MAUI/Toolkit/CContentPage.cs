@@ -15,12 +15,16 @@ public abstract class CContentPage : ContentPage
     p_pageController = Container.Locate<IPagesController>();
 
     var statusBarBehaviorApplied = Behaviors.OfType<StatusBarBehavior>().Any();
-    if (!statusBarBehaviorApplied && App.Current != null && App.Current.Resources.TryGetValue("Primary", out var primaryColor))
+    if (!statusBarBehaviorApplied && Application.Current != null)
     {
+      var theme = Application.Current.RequestedTheme;
+      if (theme == AppTheme.Unspecified)
+        theme = AppTheme.Dark;
+
       Behaviors.Add(new StatusBarBehavior
       {
-        StatusBarColor = (Color)primaryColor,
-        StatusBarStyle = StatusBarStyle.Default
+        StatusBarColor = theme == AppTheme.Dark ? Color.FromRgba(0f, 0f, 0f, 0f) : Color.FromRgba(255f, 255f, 255f, 0f),
+        StatusBarStyle = theme == AppTheme.Dark ? StatusBarStyle.LightContent : StatusBarStyle.DarkContent,
       });
     }
   }

@@ -1,15 +1,14 @@
-﻿using Ax.Fw.Cache;
+﻿using Ax.Fw.Storage.Interfaces;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Roadnik.MAUI.Interfaces;
 
 public interface IWebDataCache
 {
-  FileCache Cache { get; }
+  IBlobStorage Cache { get; }
 
   void EnqueueDownload(
-    string _url, 
-    string? _key = null);
+    string _url);
 
   bool TryGetStream(
     string _url,

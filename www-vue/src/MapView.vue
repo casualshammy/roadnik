@@ -48,6 +48,7 @@ import { MapInteractor } from "./parts/mapInteractor";
 import { getHeartRateString } from "./toolkit/commonToolkit";
 import { getCachedColor } from "./toolkit/mapToolkit";
 import type { AppId } from "./data/Guid";
+import { setupReachableCircle } from "./components/SelectedUserReachableCircle";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
@@ -108,6 +109,17 @@ function onMapCreated(_map: L.Map) {
 
   setupMap(_map);
   setupDataFlow(_map);
+  setupReachableCircle(
+    _map,
+    computed(() => p_mapState.value.selectedAppId),
+    computed(() => {
+      const appId = p_mapState.value.selectedAppId;
+      if (appId === null)
+        return undefined;
+
+      return p_gEntries.get(appId);
+    })
+  )
 }
 
 function setupMap(_map: L.Map) {
@@ -697,7 +709,7 @@ watch(computed(() => p_mapState.value.selectedAppId), _newAppId => {
   const value = _newAppId !== null
     ? (p_appIds.get(_newAppId) ?? undefined)
     : undefined;
-    
+
   pathsComboBoxSelectedEntry.value = value;
 }, { immediate: true });
 

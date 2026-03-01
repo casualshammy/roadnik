@@ -28,6 +28,17 @@
             x:Name="Switch"
             Toggled="Switch_Toggled"
             HorizontalOptions="End"
-            VerticalOptions="Center"/>
+            VerticalOptions="Center"
+            OnColor="{StaticResource Gray200}"
+            OffColor="{StaticResource Gray200}">
+            <Switch.Triggers>
+                <Trigger TargetType="Switch" Property="IsToggled" Value="True">
+                    <Setter Property="ThumbColor" Value="{StaticResource Primary}"/>
+                </Trigger>
+                <Trigger TargetType="Switch" Property="IsToggled" Value="False">
+                    <Setter Property="ThumbColor" Value="{AppThemeBinding Light={StaticResource Gray400}, Dark= {StaticResource Gray500}}"/>
+                </Trigger>
+            </Switch.Triggers>
+        </Switch>
     </Grid>
 </ContentView>

@@ -3,4 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Roadnik.MAUI.Resources.Styles.LightTheme">
 
+    <Color x:Key="Primary">CornflowerBlue</Color>
+    <Color x:Key="DangerLow">OrangeRed</Color>
+    <Color x:Key="Secondary">#DFD8F7</Color>
+    <Color x:Key="Tertiary">#2B0B98</Color>
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
+    <SolidColorBrush x:Key="DangerLowBrush" Color="{StaticResource DangerLow}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
+
 </ResourceDictionary>

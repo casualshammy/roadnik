@@ -8,7 +8,6 @@
             Stroke="DarkGray"
             StrokeShape="Ellipse">
         <ActivityIndicator
-            Color="{StaticResource Primary}"
             IsRunning="True" />
     </Border>
 

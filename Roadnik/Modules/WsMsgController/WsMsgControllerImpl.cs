@@ -40,11 +40,11 @@ internal sealed class WsMsgControllerImpl : IWsMsgController, IAppModule<IWsMsgC
       {
         try
         {
-          var roomInfo = _roomsController.GetRoom(_client.SessionGroup);
+          var roomInfo = _roomsController.GetRoom(_client.ClientGroup);
           var maxPointsInRoom = roomInfo?.MaxPathPoints ?? _appConfig.MaxPathPointsPerRoom;
 
           var oldestEntriesLut = new Dictionary<Guid, DateTimeOffset>();
-          foreach (var doc in _dbProvider.Paths.ListDocuments<StorageEntry>(_client.SessionGroup))
+          foreach (var doc in _dbProvider.Paths.ListDocuments<StorageEntry>(_client.ClientGroup))
           {
             var appId = doc.Data.AppId;
             var created = doc.Created;
@@ -64,7 +64,7 @@ internal sealed class WsMsgControllerImpl : IWsMsgController, IAppModule<IWsMsgC
         }
         catch (Exception ex)
         {
-          _log.Error($"Error while sending hello message to ws client in room {_client.SessionGroup}: {ex}");
+          _log.Error($"Error while sending hello message to ws client in room {_client.ClientGroup}: {ex}");
         }
       }, scheduler)
       .Subscribe(_lifetime);

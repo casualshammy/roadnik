@@ -28,6 +28,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
   {
     p_wsServer = new WebSocketServer<Guid, string>(
       _lifetime,
+      _log,
       WebSocketJsonCtx.Default,
       new Dictionary<string, Type>
       {
@@ -37,7 +38,7 @@ public class WebSocketCtrlImpl : IWebSocketCtrl, IAppModule<IWebSocketCtrl>
         {"ws-msg-data-updated", typeof(WsMsgUpdateAvailable) },
         {"ws-msg-path-truncated", typeof(WsMsgPathTruncated) },
       },
-      _onError: _e => _log.Error($"Error is ws server: {_e}"));
+      TimeSpan.FromHours(1));
   }
 
   public IObservable<WebSocketSession<Guid, string>> ClientConnected => p_wsServer.ClientConnected;

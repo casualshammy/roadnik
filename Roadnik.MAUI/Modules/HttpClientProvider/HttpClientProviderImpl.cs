@@ -1,4 +1,5 @@
 ﻿using Ax.Fw.DependencyInjection;
+using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Interfaces;
 

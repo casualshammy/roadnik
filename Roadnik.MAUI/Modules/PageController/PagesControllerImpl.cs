@@ -1,4 +1,5 @@
 ﻿using Ax.Fw.DependencyInjection;
+using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Interfaces;
 
 namespace Roadnik.MAUI.Modules.PageController;

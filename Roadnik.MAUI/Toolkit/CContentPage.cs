@@ -15,7 +15,10 @@ public abstract class CContentPage : ContentPage
     p_pageController = Container.Locate<IPagesController>();
 
     var statusBarBehaviorApplied = Behaviors.OfType<StatusBarBehavior>().Any();
-    if (!statusBarBehaviorApplied && Application.Current != null)
+    if (!statusBarBehaviorApplied 
+      && Application.Current != null 
+      && Application.Current.Resources.TryGetValue("Primary", out var rawPrimaryColor)
+      && rawPrimaryColor is Color primaryColor)
     {
       var theme = Application.Current.RequestedTheme;
       if (theme == AppTheme.Unspecified)
@@ -23,7 +26,7 @@ public abstract class CContentPage : ContentPage
 
       Behaviors.Add(new StatusBarBehavior
       {
-        StatusBarColor = theme == AppTheme.Dark ? Color.FromRgba(0f, 0f, 0f, 0f) : Color.FromRgba(255f, 255f, 255f, 0f),
+        StatusBarColor = theme == AppTheme.Dark ? primaryColor : primaryColor,
         StatusBarStyle = theme == AppTheme.Dark ? StatusBarStyle.LightContent : StatusBarStyle.DarkContent,
       });
     }

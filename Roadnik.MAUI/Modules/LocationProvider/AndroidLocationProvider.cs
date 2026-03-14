@@ -49,9 +49,12 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(LocationProviders _providers, TimeSpan _frequency)
+  public void StartLocationWatcher(LocationProviders _providers, TimeSpan _freq)
   {
-    var providers = new List<string>();
+    if (!p_locationService.IsLocationEnabled)
+      return;
+
+    var providers = new HashSet<string>();
     if ((_providers & LocationProviders.Gps) != 0)
       providers.Add(LocationManager.GpsProvider);
     if ((_providers & LocationProviders.Network) != 0)
@@ -59,29 +62,25 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     if ((_providers & LocationProviders.Passive) != 0)
       providers.Add(LocationManager.PassiveProvider);
 
-    StartLocationWatcher(providers, _frequency);
-  }
-
-  public void StartLocationWatcher(IReadOnlyList<string> _providers, TimeSpan _frequency)
-  {
-    if (!p_locationService.IsLocationEnabled)
-      return;
+    var frequency = !providers.Contains(LocationManager.GpsProvider)
+      ? TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 10))
+      : TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 1));
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
       lock (p_startStopLock)
       {
-        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {_frequency}...");
+        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {frequency}...");
         var result = new HashSet<string>();
 
-        foreach (var provider in _providers.Distinct())
+        foreach (var provider in providers)
         {
           if (!p_locationService.IsProviderEnabled(provider))
             continue;
 
           try
           {
-            p_locationService.RequestLocationUpdates(provider, (long)_frequency.TotalMilliseconds, 0f, this);
+            p_locationService.RequestLocationUpdates(provider, (long)frequency.TotalMilliseconds, 0f, this);
             result.Add(provider);
             p_logger.Info($"Subscribed to '{provider}' provider");
           }
@@ -91,7 +90,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
           }
         }
 
-        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {_frequency}");
+        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {frequency}");
       }
     });
   }

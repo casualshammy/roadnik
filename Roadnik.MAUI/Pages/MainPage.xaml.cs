@@ -1,5 +1,6 @@
 ﻿using Android.OS;
 using Android.Provider;
+using Android.Views;
 using AndroidX.Core.App;
 using Ax.Fw.Extensions;
 using Ax.Fw.Pools;
@@ -282,32 +283,6 @@ public partial class MainPage : CContentPage
         });
       });
 
-    p_pageIsVisible
-      .Subscribe(_ =>
-      {
-        //if (Build.VERSION.SdkInt >= BuildVersionCodes.VanillaIceCream)
-        //  return;
-
-        //var window = Platform.CurrentActivity?.Window;
-        //if (window == null)
-        //  return;
-
-       
-
-        //if (_)
-        //{
-        //  window.AddFlags(WindowManagerFlags.LayoutNoLimits);
-        //  window.AddFlags(WindowManagerFlags.TranslucentStatus);
-        //}
-        //else
-        //{
-        //  window.ClearFlags(WindowManagerFlags.LayoutNoLimits);
-        //  window.ClearFlags(WindowManagerFlags.TranslucentStatus);
-        //}
-
-        //window.SetStatusBarColor(Android.Graphics.Color.AliceBlue);
-      }, p_lifetime);
-
     p_log.Info($"Main page is opened");
   }
 
@@ -423,11 +398,11 @@ public partial class MainPage : CContentPage
         await p_mapInteractor.SetObservedUserAsync(null, true, p_lifetime.Token);
       }
 
-      var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(5), default);
+      var location = await AndroidLocationProvider.GetCurrentBestLocationAsync(TimeSpan.FromSeconds(2), default);
       if (location != null)
       {
-        var lat = location.Latitude.ToString(CultureInfo.InvariantCulture);
-        var lng = location.Longitude.ToString(CultureInfo.InvariantCulture);
+        var lat = location.Latitude.ToInvariantString();
+        var lng = location.Longitude.ToInvariantString();
         await p_mapInteractor.SetMapCenterAsync((float)location.Latitude, (float)location.Longitude, null, 500, p_lifetime.Token);
       }
     }

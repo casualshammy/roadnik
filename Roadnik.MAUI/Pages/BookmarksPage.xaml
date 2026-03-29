@@ -18,7 +18,7 @@
             AbsoluteLayout.LayoutBounds="0,0,1,1">
             <CollectionView 
                 x:Name="p_listView"
-                SelectionMode="None"
+                SelectionMode="Single"
                 SelectionChanged="CollectionView_SelectionChanged">
                 <CollectionView.ItemTemplate>
                     <DataTemplate

@@ -224,54 +224,46 @@ public partial class MainPage : CContentPage
             webAppLocationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1));
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
-            compassProvider.Values
-              .Sample(TimeSpan.FromMilliseconds(100))
-              .SelectAsync(async (_heading, _ct) =>
+            Observable
+              .CombineLatest(
+                compassProvider.Values
+                  .Sample(TimeSpan.FromMilliseconds(100)),
+                webAppLocationProvider.Location
+                  .Buffer(TimeSpan.FromSeconds(1)),
+                (_c, _l) => (Heading: _c, Locations: _l)
+              )
+              .SelectAsync(async (_tuple, _ct) =>
               {
-                if (_ct.IsCancellationRequested)
-                  return;
+                var (heading, locations) = _tuple;
 
-                try
-                {
-                  await MainThread.InvokeOnMainThreadAsync(async () =>
-                  {
-                    await p_mapInteractor.SetCompassHeadingAsync(_heading, _ct);
-                  });
-                }
-                catch (Exception ex)
-                {
-                  p_log.Error($"Can't handle compass change: {ex}");
-                }
-              })
-              .Subscribe(_life);
-
-            webAppLocationProvider.Location
-              .Buffer(TimeSpan.FromSeconds(1))
-              .SelectAsync(async (_locations, _ct) =>
-              {
-                if (_ct.IsCancellationRequested)
-                  return;
-
-                if (_locations.Count == 0)
-                  return;
-
-                var loc = _locations
+                var loc = locations
                   .OrderBy(_ => _.Accuracy)
-                  .First();
+                  .FirstOrDefault();
+
+                if (_ct.IsCancellationRequested)
+                  return;
 
                 try
                 {
                   await MainThread.InvokeOnMainThreadAsync(async () =>
                   {
-                    await p_mapInteractor.SetLocationAndHeadingAsync(loc, _ct);
+                    if (_ct.IsCancellationRequested)
+                      return;
 
-                    if (p_mapFollowingMe)
-                      await p_mapInteractor.SetMapCenterAsync((float)loc.Latitude, (float)loc.Longitude, _ct: _ct);
+                    if (loc != null)
+                    {
+                      await p_mapInteractor.SetLocationAndHeadingAsync(loc, _ct);
+
+                      if (p_mapFollowingMe)
+                        await p_mapInteractor.SetMapCenterAsync((float)loc.Latitude, (float)loc.Longitude, _ct: _ct);
+                    }
+
+                    await p_mapInteractor.SetCompassHeadingAsync(heading, _ct);
                   });
                 }
                 catch (Exception ex)
                 {
-                  p_log.Error($"Can't handle current location change: {ex}");
+                  p_log.Error($"Can't handle current location and compass change: {ex}");
                 }
               })
               .Subscribe(_life);

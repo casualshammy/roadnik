@@ -57,7 +57,8 @@ export class MapInteractor {
     _lat: number,
     _lng: number,
     _accuracy: number,
-    _heading: number | null
+    _heading: number | null,
+    _speed: number | null
   ): boolean {
     const map = this.p_map.value;
     if (map === undefined)
@@ -68,7 +69,7 @@ export class MapInteractor {
       console.log("Created current location marker");
     }
 
-    this.p_appCtx.currentLocation.updateLocationAndHeading(_lat, _lng, _accuracy, _heading);
+    this.p_appCtx.currentLocation.updateLocationAndHeading(_lat, _lng, _accuracy, _heading, _speed);
     return true;
   }
 

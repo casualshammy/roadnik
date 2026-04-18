@@ -45,8 +45,9 @@ internal class MapInteractor
     var lng = _loc.Longitude.ToString(CultureInfo.InvariantCulture);
     var acc = _loc.Accuracy.ToString(CultureInfo.InvariantCulture);
     var heading = (_loc.Course != null && _loc.Speed > 0.55f) ? _loc.Course.Value.ToString(CultureInfo.InvariantCulture) : "null";
+    var speed = _loc.Speed?.ToString(CultureInfo.InvariantCulture) ?? "null";
 
-    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setLocationAndHeading({lat},{lng},{acc},{heading})");
+    var rawResult = await p_webView.EvaluateJavaScriptAsync($"setLocationAndHeading({lat},{lng},{acc},{heading},{speed})");
     if (rawResult == null || !bool.TryParse(rawResult, out var result))
       throw new InvalidOperationException($"Can't set current location - js code returned null");
 

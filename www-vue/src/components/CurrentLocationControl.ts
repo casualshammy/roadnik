@@ -2,7 +2,12 @@ import { GenerateCircleIcon } from "../toolkit/mapToolkit";
 import L, { LatLngBounds, type LatLngExpression } from "leaflet";
 import 'leaflet-rotatedmarker';
 
+const SPEED_THRESHOLD_MS = 0.55; // m/s (~2 km/h)
+const REACH_VIEWPORT_SHORT = 1 / 6; // fraction of viewport height for the small circle
+const REACH_TIME_STEPS_S = [1, 2, 5, 10, 20, 30, 60].map(m => m * 60); // allowed time values in seconds
+
 export class CurrentLocationControl {
+  private static readonly p_reachCircleMarkerCache: Map<string, L.DivIcon> = new Map();
   private readonly p_map: L.Map;
   private readonly p_marker: L.Marker;
   private readonly p_accuracyCircle: L.Circle;
@@ -10,6 +15,11 @@ export class CurrentLocationControl {
   private readonly p_fixedCircleBg: L.CircleMarker;
   private readonly p_directionLine: L.Polyline;
   private readonly p_headingMarker: L.Marker;
+  private readonly p_reachCircleShort: L.Circle;
+  private readonly p_reachCircleLong: L.Circle;
+  private readonly p_reachLabelShort: L.Marker;
+  private readonly p_reachLabelLong: L.Marker;
+  private readonly p_speedSamples: { time: number; speed: number }[] = [];
 
   public constructor(_map: L.Map) {
     this.p_map = _map;
@@ -44,6 +54,38 @@ export class CurrentLocationControl {
     const directionLine = L.polyline([[0, 0], [0, 0]], { color: 'black', fillColor: '*', fillOpacity: 0.3, interactive: false, dashArray: [8] });
     this.p_directionLine = directionLine.addTo(_map);
 
+    this.p_reachCircleShort = L.circle([0, 0], {
+      radius: 0,
+      color: "#3388ff",
+      weight: 2,
+      dashArray: [6, 6],
+      fillOpacity: 0.04,
+      interactive: false,
+      opacity: 0,
+    }).addTo(_map);
+
+    this.p_reachCircleLong = L.circle([0, 0], {
+      radius: 0,
+      color: "#3388ff",
+      weight: 2,
+      dashArray: [6, 6],
+      fillOpacity: 0.02,
+      interactive: false,
+      opacity: 0,
+    }).addTo(_map);
+
+    this.p_reachLabelShort = L.marker([0, 0], {
+      icon: CurrentLocationControl.createReachLabelIcon(""),
+      interactive: false,
+      opacity: 0,
+    }).addTo(_map);
+
+    this.p_reachLabelLong = L.marker([0, 0], {
+      icon: CurrentLocationControl.createReachLabelIcon(""),
+      interactive: false,
+      opacity: 0,
+    }).addTo(_map);
+
     _map.on('zoomstart', _e => {
       this.p_marker.remove();
       this.p_accuracyCircle.remove();
@@ -51,6 +93,10 @@ export class CurrentLocationControl {
       this.p_fixedCircleBg.remove();
       this.p_headingMarker.remove();
       this.p_directionLine.remove();
+      this.p_reachCircleShort.remove();
+      this.p_reachCircleLong.remove();
+      this.p_reachLabelShort.remove();
+      this.p_reachLabelLong.remove();
     });
     _map.on('zoomend', _e => {
       this.p_marker.addTo(_map);
@@ -59,14 +105,21 @@ export class CurrentLocationControl {
       this.p_fixedCircleBg.addTo(_map).bringToBack();
       this.p_headingMarker.addTo(_map);
       this.p_directionLine.addTo(_map);
+      this.p_reachCircleShort.addTo(_map);
+      this.p_reachCircleLong.addTo(_map);
+      this.p_reachLabelShort.addTo(_map);
+      this.p_reachLabelLong.addTo(_map);
     });
+
+    setInterval(() => this.cleanUpSpeedHistoryEntries(), 1000);
   }
 
   public updateLocationAndHeading(
     _lat: number,
     _lng: number,
     _accuracy: number,
-    _heading: number | null
+    _heading: number | null,
+    _speed: number | null
   ): void {
     this.p_marker
       .setLatLng([_lat, _lng]);
@@ -91,6 +144,34 @@ export class CurrentLocationControl {
         .setRotationAngle(_heading)
         .setOpacity(1);
     }
+
+    const now = Date.now();
+    if (_speed != null)
+      this.p_speedSamples.push({ time: now, speed: _speed });
+
+    const avgSpeed = this.p_speedSamples.length > 0
+      ? this.p_speedSamples.reduce((sum, s) => sum + s.speed, 0) / this.p_speedSamples.length
+      : 0;
+
+    if (avgSpeed > SPEED_THRESHOLD_MS) {
+      const bounds = this.p_map.getBounds();
+      const viewportHeightM = this.p_map.distance(
+        [bounds.getNorth(), bounds.getCenter().lng],
+        [bounds.getSouth(), bounds.getCenter().lng]
+      );
+
+      const shortTargetM = viewportHeightM * REACH_VIEWPORT_SHORT;
+      const shortSnappedTimeS = CurrentLocationControl.snapTimeToStep(shortTargetM / avgSpeed);
+      const longSnappedTimeS = CurrentLocationControl.nextTimeStep(shortSnappedTimeS);
+
+      this.updateReachCircle(this.p_reachCircleShort, this.p_reachLabelShort, _lat, _lng, shortSnappedTimeS, avgSpeed, 0.04);
+      this.updateReachCircle(this.p_reachCircleLong,  this.p_reachLabelLong,  _lat, _lng, longSnappedTimeS,  avgSpeed, 0.02);
+    } else {
+      this.p_reachCircleShort.setStyle({ opacity: 0, fillOpacity: 0 });
+      this.p_reachCircleLong.setStyle({ opacity: 0, fillOpacity: 0 });
+      this.p_reachLabelShort.setOpacity(0);
+      this.p_reachLabelLong.setOpacity(0);
+    }
   }
 
   public updateCompass(
@@ -99,6 +180,58 @@ export class CurrentLocationControl {
     const center = this.p_marker.getLatLng();
     this.p_directionLine
       .setLatLngs([center, this.getDirectionLatLng(center.lat, center.lng, _heading, this.p_map.getBounds())]);
+  }
+
+  private cleanUpSpeedHistoryEntries(): void {
+    const cutoff = Date.now() - 10_000;
+    while (this.p_speedSamples.length > 0 && this.p_speedSamples[0].time < cutoff)
+      this.p_speedSamples.shift();
+
+    if (this.p_speedSamples.length === 0) {
+      this.p_reachCircleShort.setStyle({ opacity: 0, fillOpacity: 0 });
+      this.p_reachCircleLong.setStyle({ opacity: 0, fillOpacity: 0 });
+      this.p_reachLabelShort.setOpacity(0);
+      this.p_reachLabelLong.setOpacity(0);
+    }
+  }
+
+  private updateReachCircle(
+    _circle: L.Circle,
+    _label: L.Marker,
+    _lat: number,
+    _lng: number,
+    _snappedTimeS: number,
+    _avgSpeedMs: number,
+    _fillOpacity: number
+  ): void {
+    const radius = _snappedTimeS * _avgSpeedMs;
+    const minutes = _snappedTimeS / 60;
+    const labelText = minutes < 60 ? `${minutes} min` : `${(minutes / 60).toFixed(0)} h`;
+
+    _circle
+      .setLatLng([_lat, _lng])
+      .setRadius(radius)
+      .setStyle({ opacity: 1, fillOpacity: _fillOpacity });
+
+    // 1 degree of latitude ≈ 111320 meters
+    _label
+      .setLatLng([_lat + radius / 111320, _lng])
+      .setIcon(CurrentLocationControl.createReachLabelIcon(labelText))
+      .setOpacity(1);
+  }
+
+  private static snapTimeToStep(_timeS: number): number {
+    return REACH_TIME_STEPS_S.reduce((prev, curr) =>
+      Math.abs(curr - _timeS) < Math.abs(prev - _timeS) ? curr : prev
+    );
+  }
+
+  private static nextTimeStep(_currentTimeS: number): number {
+    const idx = REACH_TIME_STEPS_S.indexOf(_currentTimeS);
+    if (idx >= 0 && idx < REACH_TIME_STEPS_S.length - 1)
+      return REACH_TIME_STEPS_S[idx + 1];
+    
+    return _currentTimeS;
   }
 
   private getDirectionLatLng(
@@ -138,6 +271,32 @@ export class CurrentLocationControl {
     }
 
     return [_lat, _lng];
+  }
+
+  private static createReachLabelIcon(_text: string): L.DivIcon {
+    const icon = this.p_reachCircleMarkerCache.get(_text);
+    if (icon)
+      return icon;
+
+    const newIcon = L.divIcon({
+      className: "",
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+      html: `<div style="
+        background: rgba(255,255,255,0);
+        border: 1px solid #3388ff00;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1a56cc;
+        white-space: nowrap;
+        pointer-events: none;
+        text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+      ">${_text}</div>`,
+    });
+    this.p_reachCircleMarkerCache.set(_text, newIcon);
+    return newIcon;
   }
 
 }

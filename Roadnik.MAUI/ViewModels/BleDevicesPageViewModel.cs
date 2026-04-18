@@ -65,7 +65,7 @@ public partial class BleDevicesPageViewModel : BaseViewModel
     {
       Devices.Clear();
 
-      var scanTimeout = TimeSpan.FromSeconds(10);
+      var scanTimeout = TimeSpan.FromSeconds(5);
       using var scanTimedCts = new CancellationTokenSource(scanTimeout);
       using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(p_pageLifetime.Token, scanTimedCts.Token);
 

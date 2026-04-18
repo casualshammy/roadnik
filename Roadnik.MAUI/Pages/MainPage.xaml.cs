@@ -224,6 +224,8 @@ public partial class MainPage : CContentPage
             webAppLocationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1));
             _life.DoOnEnding(() => webAppLocationProvider.StopLocationWatcher());
 
+            var semaphore = 0;
+
             Observable
               .CombineLatest(
                 compassProvider.Values
@@ -232,6 +234,11 @@ public partial class MainPage : CContentPage
                   .Buffer(TimeSpan.FromSeconds(1)),
                 (_c, _l) => (Heading: _c, Locations: _l)
               )
+              .Where(_ =>
+              {
+                var entered = Interlocked.Exchange(ref semaphore, 1) == 0;
+                return entered;
+              })
               .SelectAsync(async (_tuple, _ct) =>
               {
                 var (heading, locations) = _tuple;
@@ -266,7 +273,7 @@ public partial class MainPage : CContentPage
                   p_log.Error($"Can't handle current location and compass change: {ex}");
                 }
               })
-              .Subscribe(_life);
+              .Subscribe(_ => Interlocked.Exchange(ref semaphore, 0), _life);
           }
           catch (Exception ex)
           {

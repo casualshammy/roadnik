@@ -328,7 +328,27 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     _lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var locationProviderStateScheduler));
 
     p_enableFlow
-      .WithLatestFrom(prefsFlow)
+      .ObserveOn(locationProviderStateScheduler)
+      .HotAlive(_lifetime, locationProviderStateScheduler, (_enabled, _life) =>
+      {
+        if (!_enabled)
+          return;
+
+        _life.DoOnEnding(() =>
+        {
+          p_log.Info($"Location reporting session ended, resetting stats...");
+          stats = LocationReporterSessionStats.Empty;
+          p_statsFlow.OnNext(stats);
+        });
+
+        p_log.Info($"Starting location reporting session...");
+        reportQueueCounter = 0;
+        reportFlow.Subscribe(_life);
+      });
+
+    p_enableFlow
+      .CombineLatest(prefsFlow, (_enabled, _conf) => (Enabled: _enabled, Conf: _conf))
+      .DistinctUntilChanged(_ => HashCode.Combine(_.Enabled, _.Conf.LocationProviders, _.Conf.TimeInterval))
       .ObserveOn(locationProviderStateScheduler)
       .HotAlive(_lifetime, locationProviderStateScheduler, (_tuple, _life) =>
       {
@@ -338,11 +358,10 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
         _life.DoOnEnding(() =>
         {
-          stats = LocationReporterSessionStats.Empty;
-          p_statsFlow.OnNext(stats);
+          p_log.Info($"Stopping location provider...");
+          locationProvider.StopLocationWatcher();
+          p_log.Info($"Location provider is stopped");
         });
-
-        _life.DoOnEnding(() => locationProvider.StopLocationWatcher());
 
         _life.DoOnEnding(async () =>
         {
@@ -363,12 +382,11 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           context.StartForegroundService(intent);
         });
 
+        p_log.Info($"Starting location provider...");
         locationProvider.StartLocationWatcher(
           conf.LocationProviders,
           conf.TimeInterval);
-
-        reportQueueCounter = 0;
-        reportFlow.Subscribe(_life);
+        p_log.Info($"Location provider is started");
       });
 
     p_enableFlow.OnNext(false);

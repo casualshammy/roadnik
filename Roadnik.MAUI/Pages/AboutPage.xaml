@@ -34,7 +34,7 @@
                 HorizontalOptions="Center"
                 HeightRequest="50">
                 <Image
-                    Source="{AppThemeBinding Dark=letter_r_blue.svg, Light=letter_r.svg}"/>
+                    Source="letter_r_blue.svg"/>
                 <Label 
                     Margin="-8"
                     Text="oadnik"
@@ -45,25 +45,27 @@
             </HorizontalStackLayout>
 
             <!-- SUPPORT -->
-            <VerticalStackLayout
+            <VerticalStackLayout 
                 Grid.Row="2"
                 Grid.ColumnSpan="2">
-                <Label
-                Text="Support"
-                TextTransform="Uppercase"
-                FontAttributes="Bold"
-                Margin="20, 20, 0, 0"/>
-                <Rectangle Fill="{AppThemeBinding Light=Gray, Dark=White}"
-                       Stroke="{AppThemeBinding Light=Gray, Dark=White}"
-                       Margin="16, 0"
-                       HeightRequest="2"/>
                 <Label 
-                Margin="20, 10, 20, 0"
-                Text="{Binding SupportText}">
+                    Text="Support"
+                    TextTransform="Uppercase"
+                    FontAttributes="Bold"
+                    Margin="20, 20, 0, 0"
+                    TextColor="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"/>
+                <Rectangle 
+                    Fill="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"
+                    Stroke="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"
+                    Margin="16, 0"
+                    HeightRequest="2"/>
+                <Label 
+                    Margin="20, 10, 20, 0"
+                    Text="{Binding SupportText}">
                 </Label>
                 <Label Margin="20, 10, 0, 0"
                    Text="Roadnik app's website"
-                   TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
@@ -72,7 +74,7 @@
                 </Label>
                 <Label Margin="20, 10, 0, 0"
                    Text="Issue tracker"
-                   TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
@@ -81,7 +83,7 @@
                 </Label>
                 <Label Margin="20, 10, 0, 0"
                    Text="Click here to send me an e-mail"
-                   TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                         Command="{Binding GoWebCommand}"
@@ -99,10 +101,11 @@
                     Text="Libraries &amp; Attributions"
                     TextTransform="Uppercase"
                     FontAttributes="Bold"
-                    Margin="20, 20, 0, 0"/>
+                    Margin="20, 20, 0, 0"
+                    TextColor="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"/>
                 <Rectangle 
-                    Fill="{AppThemeBinding Light=Gray, Dark=White}"
-                    Stroke="{AppThemeBinding Light=Gray, Dark=White}"
+                    Fill="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"
+                    Stroke="{AppThemeBinding Light={StaticResource LightSecondary}, Dark={StaticResource DarkSecondary}}"
                     Margin="16, 0"
                     HeightRequest="2"/>
                 <Label 
@@ -112,7 +115,7 @@
                 <Label 
                     Margin="20, 10, 0, 0"
                     Text="1. Thunderforest Maps"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                             Command="{Binding GoWebCommand}"
@@ -122,7 +125,7 @@
                 <Label 
                     Margin="20, 10, 0, 0"
                     Text="2. Data provided by OpenStreetMap contributors"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                             Command="{Binding GoWebCommand}"
@@ -132,7 +135,7 @@
                 <Label 
                     Margin="20, 10, 0, 0"
                     Text="3. Google Maps"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                             Command="{Binding GoWebCommand}"
@@ -142,7 +145,7 @@
                 <Label 
                     Margin="20, 10, 0, 0"
                     Text="4. Leaflet library"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                             Command="{Binding GoWebCommand}"
@@ -152,7 +155,7 @@
                 <Label 
                     Margin="20, 10, 0, 0"
                     Text="5. Data provided by Strava"
-                    TextColor="{AppThemeBinding Light=Blue, Dark=LightBlue}">
+                    TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource Primary}}">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer 
                             Command="{Binding GoWebCommand}"
@@ -168,7 +171,6 @@
                 HorizontalOptions="Center"
                 VerticalOptions="End"
                 Margin="0, 0, 0, 5">
-
                 <Label 
                     HorizontalOptions="Center"
                     Text="{Binding AppVersion}"/>

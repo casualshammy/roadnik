@@ -1,10 +1,12 @@
 ﻿using Ax.Fw.Extensions;
+using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Reactive.Linq;
 using static Roadnik.MAUI.Data.Consts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
@@ -13,50 +15,79 @@ namespace Roadnik.MAUI.Pages;
 public partial class BookmarksPage : CContentPage
 {
   private readonly IPreferencesStorage p_preferences;
+  private readonly IReadOnlyLifetime p_lifetime;
   private readonly ConcurrentDictionary<int, BookmarkEntryWrapper> p_bookmarks = new();
   private readonly ObservableCollection<BookmarkEntryWrapper> p_bookmarksObservable = new();
   private readonly Command<BookmarkEntryWrapper> p_onDeleteCommand;
+  private string p_searchText = string.Empty;
 
   public BookmarksPage()
   {
     InitializeComponent();
-    BindingContext = this;
     Title = L.shell_bookmarks;
 
     p_preferences = Container.Locate<IPreferencesStorage>();
+    p_lifetime = Container.Locate<IReadOnlyLifetime>();
+
     p_onDeleteCommand = new Command<BookmarkEntryWrapper>(_o =>
     {
       var bookmark = _o.Bookmark;
       var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
-      if (p_bookmarks.TryRemove(hashCode, out var removed))
-      {
+      if (p_bookmarks.TryRemove(hashCode, out _))
         p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
-        p_bookmarksObservable.Remove(removed);
-      }
     });
 
-    var bookmarks = p_preferences.GetValueOrDefault<List<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
-    foreach (var bookmark in bookmarks)
-    {
-      var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
-      var wrapper = BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand);
-      if (p_bookmarks.TryAdd(hashCode, wrapper))
-        p_bookmarksObservable.Add(wrapper);
-    }
+    p_preferences.PreferencesChanged
+      .StartWithDefault()
+      .DistinctUntilChanged(_ =>
+      {
+        var bookmarks = p_preferences.GetValueOrDefault<IReadOnlyList<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
+        var hash = bookmarks.Aggregate(0, (_acc, _entry) => _acc ^ _entry.GetHashCode());
+        return hash;
+      })
+      .Subscribe(_ =>
+      {
+        p_bookmarks.Clear();
+
+        var bookmarks = p_preferences.GetValueOrDefault<IReadOnlyList<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
+        foreach (var bookmark in bookmarks)
+        {
+          var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
+          var wrapper = BookmarkEntryWrapper.From(bookmark, p_onDeleteCommand);
+          p_bookmarks.TryAdd(hashCode, wrapper);
+        }
+
+        MainThread.BeginInvokeOnMainThread(RecalculateData);
+      }, p_lifetime);
+
+    p_preferences.PreferencesChanged
+      .StartWithDefault()
+      .DistinctUntilChanged(_ =>
+      {
+        var activeRoom = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
+        var activeUser = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
+        return HashCode.Combine(activeRoom, activeUser);
+      })
+      .Subscribe(_ => MainThread.BeginInvokeOnMainThread(RecalculateData), p_lifetime);
 
     p_listView.ItemsSource = p_bookmarksObservable;
+
+    BindingContext = this;
   }
 
-  protected override void OnAppearing()
+  public string SearchText
   {
-    base.OnAppearing();
-
-    p_pullRightLabel.Opacity = 1d;
-    p_pullRightLabel.IsVisible = true;
-
-    var animation = new Animation(_d => p_pullRightLabel.Opacity = _d, 1.0d, 0.0d, Easing.BounceIn, () => p_pullRightLabel.IsVisible = false);
-    animation.Commit(p_pullRightLabel, "pullRightOpacity", 16, 5000);
+    get => p_searchText;
+    set
+    {
+      p_searchText = value;
+      OnPropertyChanged();
+      RecalculateData();
+    }
   }
+
+  public bool HasBookmarks => p_bookmarksObservable.Count > 0;
+  public bool IsEmpty => p_bookmarksObservable.Count == 0;
 
   private async void CollectionView_SelectionChanged(object _sender, SelectionChangedEventArgs _e)
   {
@@ -106,7 +137,37 @@ public partial class BookmarksPage : CContentPage
     }
 
     p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
-    p_bookmarksObservable.Add(wrapper);
+  }
+
+  private void RecalculateData()
+  {
+    var activeRoom = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
+    var activeUser = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
+
+    foreach (var (hashCode, existing) in p_bookmarks)
+    {
+      var shouldBeActive = existing.Bookmark.RoomId == activeRoom && existing.Bookmark.Username == activeUser;
+      if (existing.IsActive != shouldBeActive)
+        p_bookmarks[hashCode] = existing with { IsActive = shouldBeActive };
+    }
+
+    var filter = p_searchText.Trim();
+    var sorted = p_bookmarks.Values
+      .OrderBy(_ => _.Bookmark.RoomId)
+      .ThenBy(_ => _.Bookmark.Username);
+
+    IEnumerable<BookmarkEntryWrapper> filtered = sorted;
+    if (!string.IsNullOrEmpty(filter))
+      filtered = sorted.Where(_ =>
+        _.Bookmark.RoomId.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+        _.Bookmark.Username.Contains(filter, StringComparison.OrdinalIgnoreCase));
+
+    p_bookmarksObservable.Clear();
+    foreach (var item in filtered)
+      p_bookmarksObservable.Add(item);
+
+    OnPropertyChanged(nameof(HasBookmarks));
+    OnPropertyChanged(nameof(IsEmpty));
   }
 
 }

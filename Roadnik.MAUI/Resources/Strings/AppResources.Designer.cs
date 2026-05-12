@@ -197,6 +197,15 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to active.
+        /// </summary>
+        internal static string page_bookmarks_active {
+            get {
+                return ResourceManager.GetString("page.bookmarks.active", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Delete.
         /// </summary>
         internal static string page_bookmarks_delete {
@@ -215,6 +224,24 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Tap + to save current room and username.
+        /// </summary>
+        internal static string page_bookmarks_empty_desc {
+            get {
+                return ResourceManager.GetString("page.bookmarks.empty_desc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No bookmarks yet.
+        /// </summary>
+        internal static string page_bookmarks_empty_title {
+            get {
+                return ResourceManager.GetString("page.bookmarks.empty_title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Room.
         /// </summary>
         internal static string page_bookmarks_room {
@@ -229,6 +256,15 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_bookmarks_username {
             get {
                 return ResourceManager.GetString("page.bookmarks.username", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Search....
+        /// </summary>
+        internal static string page_bookmarks_search_placeholder {
+            get {
+                return ResourceManager.GetString("page.bookmarks.search_placeholder", resourceCulture);
             }
         }
         

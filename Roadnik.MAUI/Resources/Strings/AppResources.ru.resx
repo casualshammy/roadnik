@@ -160,14 +160,26 @@
   <data name="page.about.updating" xml:space="preserve">
     <value>Обновление</value>
   </data>
+  <data name="page.bookmarks.active" xml:space="preserve">
+    <value>активна</value>
+  </data>
   <data name="page.bookmarks.delete" xml:space="preserve">
     <value>Удалить</value>
   </data>
   <data name="page.bookmarks.delete_hint" xml:space="preserve">
     <value>Потяните влево чтобы удалить</value>
   </data>
+  <data name="page.bookmarks.empty_desc" xml:space="preserve">
+    <value>Нажмите +, чтобы сохранить текущую комнату и имя пользователя</value>
+  </data>
+  <data name="page.bookmarks.empty_title" xml:space="preserve">
+    <value>Нет закладок</value>
+  </data>
   <data name="page.bookmarks.room" xml:space="preserve">
     <value>Комната</value>
+  </data>
+  <data name="page.bookmarks.search_placeholder" xml:space="preserve">
+    <value>Поиск закладок…</value>
   </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Пользователь</value>

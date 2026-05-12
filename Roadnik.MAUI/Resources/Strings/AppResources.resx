@@ -160,14 +160,26 @@ Last location fix: %last-location-fix% (%last-location-fix-accuracy%m)</value>
   <data name="page.about.updating" xml:space="preserve">
     <value>Updating</value>
   </data>
+  <data name="page.bookmarks.active" xml:space="preserve">
+    <value>active</value>
+  </data>
   <data name="page.bookmarks.delete" xml:space="preserve">
     <value>Delete</value>
   </data>
   <data name="page.bookmarks.delete_hint" xml:space="preserve">
     <value>Pull left to delete</value>
   </data>
+  <data name="page.bookmarks.empty_desc" xml:space="preserve">
+    <value>Tap + to save current room and username</value>
+  </data>
+  <data name="page.bookmarks.empty_title" xml:space="preserve">
+    <value>No bookmarks yet</value>
+  </data>
   <data name="page.bookmarks.room" xml:space="preserve">
     <value>Room</value>
+  </data>
+  <data name="page.bookmarks.search_placeholder" xml:space="preserve">
+    <value>Search bookmarks…</value>
   </data>
   <data name="page.bookmarks.username" xml:space="preserve">
     <value>Username</value>

@@ -1,100 +1,217 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<toolkit:CContentPage 
+<toolkit:CContentPage
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:views="clr-namespace:Roadnik.MAUI.ViewModels"
     xmlns:toolkit="clr-namespace:Roadnik.MAUI.Toolkit"
     xmlns:l="clr-namespace:Roadnik.MAUI.Resources.Strings"
-    xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
     xmlns:data="clr-namespace:Roadnik.MAUI.Data"
-    xmlns:conv="clr-namespace:Roadnik.MAUI.Pages.Parts"
     xmlns:pages="clr-namespace:Roadnik.MAUI.Pages"
     x:DataType="pages:BookmarksPage"
     x:Class="Roadnik.MAUI.Pages.BookmarksPage">
 
+    <toolkit:CContentPage.Resources>
+        <!-- Dark-mode card colors matching mockup (#1e1e2e / #2a2a3a palette) -->
+        <Color x:Key="CardBgDark">#1E1E2E</Color>
+        <Color x:Key="CardBorderDark">#2A2A3A</Color>
+        <Color x:Key="SearchBgDark">#1E1E28</Color>
+        <Color x:Key="UsernameColorDark">#A0A0C8</Color>
+        <!-- Delete button: 10% / 25% opacity OrangeRed (#FF4500) -->
+        <Color x:Key="DeleteBg">#1AFF4500</Color>
+        <Color x:Key="DeleteBorder">#40FF4500</Color>
+    </toolkit:CContentPage.Resources>
+
     <AbsoluteLayout>
-        <VerticalStackLayout
+
+        <Grid
             AbsoluteLayout.LayoutFlags="All"
-            AbsoluteLayout.LayoutBounds="0,0,1,1">
-            <CollectionView 
+            AbsoluteLayout.LayoutBounds="0,0,1,1"
+            RowDefinitions="Auto,*">
+
+            <!-- Search bar -->
+            <Border
+                Grid.Row="0"
+                Margin="10,10,10,4"
+                BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource SearchBgDark}}"
+                StrokeThickness="1"
+                Padding="4,0">
+                <Border.Stroke>
+                    <SolidColorBrush Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource CardBorderDark}}"/>
+                </Border.Stroke>
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12"/>
+                </Border.StrokeShape>
+                <Grid ColumnDefinitions="36,*">
+                    <Label
+                        Text="🔍"
+                        FontSize="16"
+                        TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource Gray500}}"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Center"/>
+                    <Entry
+                        Grid.Column="1"
+                        Text="{Binding SearchText}"
+                        Placeholder="{x:Static l:AppResources.page_bookmarks_search_placeholder}"
+                        PlaceholderColor="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource Gray500}}"
+                        TextColor="{AppThemeBinding Light={StaticResource Gray950}, Dark=White}"
+                        BackgroundColor="Transparent"
+                        FontSize="14"
+                        HeightRequest="44"/>
+                </Grid>
+            </Border>
+
+            <!-- Bookmark list -->
+            <CollectionView
+                Grid.Row="1"
                 x:Name="p_listView"
+                IsVisible="{Binding HasBookmarks}"
                 SelectionMode="Single"
-                SelectionChanged="CollectionView_SelectionChanged">
+                SelectionChanged="CollectionView_SelectionChanged"
+                Margin="0,0,0,80">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate
-                        x:DataType="data:BookmarkEntryWrapper">
-                        <SwipeView 
-                            Threshold="60">
-                            <SwipeView.RightItems>
-                                <SwipeItems 
-                                    Mode="Execute">
-                                    <SwipeItem
-                                        Text="{x:Static l:AppResources.page_bookmarks_delete}"
-                                        BackgroundColor="OrangeRed"
-                                        IconImageSource="trash_bin.svg"
-                                        Command="{Binding OnDeleteCommand}"
-                                        CommandParameter="{Binding}" />
-                                </SwipeItems>
-                            </SwipeView.RightItems>
-                            <Border 
-                                BackgroundColor="{AppThemeBinding Light=LightGray, Dark=DarkGray}"
-                                Margin="6, 2"
-                                VerticalOptions="Fill">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10,10,10,10" />
-                                </Border.StrokeShape>
+                    <DataTemplate x:DataType="data:BookmarkEntryWrapper">
+                        <Border
+                            Margin="10,4"
+                            BackgroundColor="{AppThemeBinding Light=White, Dark={StaticResource CardBgDark}}"
+                            StrokeThickness="1"
+                            Padding="0">
+                            <Border.Stroke>
+                                <SolidColorBrush Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource CardBorderDark}}"/>
+                            </Border.Stroke>
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="14"/>
+                            </Border.StrokeShape>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsActive}" Value="True">
+                                    <Setter Property="Stroke" Value="{StaticResource PrimaryBrush}"/>
+                                </DataTrigger>
+                            </Border.Triggers>
+
+                            <Grid
+                                ColumnDefinitions="36,*,Auto,Auto"
+                                Padding="0,12,12,12">
+
+                                <!-- Colored dot -->
+                                <BoxView
+                                    Grid.Column="0"
+                                    WidthRequest="10"
+                                    HeightRequest="10"
+                                    CornerRadius="5"
+                                    Color="{Binding DotColor}"
+                                    VerticalOptions="Center"
+                                    HorizontalOptions="Center"/>
+
+                                <!-- Room and username labels -->
                                 <VerticalStackLayout
-                                    Margin="10, 0"
+                                    Grid.Column="1"
+                                    Spacing="2"
                                     VerticalOptions="Center">
-                                    <Label 
-                                        Text="{Binding LocalizedRoomId}"
-                                        TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
-                                    <Label 
-                                        Text="{Binding LocalizedUsername }"
-                                        TextColor="{AppThemeBinding Dark={x:StaticResource Black}}"/>
+                                    <Label
+                                        Text="{Binding Bookmark.RoomId}"
+                                        FontAttributes="Bold"
+                                        FontSize="14"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray950}, Dark=White}"
+                                        LineBreakMode="TailTruncation"/>
+                                    <Label
+                                        Text="{Binding LocalizedUsername}"
+                                        FontSize="13"
+                                        TextColor="{AppThemeBinding Light={StaticResource Gray400}, Dark={StaticResource UsernameColorDark}}"
+                                        LineBreakMode="TailTruncation"/>
                                 </VerticalStackLayout>
-                            </Border>
-                        </SwipeView>
+
+                                <!-- Active badge -->
+                                <Border
+                                    Grid.Column="2"
+                                    IsVisible="{Binding IsActive}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Gray950}}"
+                                    Stroke="{StaticResource PrimaryBrush}"
+                                    StrokeThickness="1"
+                                    VerticalOptions="Center"
+                                    Margin="8,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="20"/>
+                                    </Border.StrokeShape>
+                                    <Label
+                                        Text="{x:Static l:AppResources.page_bookmarks_active}"
+                                        TextColor="{AppThemeBinding Light={StaticResource Tertiary}, Dark={StaticResource Primary}}"
+                                        FontSize="14"
+                                        Padding="10,5"/>
+                                </Border>
+
+                                <!-- Delete button -->
+                                <Border
+                                    Grid.Column="3"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    BackgroundColor="{StaticResource DeleteBg}"
+                                    StrokeThickness="1"
+                                    VerticalOptions="Center">
+                                    <Border.Stroke>
+                                        <SolidColorBrush Color="{StaticResource DeleteBorder}"/>
+                                    </Border.Stroke>
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10"/>
+                                    </Border.StrokeShape>
+                                    <ImageButton
+                                        Source="trash_bin_tinted.svg"
+                                        Command="{Binding OnDeleteCommand}"
+                                        CommandParameter="{Binding}"
+                                        BackgroundColor="Transparent"
+                                        HeightRequest="20"
+                                        WidthRequest="20"
+                                        Padding="0"/>
+                                </Border>
+
+                            </Grid>
+                        </Border>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-            <HorizontalStackLayout
+
+            <!-- Empty state -->
+            <VerticalStackLayout
+                Grid.Row="1"
+                IsVisible="{Binding IsEmpty}"
+                VerticalOptions="Start"
                 HorizontalOptions="Center"
-                Margin="0, 20, 0, 0"
-                x:Name="p_pullRightLabel">
-                <Image
-                    BackgroundColor="{AppThemeBinding Dark=White}"
-                    Source="left_arrow.svg"
-                    HeightRequest="14"/>
-                <Label 
-                    Margin="10, 0"
-                    Text="{x:Static l:AppResources.page_bookmarks_delete_hint}"/>
-                <Image
-                    BackgroundColor="{AppThemeBinding Dark=White}"
-                    Source="left_arrow.svg"
-                    HeightRequest="14"/>
-            </HorizontalStackLayout>
+                Margin="0,60,0,0"
+                Spacing="12">
+                <Label
+                    Text="🔖"
+                    FontSize="48"
+                    HorizontalOptions="Center"/>
+                <Label
+                    Text="{x:Static l:AppResources.page_bookmarks_empty_title}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}"
+                    FontSize="17"
+                    FontAttributes="Bold"
+                    HorizontalOptions="Center"/>
+                <Label
+                    Text="{x:Static l:AppResources.page_bookmarks_empty_desc}"
+                    TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray400}}"
+                    FontSize="13"
+                    HorizontalOptions="Center"
+                    HorizontalTextAlignment="Center"
+                    Margin="32,0"/>
+            </VerticalStackLayout>
 
-        </VerticalStackLayout>
+        </Grid>
 
-
-        <Grid 
-            Grid.Row="1"
-            Grid.Column="1"
+        <!-- FAB -->
+        <Grid
             AbsoluteLayout.LayoutFlags="PositionProportional"
-            AbsoluteLayout.LayoutBounds="0.95, 0.95, 70, 70">
+            AbsoluteLayout.LayoutBounds="0.95,0.95,70,70">
             <Button
                 WidthRequest="70"
                 HeightRequest="70"
                 CornerRadius="45"
                 Background="{StaticResource PrimaryBrush}"
-                Clicked="AddCurrentCredentials_Clicked">
-            </Button>
-            <ImageButton 
+                Clicked="AddCurrentCredentials_Clicked"/>
+            <ImageButton
                 WidthRequest="70"
                 HeightRequest="70"
                 Source="plus_circle.svg"
                 InputTransparent="True"/>
         </Grid>
+
     </AbsoluteLayout>
 </toolkit:CContentPage>

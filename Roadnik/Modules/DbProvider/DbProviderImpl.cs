@@ -38,7 +38,7 @@ internal class DbProviderImpl : IDbProvider
           new StorageRetentionRuleAge(Consts.TILE_TYPE_TF_OUTDOORS, null, TimeSpan.FromDays(30), null),
           new StorageRetentionRuleAge(Consts.TILE_TYPE_TF_TRANSPORT, null, TimeSpan.FromDays(30), null),
           new StorageRetentionRuleAge(Consts.TILE_TYPE_CARTO_DARK, null, TimeSpan.FromDays(30), null),
-          new StorageRetentionRuleTotalSize(null, null, 10L * 1024 * 1024 * 1024),
+          new StorageRetentionRuleTotalSize(null, null, _appConfig.MapTilesCacheSize ?? 10L * 1024 * 1024 * 1024),
         ],
         TimeSpan.FromDays(7),
         _docs =>

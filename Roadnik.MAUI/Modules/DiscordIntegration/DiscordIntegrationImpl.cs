@@ -192,10 +192,19 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
     var sendTask = Task.Run(async () =>
     {
-      await foreach (var msg in sendChannel.Reader.ReadAllAsync(sendCts.Token))
+      try
       {
-        var bytes = Encoding.UTF8.GetBytes(msg);
-        await ws.SendAsync(bytes, WebSocketMessageType.Text, true, sendCts.Token);
+        await foreach (var msg in sendChannel.Reader.ReadAllAsync(sendCts.Token))
+        {
+          var bytes = Encoding.UTF8.GetBytes(msg);
+          await ws.SendAsync(bytes, WebSocketMessageType.Text, true, sendCts.Token);
+        }
+      }
+      catch (OperationCanceledException) { }
+      catch (Exception ex)
+      {
+        p_log.Error($"Discord gateway send task failed: {ex.Message}");
+        ws.Abort();
       }
     }, sendCts.Token);
 
@@ -205,10 +214,10 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
     // Receive HELLO
     var helloMsg = await ReceiveGatewayMessageAsync(ws, _life.Token);
-    if (helloMsg == null || helloMsg.Op != DiscordGatewayOpCode.Hello)
+    if (helloMsg == null || helloMsg.Op != DiscordGatewayOpCode.Hello || helloMsg.D == null)
       throw new InvalidOperationException($"Expected HELLO, got op={helloMsg?.Op}");
 
-    var helloData = JsonSerializer.Deserialize(helloMsg.D!.Value, DiscordJsonCtx.Default.DiscordHelloData)
+    var helloData = JsonSerializer.Deserialize(helloMsg.D.Value, DiscordJsonCtx.Default.DiscordHelloData)
       ?? throw new InvalidOperationException("Missing HELLO payload");
     var heartbeatInterval = helloData.HeartbeatInterval;
     p_log.Info($"Discord gateway: heartbeat interval = {heartbeatInterval}ms");

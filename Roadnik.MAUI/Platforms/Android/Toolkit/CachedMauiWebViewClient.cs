@@ -6,7 +6,7 @@ using Microsoft.Maui.Platform;
 using Roadnik.MAUI.Interfaces;
 using System.Collections.Frozen;
 using System.Text.RegularExpressions;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Platforms.Android.Toolkit;
 

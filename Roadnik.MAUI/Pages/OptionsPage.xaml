@@ -120,6 +120,38 @@
                 Title="{x:Static l:AppResources.page_options_notifications_new_point_title}"
                 DetailsText="{x:Static l:AppResources.page_options_notifications_new_point_desc}"
                 SwitchTapped="{Binding NotifyNewPointCommand}"/>
+
+            <!-- DISCORD INTEGRATION -->
+            <controls:OptionsHeader
+                Title="Discord Integration" />
+            <controls:OptionsTextValue
+                Title="Connect Discord account"
+                DetailsText="Sign in to broadcast your approximate location as a Discord status"
+                ValueText=""
+                TapCommand="{Binding DiscordAuthCommand}"
+                IsVisible="{Binding DiscordNotAuthenticated}"/>
+            <controls:OptionsHorizontalLine
+                IsVisible="{Binding DiscordNotAuthenticated}"/>
+            <controls:OptionsTextValue
+                Title="Signed in as"
+                DetailsText="Tap to sign out"
+                ValueText="{Binding DiscordUsername}"
+                TapCommand="{Binding DiscordRevokeCommand}"
+                IsVisible="{Binding DiscordAuthenticated}"/>
+            <controls:OptionsHorizontalLine
+                IsVisible="{Binding DiscordAuthenticated}"/>
+            <controls:OptionsSwitch
+                x:Name="p_discordEnabled"
+                Title="Broadcast location on Discord"
+                DetailsText="Shows your approximate location and a tracking link as a Discord status while sharing"
+                IsEnabled="{Binding DiscordAuthenticated}"
+                SwitchTapped="{Binding DiscordEnabledCommand}"/>
+            <controls:OptionsHorizontalLine />
+            <controls:OptionsTextValue
+                Title="Custom status message"
+                DetailsText="Optional text appended to your Discord status, e.g. &quot;Riding in the mountains 🏔️&quot;"
+                ValueText="{Binding DiscordCustomStatus}"
+                TapCommand="{Binding DiscordStatusCommand}"/>
         </VerticalStackLayout>
 
     </ScrollView>

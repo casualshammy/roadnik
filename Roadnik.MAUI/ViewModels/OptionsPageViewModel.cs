@@ -4,13 +4,15 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
+using Roadnik.MAUI.Data.Discord;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Pages;
 using System.Reactive.Linq;
+using System.Text.Json;
 using System.Windows.Input;
-using static Android.Graphics.ColorSpace;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.ViewModels;
@@ -20,6 +22,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private readonly IPreferencesStorage p_storage;
   private readonly IPagesController p_pagesController;
   private readonly IHttpClientProvider p_httpClient;
+  private readonly IDiscordIntegration p_discord;
   private readonly ILog p_log;
   private string? p_roomId;
   private string? p_username;
@@ -34,12 +37,17 @@ internal class OptionsPageViewModel : BaseViewModel
   private bool p_bleHrmEnabled;
   private HrmDeviceInfo? p_bleHrmDeviceInfo;
   private bool p_displayOnLockScreenEnabled;
+  private bool p_discordEnabled;
+  private bool p_discordAuthenticated;
+  private string? p_discordUsername;
+  private string? p_discordCustomStatus;
 
   public OptionsPageViewModel()
   {
     p_storage = Container.Locate<IPreferencesStorage>();
     p_pagesController = Container.Locate<IPagesController>();
     p_httpClient = Container.Locate<IHttpClientProvider>();
+    p_discord = Container.Locate<IDiscordIntegration>();
     p_log = Container.Locate<ILog>()["options-page-view-model"];
 
     RoomIdCommand = new Command(OnRoomIdCommand);
@@ -56,6 +64,10 @@ internal class OptionsPageViewModel : BaseViewModel
     NotifyNewPointCommand = new Command(OnNotifyNewPoint);
     BleHrmEnabledCommand = new Command(OnBleHrmEnabled);
     DisplayOnLockScreenCommand = new Command(OnDisplayOnLockScreen);
+    DiscordAuthCommand = new Command(OnDiscordAuth);
+    DiscordRevokeCommand = new Command(OnDiscordRevoke);
+    DiscordEnabledCommand = new Command(OnDiscordEnabled);
+    DiscordStatusCommand = new Command(OnDiscordStatus);
 
     var lifetime = Container.Locate<IReadOnlyLifetime>();
     p_storage.PreferencesChanged
@@ -80,6 +92,10 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED), nameof(BleHrmEnabled));
         SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
         SetProperty(ref p_displayOnLockScreenEnabled, p_storage.GetValueOrDefault<bool>(PREF_DISPLAY_ON_LOCK_SCREEN), nameof(DisplayOnLockScreenEnabled));
+        SetProperty(ref p_discordAuthenticated, !p_storage.GetValueOrDefault<string>(PREF_DISCORD_TOKEN).IsNullOrEmpty(), nameof(DiscordAuthenticated), nameof(DiscordNotAuthenticated));
+        SetProperty(ref p_discordEnabled, p_storage.GetValueOrDefault<bool>(PREF_DISCORD_ENABLED), nameof(DiscordEnabled));
+        SetProperty(ref p_discordUsername, p_storage.GetValueOrDefault<string>(PREF_DISCORD_USERNAME), nameof(DiscordUsername));
+        SetProperty(ref p_discordCustomStatus, p_storage.GetValueOrDefault<string>(PREF_DISCORD_STATUS), nameof(DiscordCustomStatus));
       }, lifetime);
   }
 
@@ -271,6 +287,11 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
+  public bool DiscordAuthenticated => p_discordAuthenticated;
+  public bool DiscordNotAuthenticated => !p_discordAuthenticated;
+  public bool DiscordEnabled => p_discordEnabled;
+  public string? DiscordUsername => p_discordUsername;
+  public string? DiscordCustomStatus => p_discordCustomStatus;
 
   public ICommand RoomIdCommand { get; }
   public ICommand UsernameCommand { get; }
@@ -286,6 +307,10 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand NotifyNewPointCommand { get; }
   public ICommand BleHrmEnabledCommand { get; }
   public ICommand DisplayOnLockScreenCommand { get; }
+  public ICommand DiscordAuthCommand { get; }
+  public ICommand DiscordRevokeCommand { get; }
+  public ICommand DiscordEnabledCommand { get; }
+  public ICommand DiscordStatusCommand { get; }
 
   private async void OnRoomIdCommand(object _arg)
   {
@@ -506,6 +531,95 @@ internal class OptionsPageViewModel : BaseViewModel
   {
     if (_arg is bool toggled)
       DisplayOnLockScreenEnabled = toggled;
+  }
+
+  private async void OnDiscordAuth(object? _arg)
+  {
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    try
+    {
+      using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+
+      p_log.Info($"Opening Discord login page...");
+
+      var loginPage = new DiscordLoginPage();
+      await currentPage.Navigation.PushModalAsync(loginPage);
+
+      string? token;
+      try
+      {
+        token = await loginPage.WaitForTokenAsync(cts.Token);
+      }
+      finally
+      {
+        await currentPage.Navigation.PopModalAsync();
+      }
+
+      if (token.IsNullOrWhiteSpace())
+      {
+        p_log.Warn($"Discord login: no token received");
+        return;
+      }
+
+      p_log.Info($"Discord login: token received, fetching user info...");
+      var username = await p_discord.FetchUsernameAsync(token, cts.Token) ?? "unknown";
+      var tokenData = new DiscordTokenData(token, username);
+
+      var appId = p_storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
+      using var aes = new Ax.Fw.Crypto.AesWithGcm(appId.ToByteArray());
+      var json = JsonSerializer.SerializeToUtf8Bytes(tokenData, DiscordJsonCtx.Default.DiscordTokenData);
+      var encToken = aes.Encrypt(json);
+      var encTokenString = Convert.ToBase64String(encToken);
+      p_storage.SetValue(PREF_DISCORD_TOKEN, encTokenString);
+      p_storage.SetValue(PREF_DISCORD_USERNAME, username);
+
+      p_log.Info($"Discord login: authenticated as '{username}'");
+    }
+    catch (TaskCanceledException ex) when (ex.InnerException is not OperationCanceledException)
+    {
+      p_log.Warn($"Discord login was cancelled by the user");
+    }
+    catch (OperationCanceledException)
+    {
+      throw;
+    }
+    catch (Exception ex)
+    {
+      p_log.Error($"Discord login error", ex);
+    }
+  }
+
+  private void OnDiscordRevoke(object? _arg)
+    => p_discord.RevokeAuth();
+
+  private void OnDiscordEnabled(object? _arg)
+  {
+    if (_arg is bool toggled)
+      p_storage.SetValue(PREF_DISCORD_ENABLED, toggled);
+  }
+
+  private async void OnDiscordStatus(object? _arg)
+  {
+    var currentPage = p_pagesController.CurrentPage;
+    if (currentPage == null)
+      return;
+
+    var status = await currentPage.DisplayPromptAsync(
+      "Custom Discord status",
+      "Optional message added to your Discord status, e.g. \"Riding in the mountains 🏔️\"",
+      "Save",
+      "Clear",
+      initialValue: DiscordCustomStatus,
+      maxLength: 128);
+
+    // null = dismissed, empty string = cleared
+    if (status == null)
+      return;
+
+    p_storage.SetValue(PREF_DISCORD_STATUS, status.Trim());
   }
 
 }

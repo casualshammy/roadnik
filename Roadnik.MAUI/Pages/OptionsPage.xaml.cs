@@ -2,7 +2,7 @@
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Pages;
 
@@ -25,6 +25,7 @@ public partial class OptionsPage : CContentPage
     p_notifyNewPoint.SwitchIsToggled = p_bindingCtx.NotificationOnNewPoint;
     p_hrReporting.SwitchIsToggled = p_bindingCtx.BleHrmEnabled;
     p_displayOnLockScreen.SwitchIsToggled = p_bindingCtx.DisplayOnLockScreenEnabled;
+    p_discordEnabled.SwitchIsToggled = p_bindingCtx.DiscordEnabled;
 
     p_bleHrmDevice.TapCommand = new Command(OnBleHrmDeviceChanged);
   }

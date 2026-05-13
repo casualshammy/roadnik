@@ -12,7 +12,7 @@ using System.Reactive;
 using System.Reactive.Subjects;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Modules.PreferencesStorage;
 

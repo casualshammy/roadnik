@@ -2,7 +2,7 @@
 
 namespace Roadnik.MAUI.Data;
 
-internal static class Consts
+internal static class AppConsts
 {
   public static string? DEBUG_APP_ADDRESS = null; // "http://192.168.1.100:5544"; // null;
 
@@ -50,5 +50,11 @@ internal static class Consts
 
   public static Guid BLE_SERVICE_ID_HEART_RATE { get; } = GuidExtension.UuidFromPartial(0x180d);
   public static Guid BLE_CHARACTERISTIC_ID_HEART_RATE_MEASUREMENT { get; } = GuidExtension.UuidFromPartial(0x2A37);
+
+  // Discord integration
+  public const string PREF_DISCORD_ENABLED = "integrations.discord.enabled";
+  public const string PREF_DISCORD_USERNAME = "integrations.discord.username";
+  public const string PREF_DISCORD_STATUS = "integrations.discord.status";
+  public const string PREF_DISCORD_TOKEN = "integrations.discord.token";
 
 }

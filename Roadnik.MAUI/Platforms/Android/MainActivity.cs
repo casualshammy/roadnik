@@ -8,7 +8,7 @@ using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.Modules.DeepLinksController;
 using System.Text.Json;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI;
 

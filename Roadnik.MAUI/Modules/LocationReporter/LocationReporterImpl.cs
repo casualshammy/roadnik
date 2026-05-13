@@ -18,7 +18,7 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Modules.LocationReporter;
 
@@ -32,8 +32,9 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       IPreferencesStorage _storage,
       IHttpClientProvider _httpClientProvider,
       ITelephonyMgrProvider _telephonyMgrProvider,
-      IBleDevicesManager _bleDevicesManager)
-      => new LocationReporterImpl(_lifetime, _log["location-reporter"], _storage, _httpClientProvider, _telephonyMgrProvider, _bleDevicesManager));
+      IBleDevicesManager _bleDevicesManager,
+      IDiscordIntegration _discordIntegration)
+      => new LocationReporterImpl(_lifetime, _log["location-reporter"], _storage, _httpClientProvider, _telephonyMgrProvider, _bleDevicesManager, _discordIntegration));
   }
 
   record ReportingCtx(
@@ -54,7 +55,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
     IPreferencesStorage _storage,
     IHttpClientProvider _httpClientProvider,
     ITelephonyMgrProvider _telephonyMgrProvider,
-    IBleDevicesManager _bleDevicesManager)
+    IBleDevicesManager _bleDevicesManager,
+    IDiscordIntegration _discordIntegration)
   {
     p_log = _log;
 
@@ -296,6 +298,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}/api/v1{ReqPaths.STORE_PATH_POINT}", content, cts.Token);
           res.EnsureSuccessStatusCode();
 
+          _discordIntegration.UpdatePresence(location.Latitude, location.Longitude, prefs.RoomId);
+
           stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };
           p_statsFlow.OnNext(stats);
 
@@ -339,6 +343,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           p_log.Info($"Location reporting session ended, resetting stats...");
           stats = LocationReporterSessionStats.Empty;
           p_statsFlow.OnNext(stats);
+          _discordIntegration.ClearPresence();
         });
 
         p_log.Info($"Starting location reporting session...");

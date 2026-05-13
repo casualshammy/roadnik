@@ -31,7 +31,7 @@ using System.Reactive.Subjects;
 using System.Text;
 using System.Text.Json;
 using System.Web;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Pages;

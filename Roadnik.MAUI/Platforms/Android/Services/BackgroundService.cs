@@ -55,10 +55,10 @@ public class BackgroundService : CAndroidService
       var notification = GetRecordingNotification(L.notification_location_sharing_title, string.Empty);
       if (Build.VERSION.SdkInt >= BuildVersionCodes.Q)
 #pragma warning disable CA1416 // Validate platform compatibility
-        StartForeground(Consts.NOTIFICATION_ID_RECORDING, notification, global::Android.Content.PM.ForegroundService.TypeLocation);
+        StartForeground(AppConsts.NOTIFICATION_ID_RECORDING, notification, global::Android.Content.PM.ForegroundService.TypeLocation);
 #pragma warning restore CA1416 // Validate platform compatibility
       else
-        StartForeground(Consts.NOTIFICATION_ID_RECORDING, notification);
+        StartForeground(AppConsts.NOTIFICATION_ID_RECORDING, notification);
 
       p_locationReporter.Stats
         .DistinctUntilChanged()
@@ -108,7 +108,7 @@ public class BackgroundService : CAndroidService
     var channel = new NotificationChannel(channelId, "Notify when recording is active", NotificationImportance.Max);
     p_notificationMgr.CreateNotificationChannel(channel);
 
-    var stopIntent = new Intent(Consts.INTENT_STOP_LOC_SHARING, global::Android.Net.Uri.Empty!, context, typeof(StopLocationSharingReceiver));
+    var stopIntent = new Intent(AppConsts.INTENT_STOP_LOC_SHARING, global::Android.Net.Uri.Empty!, context, typeof(StopLocationSharingReceiver));
     var stopPendingIntent = PendingIntent.GetBroadcast(context, 0, stopIntent, PendingIntentFlags.Immutable);
     var stopActionBuilder = new Notification.Action.Builder(p_stopIcon, L.generic_stop, stopPendingIntent);
 
@@ -130,7 +130,7 @@ public class BackgroundService : CAndroidService
     var notification = builder.Build();
 
     if (_notify)
-      p_notificationMgr.Notify(Consts.NOTIFICATION_ID_RECORDING, notification);
+      p_notificationMgr.Notify(AppConsts.NOTIFICATION_ID_RECORDING, notification);
 
     return notification;
   }

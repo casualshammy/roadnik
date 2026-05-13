@@ -12,7 +12,7 @@ using Roadnik.MAUI.Interfaces;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Modules.BleDevicesManager;
 

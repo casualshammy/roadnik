@@ -7,7 +7,7 @@ using Roadnik.MAUI.Toolkit;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Reactive.Linq;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Pages;

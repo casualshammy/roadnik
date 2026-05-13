@@ -3,7 +3,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Interfaces;
 using System.Text.RegularExpressions;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 
 namespace Roadnik.MAUI.Modules.DeepLinksController;
 

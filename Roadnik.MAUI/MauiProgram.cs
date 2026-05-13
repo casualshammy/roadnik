@@ -11,6 +11,7 @@ using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Modules.BleDevicesManager;
 using Roadnik.MAUI.Modules.CompassProvider;
 using Roadnik.MAUI.Modules.DeepLinksController;
+using Roadnik.MAUI.Modules.DiscordIntegration;
 using Roadnik.MAUI.Modules.HttpClientProvider;
 using Roadnik.MAUI.Modules.LocationReporter;
 using Roadnik.MAUI.Modules.MapDataCache;
@@ -19,7 +20,7 @@ using Roadnik.MAUI.Modules.PreferencesStorage;
 using Roadnik.MAUI.Modules.PushMessagesController;
 using Roadnik.MAUI.Modules.TelephonyMgrProvider;
 using System.Text.RegularExpressions;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 using ILog = Ax.Fw.SharedTypes.Interfaces.ILog;
 
 namespace Roadnik.MAUI;
@@ -85,6 +86,7 @@ public static partial class MauiProgram
       .AddModule<WebDataCacheImpl, IWebDataCache>()
       .AddModule<CompassProviderImpl, ICompassProvider>()
       .AddModule<BleDevicesManagerImpl, IBleDevicesManager>()
+      .AddModule<DiscordIntegrationImpl, IDiscordIntegration>()
       .ActivateOnStart<IPushMessagesController>();
 
     Container = appDeps;

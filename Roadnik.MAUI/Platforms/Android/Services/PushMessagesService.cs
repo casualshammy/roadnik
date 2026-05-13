@@ -14,7 +14,7 @@ using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
 using System.Collections.Frozen;
 using System.Text.Json;
-using static Roadnik.MAUI.Data.Consts;
+using static Roadnik.MAUI.Data.AppConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Platforms.Android.Services;

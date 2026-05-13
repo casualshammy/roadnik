@@ -6,6 +6,7 @@ internal static class AppConsts
 {
   public static string? DEBUG_APP_ADDRESS = null; // "http://192.168.1.100:5544"; // null;
 
+  public const string USER_AGENT = "Roadnik/1.0";
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";
   public const int PRIVACY_POLICY_VERSION = 4;
@@ -56,5 +57,6 @@ internal static class AppConsts
   public const string PREF_DISCORD_USERNAME = "integrations.discord.username";
   public const string PREF_DISCORD_STATUS = "integrations.discord.status";
   public const string PREF_DISCORD_TOKEN = "integrations.discord.token";
+  public const string DISCORD_APPLICATION_ID = "1504087516674916392";
 
 }

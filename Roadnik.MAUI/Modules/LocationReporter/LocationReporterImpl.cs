@@ -298,7 +298,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
           using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}/api/v1{ReqPaths.STORE_PATH_POINT}", content, cts.Token);
           res.EnsureSuccessStatusCode();
 
-          _discordIntegration.UpdatePresence(location.Latitude, location.Longitude, prefs.RoomId);
+          _discordIntegration.UpdatePresence(location.Latitude, location.Longitude, prefs.RoomId, location.Speed, hr);
 
           stats = stats with { Successful = stats.Successful + 1, LastSuccessfulReportTime = now };
           p_statsFlow.OnNext(stats);

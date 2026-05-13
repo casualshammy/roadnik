@@ -10,7 +10,7 @@ internal interface IDiscordIntegration
   /// <summary>
   /// Pushes a new location to Discord presence. Fire-and-forget safe.
   /// </summary>
-  void UpdatePresence(double _lat, double _lng, string _roomId);
+  void UpdatePresence(double _lat, double _lng, string _roomId, float? _speed, int? _hrm);
 
   /// <summary>
   /// Clears the Discord presence status. Fire-and-forget safe.

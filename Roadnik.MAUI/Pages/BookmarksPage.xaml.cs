@@ -38,7 +38,6 @@ public partial class BookmarksPage : CContentPage
     });
 
     p_preferences.PreferencesChanged
-      .StartWithDefault()
       .DistinctUntilChanged(_ =>
       {
         var bookmarks = p_preferences.GetValueOrDefault<IReadOnlyList<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
@@ -61,7 +60,6 @@ public partial class BookmarksPage : CContentPage
       }, p_lifetime);
 
     p_preferences.PreferencesChanged
-      .StartWithDefault()
       .DistinctUntilChanged(_ =>
       {
         var activeRoom = p_preferences.GetValueOrDefault<string>(PREF_ROOM);

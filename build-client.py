@@ -6,8 +6,8 @@ import argparse
 
 signingPassword = os.environ['ANDROID_SIGNING_KEY_PASSWORD']
 
-sourceDirName = "Roadnik.MAUI"
-webAppSrcDir = os.path.join(os.getcwd(), "www-vue")
+sourceDirName = "src/mobile"
+webAppSrcDir = os.path.join(os.getcwd(), "src/frontend/app")
 webAppTargetDir = os.path.join(os.getcwd(), sourceDirName, "Resources\\Raw\\webApp")
 
 argParser = argparse.ArgumentParser()

@@ -43,12 +43,12 @@ A .NET MAUI Android app (API 28+) that sends your location to **roadnik.app** in
 
 Two constants must be changed before building:
 
-1. **`Roadnik.MAUI/Data/AppConsts.cs`** — set `ROADNIK_APP_ADDRESS` to your server URL:
+1. **`src/mobile/Data/AppConsts.cs`** — set `ROADNIK_APP_ADDRESS` to your server URL:
    ```csharp
    public const string ROADNIK_APP_ADDRESS = "https://your-domain.example";
    ```
 
-2. **`Roadnik.MAUI/Platforms/Android/DeepLinkActivity.cs`** — set `DataHost` to your domain (required for QR-code room sharing deep links):
+2. **`src/mobile/Platforms/Android/DeepLinkActivity.cs`** — set `DataHost` to your domain (required for QR-code room sharing deep links):
    ```csharp
    DataHost = "your-domain.example",
    ```

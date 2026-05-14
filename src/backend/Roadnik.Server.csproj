@@ -24,7 +24,7 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<ProjectReference Include="..\Roadnik.Common\Roadnik.Common.csproj" />
+				<ProjectReference Include="..\common\Roadnik.Common.csproj" />
 		</ItemGroup>
 
 </Project>

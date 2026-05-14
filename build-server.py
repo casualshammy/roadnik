@@ -1,7 +1,7 @@
 import os
 from build_common import git, docker, packages, utils
 
-sourceDirName = "Roadnik"
+sourceDirName = "src/backend"
 
 dockerRepo = os.getenv('DOCKER_REPO')
 if not dockerRepo:
@@ -22,8 +22,8 @@ print(f"Creating docker image...", flush=True)
 print(f"Version: '{version}'", flush=True)
 print(f"===========================================", flush=True)
 packages.adjust_csproj_version(os.path.join(os.getcwd(), sourceDirName), version)
-docker.buildPushMultiArch(f"{dockerRepo}:{version}", "Roadnik/Dockerfile", dockerLogin, dockerPassword)
-docker.buildPushMultiArch(f"{dockerRepo}:latest", "Roadnik/Dockerfile", dockerLogin, dockerPassword)
+docker.buildPushMultiArch(f"{dockerRepo}:{version}", "src/backend/Dockerfile", dockerLogin, dockerPassword)
+docker.buildPushMultiArch(f"{dockerRepo}:latest", "src/backend/Dockerfile", dockerLogin, dockerPassword)
 
 print(f"===========================================", flush=True)
 print(f"Done!", flush=True)

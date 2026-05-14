@@ -19,7 +19,7 @@
                 FontSize="15"/>
             <Label
                 x:Name="DetailsTextLabel"
-                TextColor="{StaticResource Gray300}"
+                TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
                 FontSize="14"/>
         </VerticalStackLayout>
         <Switch
@@ -27,6 +27,7 @@
             Grid.Row="0"
             x:Name="Switch"
             Toggled="Switch_Toggled"
+            OnColor="{StaticResource Primary}"
             HorizontalOptions="End"
             VerticalOptions="Center"/>
     </Grid>

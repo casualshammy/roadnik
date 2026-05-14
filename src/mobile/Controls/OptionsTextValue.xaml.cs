@@ -40,7 +40,8 @@ public partial class OptionsTextValue : ContentView
     {
       var control = (OptionsTextValue)_bindable;
       var text = _new as string;
-      control.ValueTextLabel.Text = text;//!text.IsNullOrEmpty() ? $" {text} " : text;
+      control.ValueTextLabel.Text = text;
+      control.ValueBorder.IsVisible = !text.IsNullOrEmpty();
     });
 
   public static readonly BindableProperty TapCommandProperty = BindableProperty.Create(
@@ -69,6 +70,27 @@ public partial class OptionsTextValue : ContentView
   {
     get => (string)GetValue(ValueTextProperty);
     set => SetValue(ValueTextProperty, value);
+  }
+
+  public static readonly BindableProperty RightEmojiProperty = BindableProperty.Create(
+    nameof(RightEmoji),
+    typeof(string),
+    typeof(OptionsTextValue),
+    propertyChanged: (_bindable, _old, _new) =>
+    {
+      var control = (OptionsTextValue)_bindable;
+      var emoji = _new as string;
+      var hasEmoji = !emoji.IsNullOrEmpty();
+      control.RightEmojiLabel.Text = emoji;
+      control.RightEmojiLabel.IsVisible = hasEmoji;
+      if (hasEmoji)
+        control.ValueBorder.IsVisible = false;
+    });
+
+  public string RightEmoji
+  {
+    get => (string)GetValue(RightEmojiProperty);
+    set => SetValue(RightEmojiProperty, value);
   }
 
   public ICommand TapCommand

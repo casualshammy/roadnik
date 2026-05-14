@@ -5,8 +5,8 @@
 
     <Rectangle
         VerticalOptions="End"
-        Fill="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray100}}"
-        Stroke="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray100}}"
+        Fill="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
+        Stroke="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray600}}"
         Margin="10, 0, 10, 0"
         HeightRequest="2"/>
 </ContentView>

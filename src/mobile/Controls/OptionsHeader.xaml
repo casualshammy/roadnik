@@ -3,25 +3,21 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="Roadnik.MAUI.Controls.OptionsHeader">
 
-    <Grid
-        Margin="0, 20, 0, 0"
-        HeightRequest="40"
-        ColumnDefinitions="*"
-        RowDefinitions="*, 2">
-        <Label 
+    <Border
+        Margin="16, 20, 16, 6"
+        StrokeShape="RoundRectangle 100"
+        StrokeThickness="0"
+        Stroke="Transparent"
+        BackgroundColor="{AppThemeBinding Light=#E8E4F8, Dark=#2A2840}"
+        HorizontalOptions="Start"
+        Padding="10, 5, 14, 5">
+        <Label
             x:Name="TitleLabel"
-            Margin="20, 0"
             FontAttributes="Bold"
-            FontSize="Medium"
+            FontSize="12"
+            CharacterSpacing="0.5"
+            TextTransform="Uppercase"
             VerticalOptions="Center"
-            TextColor="{AppThemeBinding Light=Blue, Dark=CadetBlue}"/>
-        <Rectangle 
-            Grid.Column="0"
-            Grid.Row="1"
-            Grid.ColumnSpan="2"
-            VerticalOptions="End"
-            Fill="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-            Stroke="{AppThemeBinding Light=Blue, Dark=CadetBlue}"
-            HeightRequest="2"/>
-    </Grid>
+            TextColor="{StaticResource Primary}"/>
+    </Border>
 </ContentView>

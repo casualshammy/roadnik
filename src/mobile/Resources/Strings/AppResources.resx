@@ -207,7 +207,7 @@ Please click "Allow" in the next window.</value>
     <value>Battery optimization is enabled</value>
   </data>
   <data name="page.options.connection_settings" xml:space="preserve">
-    <value>Connection settings</value>
+    <value>🔗 Connection settings</value>
   </data>
   <data name="page.options.delete_old_route.desc" xml:space="preserve">
     <value>The track from the previous recording session will not be preserved when you begin a new session</value>
@@ -223,7 +223,7 @@ If the actual location accuracy will be less than the value of the '%min-locatio
     <value>Accuracy warning</value>
   </data>
   <data name="page.options.notifications" xml:space="preserve">
-    <value>Notifications</value>
+    <value>🔔 Notifications</value>
   </data>
   <data name="page.options.notifications.new_point.desc" xml:space="preserve">
     <value>Someone has created a new point</value>
@@ -241,7 +241,7 @@ If the actual location accuracy will be less than the value of the '%min-locatio
     <value>Room ID</value>
   </data>
   <data name="page.options.tracking" xml:space="preserve">
-    <value>Tracking settings</value>
+    <value>📍 Tracking settings</value>
   </data>
   <data name="page.options.tracking.required_accuracy" xml:space="preserve">
     <value>Required location accuracy</value>
@@ -314,7 +314,7 @@ Passive mode uses data obtained from other applications.</value>
     <value>Your location will be sent when the following combination of the above conditions is met</value>
   </data>
   <data name="page.options.location_providers" xml:space="preserve">
-    <value>Location providers</value>
+    <value>🛰️ Location providers</value>
   </data>
   <data name="page.options.gps.tooltip" xml:space="preserve">
     <value>GPS consumes the most energy but has the highest accuracy</value>

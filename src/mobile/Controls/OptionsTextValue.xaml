@@ -20,23 +20,39 @@
             <Label
                 x:Name="DetailsTextLabel"
                 IsVisible="False"
-                TextColor="{StaticResource Gray300}"
+                TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource Gray300}}"
                 FontSize="14"/>
         </VerticalStackLayout>
         <Border
+            x:Name="ValueBorder"
             Grid.Column="1"
             HorizontalOptions="End"
             VerticalOptions="Center"
             Margin="5, 5, 20, 5"
-            MinimumWidthRequest="80"
+            MinimumWidthRequest="60"
+            MaximumWidthRequest="160"
             StrokeShape="RoundRectangle 20"
+            StrokeThickness="0"
+            Stroke="Transparent"
+            BackgroundColor="{StaticResource Primary}"
             Padding="10, 5, 10, 5">
             
             <Label
                 HorizontalTextAlignment="Center"
                 VerticalTextAlignment="Center"
+                TextColor="White"
+                LineBreakMode="TailTruncation"
+                MaxLines="1"
                 x:Name="ValueTextLabel" />
         </Border>
+        <Label
+            x:Name="RightEmojiLabel"
+            Grid.Column="1"
+            IsVisible="False"
+            FontSize="22"
+            HorizontalOptions="End"
+            VerticalOptions="Center"
+            Margin="5, 0, 20, 0"/>
 
     </Grid>
 

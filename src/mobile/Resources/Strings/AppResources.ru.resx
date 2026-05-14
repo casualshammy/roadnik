@@ -207,7 +207,7 @@
     <value>Оптимизация батареи включена</value>
   </data>
   <data name="page.options.connection_settings" xml:space="preserve">
-    <value>Настройки подключения</value>
+    <value>🔗 Настройки подключения</value>
   </data>
   <data name="page.options.delete_old_route.desc" xml:space="preserve">
     <value>Предыдущая запись трека будет удалена при начале новой записи</value>
@@ -223,7 +223,7 @@
     <value>Предупреждение о точности</value>
   </data>
   <data name="page.options.notifications" xml:space="preserve">
-    <value>Уведомления</value>
+    <value>🔔 Уведомления</value>
   </data>
   <data name="page.options.notifications.new_point.desc" xml:space="preserve">
     <value>Кто-то создал новую точку на карте</value>
@@ -241,7 +241,7 @@
     <value>ID комнаты</value>
   </data>
   <data name="page.options.tracking" xml:space="preserve">
-    <value>Настройки трекинга</value>
+    <value>📍 Настройки трекинга</value>
   </data>
   <data name="page.options.tracking.required_accuracy" xml:space="preserve">
     <value>Минимальная точность геолокации</value>
@@ -314,7 +314,7 @@ WiFi потребляет меньше энергии, но его точнос�
     <value>Ваше местоположение будет отправлено при следующей комбинации вышеуказанных условий</value>
   </data>
   <data name="page.options.location_providers" xml:space="preserve">
-    <value>Провайдеры местоположения</value>
+    <value>🛰️ Провайдеры местоположения</value>
   </data>
   <data name="page.options.gps.tooltip" xml:space="preserve">
     <value>GPS потребляет больше всего энергии, но и точность у него наивысшая</value>

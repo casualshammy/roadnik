@@ -9,151 +9,193 @@
              x:DataType="views:OptionsPageViewModel"
              Title="{x:Static l:AppResources.shell_settings}">
 
+    <tookit:CContentPage.Resources>
+        <Style x:Key="OptionsCard" TargetType="Border">
+            <Setter Property="StrokeShape" Value="RoundRectangle 16"/>
+            <Setter Property="StrokeThickness" Value="0"/>
+            <Setter Property="Stroke" Value="Transparent"/>
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F4F1FE, Dark=#1C1A24}"/>
+            <Setter Property="Margin" Value="12, 0, 12, 8"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+    </tookit:CContentPage.Resources>
+
     <ContentPage.BindingContext>
         <views:OptionsPageViewModel />
     </ContentPage.BindingContext>
 
     <ScrollView>
         <VerticalStackLayout>
-            
+
             <!-- SERVER SETTINGS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_connection_settings}" />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_roomId}"
-                ValueText="{Binding RoomId}"
-                TapCommand="{Binding RoomIdCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_username}"
-                ValueText="{Binding Nickname}"
-                TapCommand="{Binding UsernameCommand}"/>
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_roomId}"
+                        ValueText="{Binding RoomId}"
+                        TapCommand="{Binding RoomIdCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_username}"
+                        ValueText="{Binding Nickname}"
+                        TapCommand="{Binding UsernameCommand}"/>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- TRACKING SETTINGS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_tracking}" />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_time_interval}"
-                DetailsText="{x:Static l:AppResources.page_options_time_interval_hint}"
-                ValueText="{Binding MinimumTime, StringFormat='{0} s'}"
-                TapCommand="{Binding MinimumIntervalCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_distance}"
-                DetailsText="{x:Static l:AppResources.page_options_distance_hint}"
-                ValueText="{Binding MinimumDistance, StringFormat='{0} m'}"
-                TapCommand="{Binding MinimumDistanceCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_share_condition}"
-                DetailsText="{x:Static l:AppResources.page_options_share_condition_hint}"
-                ValueText="{Binding TrackpointReportingConditionText}"
-                TapCommand="{Binding TrackpointReportingConditionCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="{x:Static l:AppResources.page_options_tracking_required_accuracy}"
-                ValueText="{Binding MinAccuracy, StringFormat='{0} m'}"
-                TapCommand="{Binding MinAccuracyCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsSwitch
-                x:Name="p_deleteOldRouteOnNew"
-                Title="{x:Static l:AppResources.page_options_delete_old_route_title}"
-                DetailsText="{x:Static l:AppResources.page_options_delete_old_route_desc}"
-                SwitchTapped="{Binding WipeOldTrackOnNewCommand}"/>
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_time_interval}"
+                        DetailsText="{x:Static l:AppResources.page_options_time_interval_hint}"
+                        ValueText="{Binding MinimumTime, StringFormat='{0} s'}"
+                        TapCommand="{Binding MinimumIntervalCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_distance}"
+                        DetailsText="{x:Static l:AppResources.page_options_distance_hint}"
+                        ValueText="{Binding MinimumDistance, StringFormat='{0} m'}"
+                        TapCommand="{Binding MinimumDistanceCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_share_condition}"
+                        DetailsText="{x:Static l:AppResources.page_options_share_condition_hint}"
+                        ValueText="{Binding TrackpointReportingConditionText}"
+                        TapCommand="{Binding TrackpointReportingConditionCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        Title="{x:Static l:AppResources.page_options_tracking_required_accuracy}"
+                        ValueText="{Binding MinAccuracy, StringFormat='{0} m'}"
+                        TapCommand="{Binding MinAccuracyCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsSwitch
+                        x:Name="p_deleteOldRouteOnNew"
+                        Title="{x:Static l:AppResources.page_options_delete_old_route_title}"
+                        DetailsText="{x:Static l:AppResources.page_options_delete_old_route_desc}"
+                        SwitchTapped="{Binding WipeOldTrackOnNewCommand}"/>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- LOCATION PROVIDERS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_location_providers}" />
-            <controls:OptionsSwitch
-                x:Name="p_locationProvidersGps"
-                Title="{x:Static l:AppResources.page_options_power_mode_high_accuracy}"
-                DetailsText="{x:Static l:AppResources.page_options_gps_tooltip}"
-                SwitchTapped="{Binding OnLocationProviderGpsSwitched}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsSwitch
-                x:Name="p_locationProvidersNetwork"
-                Title="{x:Static l:AppResources.page_options_power_mode_medium_accuracy}"
-                DetailsText="{x:Static l:AppResources.page_options_network_tooltip}"
-                SwitchTapped="{Binding OnLocationProviderNetworkSwitched}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsSwitch
-                x:Name="p_locationProvidersPassive"
-                Title="{x:Static l:AppResources.page_options_power_mode_passive}"
-                DetailsText="{x:Static l:AppResources.page_options_passive_tooltip}"
-                SwitchTapped="{Binding OnLocationProviderPassiveSwitched}"/>
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsSwitch
+                        x:Name="p_locationProvidersGps"
+                        Title="{x:Static l:AppResources.page_options_power_mode_high_accuracy}"
+                        DetailsText="{x:Static l:AppResources.page_options_gps_tooltip}"
+                        SwitchTapped="{Binding OnLocationProviderGpsSwitched}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsSwitch
+                        x:Name="p_locationProvidersNetwork"
+                        Title="{x:Static l:AppResources.page_options_power_mode_medium_accuracy}"
+                        DetailsText="{x:Static l:AppResources.page_options_network_tooltip}"
+                        SwitchTapped="{Binding OnLocationProviderNetworkSwitched}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsSwitch
+                        x:Name="p_locationProvidersPassive"
+                        Title="{x:Static l:AppResources.page_options_power_mode_passive}"
+                        DetailsText="{x:Static l:AppResources.page_options_passive_tooltip}"
+                        SwitchTapped="{Binding OnLocationProviderPassiveSwitched}"/>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- SENSORS -->
             <controls:OptionsHeader
-                Title="Sensors" />
-            <controls:OptionsSwitch
-                x:Name="p_hrReporting"
-                Title="Heart rate reporting"
-                DetailsText="Heart rate reporting details"
-                SwitchTapped="{Binding BleHrmEnabledCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                x:Name="p_bleHrmDevice"
-                Title="BLE HRM device"
-                IsEnabled="{Binding BleHrmEnabled}"
-                ValueText="{Binding BleHrmDeviceName}"/>
-            
+                Title="❤️ Sensors" />
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsSwitch
+                        x:Name="p_hrReporting"
+                        Title="Heart rate reporting"
+                        DetailsText="Heart rate reporting details"
+                        SwitchTapped="{Binding BleHrmEnabledCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        x:Name="p_bleHrmDevice"
+                        Title="BLE HRM device"
+                        IsEnabled="{Binding BleHrmEnabled}"
+                        ValueText="{Binding BleHrmDeviceName}"/>
+                </VerticalStackLayout>
+            </Border>
+
             <!-- DISPLAY -->
             <controls:OptionsHeader
-                Title="Display" />
-            <controls:OptionsSwitch
-                x:Name="p_displayOnLockScreen"
-                Title="{x:Static l:AppResources.page_options_display_on_lockscreen_title}"
-                DetailsText="{x:Static l:AppResources.page_options_display_on_lockscreen_desc}"
-                SwitchTapped="{Binding DisplayOnLockScreenCommand}"/>
+                Title="🖥️ Display" />
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsSwitch
+                        x:Name="p_displayOnLockScreen"
+                        Title="{x:Static l:AppResources.page_options_display_on_lockscreen_title}"
+                        DetailsText="{x:Static l:AppResources.page_options_display_on_lockscreen_desc}"
+                        SwitchTapped="{Binding DisplayOnLockScreenCommand}"/>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- NOTIFICATIONS -->
             <controls:OptionsHeader
                 Title="{x:Static l:AppResources.page_options_notifications}" />
-            <controls:OptionsSwitch
-                x:Name="p_notifyNewTrack"
-                Title="{x:Static l:AppResources.page_options_notifications_new_track_title}"
-                DetailsText="{x:Static l:AppResources.page_options_notifications_new_track_desc}"
-                SwitchTapped="{Binding NotifyNewTrackCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsSwitch
-                x:Name="p_notifyNewPoint"
-                Title="{x:Static l:AppResources.page_options_notifications_new_point_title}"
-                DetailsText="{x:Static l:AppResources.page_options_notifications_new_point_desc}"
-                SwitchTapped="{Binding NotifyNewPointCommand}"/>
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsSwitch
+                        x:Name="p_notifyNewTrack"
+                        Title="{x:Static l:AppResources.page_options_notifications_new_track_title}"
+                        DetailsText="{x:Static l:AppResources.page_options_notifications_new_track_desc}"
+                        SwitchTapped="{Binding NotifyNewTrackCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsSwitch
+                        x:Name="p_notifyNewPoint"
+                        Title="{x:Static l:AppResources.page_options_notifications_new_point_title}"
+                        DetailsText="{x:Static l:AppResources.page_options_notifications_new_point_desc}"
+                        SwitchTapped="{Binding NotifyNewPointCommand}"/>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- DISCORD INTEGRATION -->
             <controls:OptionsHeader
-                Title="Discord Integration" />
-            <controls:OptionsTextValue
-                Title="Connect Discord account"
-                DetailsText="Sign in to broadcast your approximate location as a Discord status"
-                ValueText=""
-                TapCommand="{Binding DiscordAuthCommand}"
-                IsVisible="{Binding DiscordNotAuthenticated}"/>
-            <controls:OptionsHorizontalLine
-                IsVisible="{Binding DiscordNotAuthenticated}"/>
-            <controls:OptionsTextValue
-                Title="Signed in"
-                DetailsText="Tap to sign out"
-                ValueText=""
-                TapCommand="{Binding DiscordRevokeCommand}"
-                IsVisible="{Binding DiscordAuthenticated}"/>
-            <controls:OptionsHorizontalLine
-                IsVisible="{Binding DiscordAuthenticated}"/>
-            <controls:OptionsSwitch
-                x:Name="p_discordEnabled"
-                Title="Broadcast location on Discord"
-                DetailsText="Shows your approximate location and a tracking link as a Discord status while sharing"
-                IsEnabled="{Binding DiscordAuthenticated}"
-                SwitchTapped="{Binding DiscordEnabledCommand}"/>
-            <controls:OptionsHorizontalLine />
-            <controls:OptionsTextValue
-                Title="Custom status message"
-                DetailsText="Optional text appended to your Discord status, e.g. &quot;Riding in the mountains 🏔️&quot;"
-                ValueText="{Binding DiscordCustomStatus}"
-                TapCommand="{Binding DiscordStatusCommand}"/>
-        </VerticalStackLayout>
+                Title="💬 Discord Integration" />
+            <Border Style="{StaticResource OptionsCard}">
+                <VerticalStackLayout>
+                    <controls:OptionsTextValue
+                        Title="Connect Discord account"
+                        DetailsText="Sign in to broadcast your approximate location as a Discord status"
+                        ValueText=""
+                        RightEmoji="🔗"
+                        TapCommand="{Binding DiscordAuthCommand}"
+                        IsVisible="{Binding DiscordNotAuthenticated}"/>
+                    <controls:OptionsHorizontalLine
+                        IsVisible="{Binding DiscordNotAuthenticated}"/>
+                    <controls:OptionsTextValue
+                        Title="Signed in"
+                        DetailsText="Tap to sign out"
+                        ValueText=""
+                        RightEmoji="✅"
+                        TapCommand="{Binding DiscordRevokeCommand}"
+                        IsVisible="{Binding DiscordAuthenticated}"/>
+                    <controls:OptionsHorizontalLine
+                        IsVisible="{Binding DiscordAuthenticated}"/>
+                    <controls:OptionsSwitch
+                        x:Name="p_discordEnabled"
+                        Title="Broadcast location on Discord"
+                        DetailsText="Shows your approximate location and a tracking link as a Discord status while sharing"
+                        IsEnabled="{Binding DiscordAuthenticated}"
+                        SwitchTapped="{Binding DiscordEnabledCommand}"/>
+                    <controls:OptionsHorizontalLine />
+                    <controls:OptionsTextValue
+                        Title="Custom status message"
+                        DetailsText="Optional text appended to your Discord status"
+                        ValueText="{Binding DiscordCustomStatus}"
+                        TapCommand="{Binding DiscordStatusCommand}"/>
+                </VerticalStackLayout>
+            </Border>
 
+            <BoxView HeightRequest="24" Color="Transparent"/>
+        </VerticalStackLayout>
     </ScrollView>
 
 

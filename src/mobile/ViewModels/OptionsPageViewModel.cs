@@ -38,8 +38,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private HrmDeviceInfo? p_bleHrmDeviceInfo;
   private bool p_displayOnLockScreenEnabled;
   private bool p_discordEnabled;
-  private bool p_discordAuthenticated;
-  private string? p_discordUsername;
+  private bool p_discordTokenExist;
   private string? p_discordCustomStatus;
 
   public OptionsPageViewModel()
@@ -92,9 +91,8 @@ internal class OptionsPageViewModel : BaseViewModel
         SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED), nameof(BleHrmEnabled));
         SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
         SetProperty(ref p_displayOnLockScreenEnabled, p_storage.GetValueOrDefault<bool>(PREF_DISPLAY_ON_LOCK_SCREEN), nameof(DisplayOnLockScreenEnabled));
-        SetProperty(ref p_discordAuthenticated, !p_storage.GetValueOrDefault<string>(PREF_DISCORD_TOKEN).IsNullOrEmpty(), nameof(DiscordAuthenticated), nameof(DiscordNotAuthenticated));
+        SetProperty(ref p_discordTokenExist, !p_storage.GetValueOrDefault<string>(PREF_DISCORD_TOKEN).IsNullOrEmpty(), nameof(DiscordAuthenticated), nameof(DiscordNotAuthenticated));
         SetProperty(ref p_discordEnabled, p_storage.GetValueOrDefault<bool>(PREF_DISCORD_ENABLED), nameof(DiscordEnabled));
-        SetProperty(ref p_discordUsername, p_storage.GetValueOrDefault<string>(PREF_DISCORD_USERNAME), nameof(DiscordUsername));
         SetProperty(ref p_discordCustomStatus, p_storage.GetValueOrDefault<string>(PREF_DISCORD_STATUS), nameof(DiscordCustomStatus));
       }, lifetime);
   }
@@ -287,10 +285,9 @@ internal class OptionsPageViewModel : BaseViewModel
     }
   }
 
-  public bool DiscordAuthenticated => p_discordAuthenticated;
-  public bool DiscordNotAuthenticated => !p_discordAuthenticated;
+  public bool DiscordAuthenticated => p_discordTokenExist;
+  public bool DiscordNotAuthenticated => !p_discordTokenExist;
   public bool DiscordEnabled => p_discordEnabled;
-  public string? DiscordUsername => p_discordUsername;
   public string? DiscordCustomStatus => p_discordCustomStatus;
 
   public ICommand RoomIdCommand { get; }
@@ -564,19 +561,16 @@ internal class OptionsPageViewModel : BaseViewModel
         return;
       }
 
-      p_log.Info($"Discord login: token received, fetching user info...");
-      var username = await p_discord.FetchUsernameAsync(token, cts.Token) ?? "unknown";
-      var tokenData = new DiscordTokenData(token, username);
+      p_log.Info($"Discord login: token received");
 
       var appId = p_storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
       using var aes = new Ax.Fw.Crypto.AesWithGcm(appId.ToByteArray());
-      var json = JsonSerializer.SerializeToUtf8Bytes(tokenData, DiscordJsonCtx.Default.DiscordTokenData);
+      var json = JsonSerializer.SerializeToUtf8Bytes(token, DiscordJsonCtx.Default.String);
       var encToken = aes.Encrypt(json);
       var encTokenString = Convert.ToBase64String(encToken);
       p_storage.SetValue(PREF_DISCORD_TOKEN, encTokenString);
-      p_storage.SetValue(PREF_DISCORD_USERNAME, username);
 
-      p_log.Info($"Discord login: authenticated as '{username}'");
+      p_log.Info($"Discord login: token saved");
     }
     catch (TaskCanceledException ex) when (ex.InnerException is not OperationCanceledException)
     {

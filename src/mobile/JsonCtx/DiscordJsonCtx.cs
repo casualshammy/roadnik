@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Roadnik.MAUI.JsonCtx;
 
-[JsonSerializable(typeof(DiscordTokenData))]
+[JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(DiscordGatewayMessage))]
 [JsonSerializable(typeof(DiscordHelloData))]
 [JsonSerializable(typeof(DiscordUserResponse))]

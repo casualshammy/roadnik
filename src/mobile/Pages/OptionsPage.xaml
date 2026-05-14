@@ -133,9 +133,9 @@
             <controls:OptionsHorizontalLine
                 IsVisible="{Binding DiscordNotAuthenticated}"/>
             <controls:OptionsTextValue
-                Title="Signed in as"
+                Title="Signed in"
                 DetailsText="Tap to sign out"
-                ValueText="{Binding DiscordUsername}"
+                ValueText=""
                 TapCommand="{Binding DiscordRevokeCommand}"
                 IsVisible="{Binding DiscordAuthenticated}"/>
             <controls:OptionsHorizontalLine

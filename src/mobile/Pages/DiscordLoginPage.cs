@@ -1,3 +1,5 @@
+using Roadnik.MAUI.Controls;
+
 namespace Roadnik.MAUI.Pages;
 
 /// <summary>
@@ -18,6 +20,7 @@ internal class DiscordLoginPage : ContentPage
     "})()";
 
   private readonly WebView p_webView;
+  private readonly Spinner p_spinner;
   private TaskCompletionSource<string?>? p_tokenTcs;
 
   public DiscordLoginPage()
@@ -31,8 +34,22 @@ internal class DiscordLoginPage : ContentPage
       HorizontalOptions = LayoutOptions.Fill,
     };
     p_webView.Navigated += OnNavigated;
+    p_webView.Navigating += Navigating;
 
-    Content = new Grid { Children = { p_webView } };
+    p_spinner = new Spinner
+    {
+      IsVisible = false,
+      VerticalOptions = LayoutOptions.Center,
+      HorizontalOptions = LayoutOptions.Center,
+    };
+
+    Content = new Grid
+    {
+      Children = {
+        p_webView,
+        p_spinner
+      }
+    };
   }
 
   internal Task<string?> WaitForTokenAsync(CancellationToken _ct)
@@ -42,8 +59,15 @@ internal class DiscordLoginPage : ContentPage
     return p_tokenTcs.Task;
   }
 
+  private void Navigating(object? _sender, WebNavigatingEventArgs _e)
+  {
+    p_spinner.IsVisible = true;
+  }
+
   private async void OnNavigated(object? _sender, WebNavigatedEventArgs _e)
   {
+    p_spinner.IsVisible = false;
+
     // Discord redirects to /channels/... after a successful login
     var url = _e.Url ?? string.Empty;
     if (!url.Contains("discord.com/channels") && !url.Contains("discord.com/app"))

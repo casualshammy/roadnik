@@ -59,11 +59,10 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     p_storage.PreferencesChanged
       .Select(_ =>
       {
-        var savedUsername = _storage.GetValueOrDefault<string>(PREF_DISCORD_USERNAME);
         var isEnabled = _storage.GetValueOrDefault<bool>(PREF_DISCORD_ENABLED);
         var encToken = _storage.GetValueOrDefault<string>(PREF_DISCORD_TOKEN);
         var appId = _storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
-        return (UserName: savedUsername, Enabled: isEnabled, EncToken: encToken, AppId: appId);
+        return (Enabled: isEnabled, EncToken: encToken, AppId: appId);
       })
       .CombineLatest(p_isBroadcastingSubj)
       .DistinctUntilChanged(_ =>
@@ -75,9 +74,9 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
       .HotAlive(_lifetime, null, (_e, _life) =>
       {
         var (data, isBroadcasting) = _e;
-        var tokenData = TryLoadTokenData();
+        var token = TryLoadToken();
         var isEnabled = data.Enabled;
-        var active = isEnabled && tokenData != null && isBroadcasting;
+        var active = isEnabled && token != null && isBroadcasting;
 
         if (!active)
           return;
@@ -91,7 +90,6 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     try
     {
       p_storage.RemoveValue(PREF_DISCORD_TOKEN);
-      p_storage.RemoveValue(PREF_DISCORD_USERNAME);
       p_storage.SetValue(PREF_DISCORD_ENABLED, false);
       p_log.Info($"Discord auth revoked");
     }
@@ -170,8 +168,8 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
   private async Task RunGatewaySessionAsync(IReadOnlyLifetime _life)
   {
-    var tokenData = TryLoadTokenData();
-    if (tokenData == null)
+    var token = TryLoadToken();
+    if (token == null)
     {
       p_log.Warn($"Discord gateway: no valid token, aborting session");
       RevokeAuth();
@@ -245,12 +243,12 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
       }
     }, _life.Token);
 
-    p_log.Info($"Discord gateway: sending IDENTIFY (token length: {tokenData.Token.Length})");
+    p_log.Info($"Discord gateway: sending IDENTIFY (token length: {token.Length})");
     Enqueue(
       new DiscordIdentifyMsg(
         DiscordGatewayOpCode.Identify,
         new DiscordIdentifyData(
-          tokenData.Token,
+          token,
           Capabilities: DISCORD_IDENTIFY_CAPABILITIES,
           Compress: false,
           new DiscordIdentifyProperties("Windows", "Discord Client", "ktor"))),
@@ -415,7 +413,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     return data;
   }
 
-  private DiscordTokenData? TryLoadTokenData()
+  private string? TryLoadToken()
   {
     var appId = p_storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
     var encToken = p_storage.GetValueOrDefault<string>(PREF_DISCORD_TOKEN);
@@ -427,7 +425,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     {
       using var aes = new Ax.Fw.Crypto.AesWithGcm(appId.ToByteArray());
       var tokenDataSpan = aes.Decrypt(Convert.FromBase64String(encToken));
-      var tokenData = JsonSerializer.Deserialize(tokenDataSpan, DiscordJsonCtx.Default.DiscordTokenData);
+      var tokenData = JsonSerializer.Deserialize(tokenDataSpan, DiscordJsonCtx.Default.String);
       return tokenData;
     }
     catch (Exception ex)

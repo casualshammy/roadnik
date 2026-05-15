@@ -5,11 +5,15 @@ using Roadnik.MAUI.Data.Discord;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Toolkit;
+using System.Buffers;
 using System.Net.WebSockets;
+using System.Reactive;
+using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Channels;
 using static Roadnik.MAUI.Data.AppConsts;
 
@@ -17,12 +21,20 @@ namespace Roadnik.MAUI.Modules.DiscordIntegration;
 
 internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscordIntegration>
 {
-  private record PresenceData(
+  private sealed record PresenceData(
+    int SessionId,
     double Lat,
     double Lng,
     string RoomId,
     float? Speed,
     int? Hrm);
+
+  private sealed record TimestampedPresenceData(
+    PresenceData? Data,
+    DateTimeOffset Timestamp)
+  {
+    public static TimestampedPresenceData Default { get; } = new(null, default);
+  }
 
   public static IDiscordIntegration ExportInstance(IAppDependencyCtx _ctx)
   {
@@ -40,11 +52,11 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
   private const int DISCORD_CLOSE_CODE_AUTH_FAILED = 4004;
 
   private readonly BehaviorSubject<PresenceData?> p_presenceDataSubj = new(null);
-  private readonly BehaviorSubject<bool> p_isBroadcastingSubj = new(false);
+  // private readonly BehaviorSubject<bool> p_isBroadcastingSubj = new(false);
   private readonly ILog p_log;
   private readonly IPreferencesStorage p_storage;
   private readonly IHttpClientProvider p_httpClientProvider;
-  private long? p_broadcastStartTs;
+  // private long? p_broadcastStartTs;
 
   private DiscordIntegrationImpl(
     IReadOnlyLifetime _lifetime,
@@ -64,24 +76,24 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
         var appId = _storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
         return (Enabled: isEnabled, EncToken: encToken, AppId: appId);
       })
-      .CombineLatest(p_isBroadcastingSubj)
+      .CombineLatest(p_presenceDataSubj)
       .DistinctUntilChanged(_ =>
       {
-        var (data, isBroadcasting) = _;
-        return HashCode.Combine(data.Enabled, data.EncToken, isBroadcasting);
+        var (data, presenceData) = _;
+        return HashCode.Combine(data.Enabled, data.EncToken, presenceData?.SessionId);
       })
       .Throttle(TimeSpan.FromSeconds(1))
       .HotAlive(_lifetime, null, (_e, _life) =>
       {
-        var (data, isBroadcasting) = _e;
+        var (data, presenceData) = _e;
         var token = TryLoadToken();
         var isEnabled = data.Enabled;
-        var active = isEnabled && token != null && isBroadcasting;
+        var active = isEnabled && token != null && presenceData != null;
 
         if (!active)
           return;
 
-        _ = Task.Run(() => RunGatewayLoopAsync(_life), _life.Token);
+        _ = Task.Run(() => RunGatewayLoopAsync(_life, token!), _life.Token);
       });
   }
 
@@ -90,7 +102,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     try
     {
       p_storage.RemoveValue(PREF_DISCORD_TOKEN);
-      p_storage.SetValue(PREF_DISCORD_ENABLED, false);
+      p_storage.SetValue(PREF_DISCORD_ENABLED, false, PrefsStorageJsonCtx.Default.Boolean);
       p_log.Info($"Discord auth revoked");
     }
     catch (Exception ex)
@@ -99,44 +111,33 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     }
   }
 
-  public void UpdatePresence(double _lat, double _lng, string _roomId, float? _speed, int? _hrm)
+  public void UpdatePresence(
+    int _sessionId,
+    double _lat,
+    double _lng,
+    string _roomId,
+    float? _speed,
+    int? _hrm)
   {
-    p_broadcastStartTs ??= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-    p_isBroadcastingSubj.OnNext(true);
-    p_presenceDataSubj.OnNext(new PresenceData(_lat, _lng, _roomId, _speed, _hrm));
+    // p_broadcastStartTs ??= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    // p_isBroadcastingSubj.OnNext(true);
+    p_presenceDataSubj.OnNext(new PresenceData(_sessionId, _lat, _lng, _roomId, _speed, _hrm));
   }
 
   public void ClearPresence()
   {
     p_presenceDataSubj.OnNext(null);
-    p_isBroadcastingSubj.OnNext(false);
-    p_broadcastStartTs = null;
+    // p_isBroadcastingSubj.OnNext(false);
+    // p_broadcastStartTs = null;
   }
 
-  public async Task<string?> FetchUsernameAsync(string _token, CancellationToken _ct)
-  {
-    using var req = new HttpRequestMessage(HttpMethod.Get, $"{DISCORD_API_BASE}/users/@me");
-    // Discord user session tokens are passed as a raw header value (no "Bearer" prefix)
-    req.Headers.TryAddWithoutValidation("Authorization", _token);
-
-    using var res = await p_httpClientProvider.Value.SendAsync(req, _ct);
-    if (!res.IsSuccessStatusCode)
-      return null;
-
-    var response = await JsonSerializer.DeserializeAsync(
-      await res.Content.ReadAsStreamAsync(_ct),
-      DiscordJsonCtx.Default.DiscordUserResponse,
-      _ct);
-    return response?.Username;
-  }
-
-  private async Task RunGatewayLoopAsync(IReadOnlyLifetime _life)
+  private async Task RunGatewayLoopAsync(IReadOnlyLifetime _life, string _token)
   {
     while (!_life.Token.IsCancellationRequested)
     {
       try
       {
-        await RunGatewaySessionAsync(_life);
+        await RunGatewaySessionAsync(_life, _token);
       }
       catch (AccessViolationException ex)
       {
@@ -144,7 +145,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
         RevokeAuth();
         break;
       }
-      catch (OperationCanceledException)
+      catch (OperationCanceledException) when (_life.IsCancellationRequested)
       {
         break;
       }
@@ -166,25 +167,22 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     p_log.Info($"Discord gateway loop stopped");
   }
 
-  private async Task RunGatewaySessionAsync(IReadOnlyLifetime _life)
+  private async Task RunGatewaySessionAsync(IReadOnlyLifetime _life, string _token)
   {
-    var token = TryLoadToken();
-    if (token == null)
-    {
-      p_log.Warn($"Discord gateway: no valid token, aborting session");
-      RevokeAuth();
-      return;
-    }
-
     using var ws = new ClientWebSocket();
-    // ws.Options.SetRequestHeader("User-Agent", "Roadnik/1.0 (roadnik.app)");
 
     p_log.Info($"Connecting to Discord gateway...");
-    await ws.ConnectAsync(new Uri(DISCORD_GATEWAY_URL), _life.Token);
+    {
+      using var cts = CancellationTokenSource.CreateLinkedTokenSource(_life.Token);
+      cts.CancelAfter(TimeSpan.FromSeconds(10));
+      await ws.ConnectAsync(new Uri(DISCORD_GATEWAY_URL), cts.Token);
+    }
     p_log.Info($"Discord gateway connected");
 
     // outgoing message channel to serialise sends
     var sendChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
+    void EnqueueJson(string _json) => sendChannel.Writer.TryWrite(_json);
+    void Enqueue<T>(T _msg, JsonTypeInfo<T> _typeInfo) => EnqueueJson(JsonSerializer.Serialize(_msg, _typeInfo));
 
     using var sendCts = CancellationTokenSource.CreateLinkedTokenSource(_life.Token);
 
@@ -206,10 +204,6 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
       }
     }, sendCts.Token);
 
-    void EnqueueJson(string _json) => sendChannel.Writer.TryWrite(_json);
-    void Enqueue<T>(T _msg, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> _typeInfo)
-      => EnqueueJson(JsonSerializer.Serialize(_msg, _typeInfo));
-
     // Receive HELLO
     var helloMsg = await ReceiveGatewayMessageAsync(ws, _life.Token);
     if (helloMsg == null || helloMsg.Op != DiscordGatewayOpCode.Hello || helloMsg.D == null)
@@ -217,6 +211,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
     var helloData = JsonSerializer.Deserialize(helloMsg.D.Value, DiscordJsonCtx.Default.DiscordHelloData)
       ?? throw new InvalidOperationException("Missing HELLO payload");
+
     var heartbeatInterval = helloData.HeartbeatInterval;
     p_log.Info($"Discord gateway: heartbeat interval = {heartbeatInterval}ms");
 
@@ -243,12 +238,13 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
       }
     }, _life.Token);
 
-    p_log.Info($"Discord gateway: sending IDENTIFY (token length: {token.Length})");
+    // Send IDENTIFY
+    p_log.Info($"Discord gateway: sending IDENTIFY (token length: {_token.Length})");
     Enqueue(
       new DiscordIdentifyMsg(
         DiscordGatewayOpCode.Identify,
         new DiscordIdentifyData(
-          token,
+          _token,
           Capabilities: DISCORD_IDENTIFY_CAPABILITIES,
           Compress: false,
           new DiscordIdentifyProperties("Windows", "Discord Client", "ktor"))),
@@ -274,7 +270,8 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
       p_log.Info($"Discord gateway: received op={msg.Op} t={msg.T ?? "-"} s={msg.S?.ToString() ?? "-"}");
 
-      if (msg.S != null) lastSeq = msg.S;
+      if (msg.S != null)
+        lastSeq = msg.S;
 
       if (msg.Op == DiscordGatewayOpCode.Dispatch && msg.T == "READY")
       {
@@ -290,25 +287,43 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     if (!ready)
       throw new InvalidOperationException("Discord gateway: did not receive READY");
 
-    // Send current presence immediately on connect
-    await SendPresenceUpdateAsync(p_presenceDataSubj.Value, p_broadcastStartTs, EnqueueJson, _life.Token);
-
-    // Subscribe to future presence changes
-    using var presenceSub = p_presenceDataSubj
-      .Skip(1)
+    // Subscribe to presence changes
+    p_presenceDataSubj
       .DistinctUntilChanged()
-      .Subscribe(data =>
+      .Scan(TimestampedPresenceData.Default, (_acc, _presence) =>
       {
-        _ = SendPresenceUpdateAsync(data, p_broadcastStartTs, EnqueueJson, _life.Token);
-      });
+        if (_presence?.SessionId != _acc.Data?.SessionId)
+          return new TimestampedPresenceData(_presence, DateTimeOffset.UtcNow);
+        else
+          return _acc with { Data = _presence };
+      })
+      .SelectAsync(async (_d, _ct) =>
+      {
+        try
+        {
+          using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+          using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_ct, timeoutCts.Token);
+          await SendPresenceUpdateAsync(_d.Data, _d.Timestamp, EnqueueJson, linkedCts.Token);
+        }
+        catch (OperationCanceledException) when (_ct.IsCancellationRequested)
+        { }
+        catch (Exception ex)
+        {
+          p_log.Error($"Error sending presence update to Discord: {ex}");
+        }
+        return Unit.Default;
+      })
+      .Subscribe(_life);
 
     // Main receive loop
     while (!_life.Token.IsCancellationRequested && ws.State == WebSocketState.Open)
     {
       var msg = await ReceiveGatewayMessageAsync(ws, _life.Token);
-      if (msg == null) break;
+      if (msg == null)
+        break;
 
-      if (msg.S != null) lastSeq = msg.S;
+      if (msg.S != null)
+        lastSeq = msg.S;
 
       if (msg.Op == DiscordGatewayOpCode.HeartbeatAck)
         Interlocked.Exchange(ref heartbeatAckReceived, 1);
@@ -333,7 +348,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
 
   private async Task SendPresenceUpdateAsync(
     PresenceData? _data,
-    long? _startTs,
+    DateTimeOffset _sessionStart,
     Action<string> _enqueue,
     CancellationToken _ct)
   {
@@ -344,13 +359,13 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
           DiscordGatewayOpCode.PresenceUpdate,
           new DiscordPresenceUpdateData(null, [], "online", false)),
         DiscordJsonCtx.Default.DiscordPresenceUpdateMsg));
+
       return;
     }
 
     var (lat, lng, roomId, speed, hrm) = (_data.Lat, _data.Lng, _data.RoomId, _data.Speed, _data.Hrm);
     var locationName = await LocationToolkit.TryGetApproximateLocationNameAsync(p_httpClientProvider, lat, lng, _ct);
     var trackingUrl = $"{ROADNIK_APP_ADDRESS}/r/?id={roomId}";
-    var startTs = _startTs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
     var customStatus = p_storage.GetValueOrDefault<string>(PREF_DISCORD_STATUS);
 
     var detailsParts = new List<string>();
@@ -358,6 +373,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
       detailsParts.Add($"📍 {locationName}");
     else
       detailsParts.Add("📍 Sharing location");
+
     if (!customStatus.IsNullOrWhiteSpace())
       detailsParts.Add(customStatus!);
 
@@ -377,7 +393,7 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
             Type: DiscordActivityType.Competing,
             Details: string.Join(" · ", detailsParts),
             State: stateParts.Count > 0 ? string.Join(" · ", stateParts) : null,
-            Timestamps: new DiscordActivityTimestamps(startTs),
+            Timestamps: new DiscordActivityTimestamps(_sessionStart.ToUnixTimeMilliseconds()),
             ApplicationId: DISCORD_APPLICATION_ID,
             Buttons: ["Open Roadnik"],
             Metadata: new DiscordActivityMetadata([trackingUrl]))],
@@ -390,27 +406,33 @@ internal class DiscordIntegrationImpl : IDiscordIntegration, IAppModule<IDiscord
     ClientWebSocket _ws,
     CancellationToken _ct)
   {
-    var buffer = new byte[65536];
-    using var ms = new MemoryStream();
-
-    WebSocketReceiveResult result;
-    do
+    var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+    try
     {
-      result = await _ws.ReceiveAsync(buffer, _ct);
-      if (result.MessageType == WebSocketMessageType.Close)
+      using var ms = new MemoryStream();
+      WebSocketReceiveResult result;
+      do
       {
-        p_log.Warn($"Discord gateway: server closed connection (code: {result.CloseStatus}, reason: {result.CloseStatusDescription})");
-        return null;
+        result = await _ws.ReceiveAsync(buffer, _ct);
+        if (result.MessageType == WebSocketMessageType.Close)
+        {
+          p_log.Warn($"Discord gateway: server closed connection (code: {result.CloseStatus}, reason: {result.CloseStatusDescription})");
+          return null;
+        }
+
+        ms.Write(buffer, 0, result.Count);
       }
+      while (!result.EndOfMessage);
 
-      ms.Write(buffer, 0, result.Count);
+      ms.Position = 0;
+
+      var data = await JsonSerializer.DeserializeAsync(ms, DiscordJsonCtx.Default.DiscordGatewayMessage, _ct);
+      return data;
     }
-    while (!result.EndOfMessage);
-
-    ms.Position = 0;
-
-    var data = await JsonSerializer.DeserializeAsync(ms, DiscordJsonCtx.Default.DiscordGatewayMessage, _ct);
-    return data;
+    finally
+    {
+      ArrayPool<byte>.Shared.Return(buffer);
+    }
   }
 
   private string? TryLoadToken()

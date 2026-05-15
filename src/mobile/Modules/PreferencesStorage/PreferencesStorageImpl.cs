@@ -67,6 +67,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     return (T?)obj;
   }
 
+  [Obsolete($"Use {nameof(SetValue)} with json type info")]
   public void SetValue<T>(string _key, T? _value)
   {
     var json = JsonSerializer.Serialize(_value);

@@ -9,6 +9,9 @@ public interface IPreferencesStorage
   T? GetValueOrDefault<T>(string _key);
   T? GetValueOrDefault<T>(string _key, JsonTypeInfo<T> _jsonTypeInfo);
   void RemoveValue(string _key);
+
+  [Obsolete($"Use {nameof(SetValue)} with json type info")] 
   void SetValue<T>(string _key, T _value);
+
   void SetValue<T>(string _key, T _value, JsonTypeInfo<T> _jsonTypeInfo);
 }

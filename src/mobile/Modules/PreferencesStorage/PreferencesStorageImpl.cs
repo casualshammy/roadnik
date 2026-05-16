@@ -39,6 +39,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
   public IObservable<Unit> PreferencesChanged => p_prefChangedFlow;
 
+  [Obsolete]
   public T? GetValueOrDefault<T>(string _key)
   {
     if (p_cache.TryGet(_key, out var obj))
@@ -67,7 +68,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     return (T?)obj;
   }
 
-  [Obsolete($"Use {nameof(SetValue)} with json type info")]
+  [Obsolete]
   public void SetValue<T>(string _key, T? _value)
   {
     var json = JsonSerializer.Serialize(_value);

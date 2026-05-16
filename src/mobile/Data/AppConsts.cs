@@ -40,8 +40,10 @@ internal static class AppConsts
   public const string HOST_MSG_MAP_DRAG_STARTED = "map-drag-started";
 
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
+  public const string NOTIFICATION_CHANNEL_INTEGRATIONS = "IntegrationsChannel";
   public const int NOTIFICATION_ID_RECORDING = 100;
   public const int NOTIFICATION_ID_LOCATION_PROVIDER_DISABLED = 101;
+  public const int NOTIFICATION_ID_DISCORD_AUTH_REVOKED = 102;
 
   public const int PUSH_MSG_NEW_POINT = 10000;
   public const int PUSH_MSG_NEW_TRACK = 10001;

@@ -334,4 +334,10 @@ WiFi потребляет меньше энергии, но его точнос�
   <data name="page.options.display_on_lockscreen_desc" xml:space="preserve">
     <value>Карта будет отображаться на заблокированном экране</value>
   </data>
+  <data name="discord_auth_revoked_notification_title" xml:space="preserve">
+    <value>Интеграция с Discord отключена</value>
+  </data>
+  <data name="discord_auth_revoked_notification_body" xml:space="preserve">
+    <value>Авторизация Discord отозвана. Включите интеграцию с Discord повторно в настройках приложения.</value>
+  </data>
 </root>

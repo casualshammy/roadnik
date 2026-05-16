@@ -684,5 +684,17 @@ namespace Roadnik.MAUI.Resources.Strings {
                 return ResourceManager.GetString("shell.settings", resourceCulture);
             }
         }
+
+        internal static string discord_auth_revoked_notification_title {
+            get {
+                return ResourceManager.GetString("discord_auth_revoked_notification_title", resourceCulture);
+            }
+        }
+
+        internal static string discord_auth_revoked_notification_body {
+            get {
+                return ResourceManager.GetString("discord_auth_revoked_notification_body", resourceCulture);
+            }
+        }
     }
 }

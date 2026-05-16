@@ -6,8 +6,12 @@ namespace Roadnik.MAUI.Interfaces;
 public interface IPreferencesStorage
 {
   IObservable<Unit> PreferencesChanged { get; }
+
+  [Obsolete]
   T? GetValueOrDefault<T>(string _key);
+
   T? GetValueOrDefault<T>(string _key, JsonTypeInfo<T> _jsonTypeInfo);
+
   void RemoveValue(string _key);
 
   [Obsolete($"Use {nameof(SetValue)} with json type info")] 

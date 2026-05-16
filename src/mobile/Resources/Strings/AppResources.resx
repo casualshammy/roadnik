@@ -334,4 +334,10 @@ Passive mode uses data obtained from other applications.</value>
   <data name="page.options.display_on_lockscreen_desc" xml:space="preserve">
     <value>Keep the map visible on the lock screen</value>
   </data>
+  <data name="discord_auth_revoked_notification_title" xml:space="preserve">
+    <value>Discord integration disabled</value>
+  </data>
+  <data name="discord_auth_revoked_notification_body" xml:space="preserve">
+    <value>Discord authentication failed. Please re-enable Discord integration in the app settings.</value>
+  </data>
 </root>

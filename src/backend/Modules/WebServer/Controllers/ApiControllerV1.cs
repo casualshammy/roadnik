@@ -157,6 +157,7 @@ internal class ApiControllerV1
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
     IFCMPublisher _fcmPublisher,
+    ISseServerCtrl _sseServerCtrl,
     HttpRequest _httpRequest,
     [FromBody] StorePathPointReq _req,
     CancellationToken _ct)
@@ -203,7 +204,9 @@ internal class ApiControllerV1
     var record = StorageEntry.From(_req);
     _dbProvider.Paths.WriteDocument(_req.RoomId, $"{record.AppId}.{nowUnixMs}", record);
 
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgUpdateAvailable(nowUnixMs), _ct);
+    var msg = new WsMsgUpdateAvailable(nowUnixMs);
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
+    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
 
     if (room?.MaxPointsPerPath > 0)
       p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.AppId, _req.Username);
@@ -268,6 +271,7 @@ internal class ApiControllerV1
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
     IFCMPublisher _fcmPublisher,
+    ISseServerCtrl _sseServerCtrl,
     HttpRequest _httpRequest,
     [FromBody] CreateRoomPointReq _req,
     CancellationToken _ct)
@@ -291,7 +295,9 @@ internal class ApiControllerV1
     var point = new RoomPointDocument(_req.AppId, _req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
     _dbProvider.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+    var msg = new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds());
+    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
+    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
 
     var pushMsgData = JsonSerializer.SerializeToElement(
       new PushMsgRoomPointAdded(_req.AppId, _req.Username, _req.Description, _req.Lat, _req.Lng),
@@ -333,6 +339,7 @@ internal class ApiControllerV1
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
+    ISseServerCtrl _sseServerCtrl,
     HttpRequest _httpRequest,
     [FromBody] DeleteRoomPointReq _req,
     CancellationToken _ct)
@@ -351,8 +358,9 @@ internal class ApiControllerV1
       {
         _dbProvider.GenericData.DeleteSimpleDocument<RoomPointDocument>(entry.Key);
 
-        var now = DateTimeOffset.UtcNow;
-        await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()), _ct);
+        var msg = new WsMsgRoomPointsUpdated(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
+        _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
         break;
       }
 

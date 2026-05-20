@@ -20,8 +20,9 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
       IReadOnlyLifetime _lifetime,
       IAppConfig _appConfig,
       IWebSocketCtrl _webSocketCtrl,
+      ISseServerCtrl _sseServerCtrl,
       ILog _log)
-      => new RoomsControllerImpl(_storage, _lifetime, _appConfig, _webSocketCtrl, _log["rooms-controller"]));
+      => new RoomsControllerImpl(_storage, _lifetime, _appConfig, _webSocketCtrl, _sseServerCtrl, _log["rooms-controller"]));
   }
 
   record UserWipeInfo(string RoomId, Guid AppInstanceId, string UserName, long UpToDateTimeUnixMs);
@@ -36,6 +37,7 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
     IReadOnlyLifetime _lifetime,
     IAppConfig _appConfig,
     IWebSocketCtrl _webSocketCtrl,
+    ISseServerCtrl _sseServerCtrl,
     ILog _log)
   {
     p_storage = _storage;
@@ -112,10 +114,9 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
               ++entriesDeleted;
             }
 
-            await _webSocketCtrl.SendMsgByRoomIdAsync(
-              _data.RoomId,
-              new WsMsgPathWiped(GenericToolkit.ConcealAppInstanceId(_data.AppInstanceId), _data.UserName),
-              _ct);
+            var msg = new WsMsgPathWiped(GenericToolkit.ConcealAppInstanceId(_data.AppInstanceId), _data.UserName);
+            await _webSocketCtrl.SendMsgByRoomIdAsync(_data.RoomId, msg, _ct);
+            _sseServerCtrl.SendMsgByRoomId(_data.RoomId, msg);
 
             _log.Info($"[{wipeCounter}] Removed '{entriesDeleted}' entries for {_data.RoomId}/{_data.AppInstanceId}");
           }
@@ -167,10 +168,9 @@ internal class RoomsControllerImpl : IRoomsController, IAppModule<IRoomsControll
               }
             }
 
-            await _webSocketCtrl.SendMsgByRoomIdAsync(
-              entry.RoomId, 
-              new WsMsgPathTruncated(GenericToolkit.ConcealAppInstanceId(entry.AppInstanceId), entry.UserName, maxPointsPerPath.Value), 
-              _ct);
+            var msg = new WsMsgPathTruncated(GenericToolkit.ConcealAppInstanceId(entry.AppInstanceId), entry.UserName, maxPointsPerPath.Value);
+            await _webSocketCtrl.SendMsgByRoomIdAsync(entry.RoomId, msg, _ct);
+            _sseServerCtrl.SendMsgByRoomId(entry.RoomId, msg);
 
             _log.Info($"Truncated '{entry.RoomId}/{entry.AppInstanceId}' to '{maxPointsPerPath}' points (removed: {removedDocumentsCount})");
           }

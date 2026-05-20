@@ -49,7 +49,7 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Log" Version="15.0.294" />
+				<PackageReference Include="Ax.Fw.Log" Version="15.0.295" />
 				<PackageReference Include="CommunityToolkit.Maui" Version="14.1.1" />
 				<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.60" />
 				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.60" />

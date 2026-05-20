@@ -7,13 +7,14 @@ using Roadnik.Server.Data;
 using Roadnik.Server.Data.Settings;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.Modules.DbProvider;
+using Roadnik.Server.Modules.EventsController;
 using Roadnik.Server.Modules.FCMProvider;
 using Roadnik.Server.Modules.ReqRateLimiter;
 using Roadnik.Server.Modules.RoomsController;
+using Roadnik.Server.Modules.SseServerCtrl;
 using Roadnik.Server.Modules.StravaTilesProvider;
 using Roadnik.Server.Modules.WebServer;
 using Roadnik.Server.Modules.WebSocketController;
-using Roadnik.Server.Modules.WsMsgController;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 
@@ -47,8 +48,9 @@ public partial class Program
       .AddModule<FCMPublisherImpl, IFCMPublisher>()
       .AddModule<RoomsControllerImpl, IRoomsController>()
       .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
+      .AddModule<SseServerCtrlImpl, ISseServerCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
-      .AddModule<WsMsgControllerImpl, IWsMsgController>()
+      .AddModule<EventsControllerImpl, IEventsController>()
       .AddModule<StravaTilesProviderImpl, IStravaTilesProvider>()
       .ActivateOnStart((ILog _log, IReadOnlyLifetime _lifetime) =>
       {
@@ -70,7 +72,7 @@ public partial class Program
         });
       })
       .ActivateOnStart<IWebServer>()
-      .ActivateOnStart<IWsMsgController>()
+      .ActivateOnStart<IEventsController>()
       .ActivateOnStart<IStravaTilesProvider>();
 
     await app.RunWaitAsync();

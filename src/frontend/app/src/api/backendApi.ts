@@ -1,7 +1,7 @@
 import type { GetPathResData, WsBaseMsg } from '@/data/backend';
 import type { AppId } from '@/data/Guid';
+import { sleepAsync } from '@/toolkit/commonToolkit';
 import { LatLng } from 'leaflet';
-import { WebsocketBuilder, ConstantBackoff, Websocket } from 'websocket-ts';
 
 type RoomPoint = {
   PointId: number;
@@ -32,14 +32,24 @@ export class BackendApi {
     this.p_apiUrl = _apiUrl;
   }
 
-  public setupWs(_roomId: string, _listener: (ws: Websocket, msg: WsBaseMsg) => Promise<void>): Websocket {
-    const wsApiUrl = this.p_apiUrl.replace(/^http/, "ws");
-    const url = `${wsApiUrl}/api/v1/ws?roomId=${_roomId}`
-    const ws = new WebsocketBuilder(url)
-      .onMessage((_ws, _ev) => _listener(_ws, JSON.parse(_ev.data)))
-      .withBackoff(new ConstantBackoff(1000))
-      .build();
-    return ws;
+  public setupEventSource(
+    _roomId: string,
+    _handlers: { [key: string]: (event: MessageEvent) => void }
+  ): void {
+    console.log(`Setting up EventSource...`);
+    const url = `${this.p_apiUrl}/api/v1/events?roomId=${_roomId}`;
+    const eventSource = new EventSource(url);
+
+    for (const eventType in _handlers)
+      eventSource.addEventListener(eventType, _handlers[eventType]);
+
+    eventSource.onerror = _ev => {
+      console.error("EventSource error:", _ev);
+      eventSource.close();
+      sleepAsync(1000).then(() => {
+        this.setupEventSource(_roomId, _handlers);
+      });
+    };
   }
 
   public async getPathsAsync(_roomId: string, _offset: number | undefined = 0): Promise<GetPathResData> {

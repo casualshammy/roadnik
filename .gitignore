@@ -1,9 +1,7 @@
 /.vs
 /src/backend/bin
 /src/backend/obj
-/logs
 /www/node_modules
-/data
 /src/mobile/bin
 /src/mobile/obj
 /output
@@ -19,3 +17,4 @@
 /.keys
 /src/backend/Properties/launchSettings.json
 /src/.vs/
+/src/backend/.data/

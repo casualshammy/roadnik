@@ -1,3 +1,3 @@
 ﻿namespace Roadnik.Server.Interfaces;
 
-internal interface IWsMsgController { }
+internal interface IEventsController { }

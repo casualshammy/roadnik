@@ -3,6 +3,7 @@ using Ax.Fw.DependencyInjection;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Web.Extensions;
 using Ax.Fw.Web.Middlewares;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Roadnik.Common.JsonCtx;
 using Roadnik.Interfaces;
 using Roadnik.Server.Interfaces;
@@ -21,17 +22,16 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IAppConfig _appConfig,
       IDbProvider _documentStorage,
       ILog _logger,
-      IWebSocketCtrl _webSocketCtrl,
       IRoomsController _roomsController,
       IReqRateLimiter _reqRateLimiter,
       IFCMPublisher _fCMPublisher,
       IReadOnlyLifetime _lifetime,
       IHttpClientProvider _httpClientProvider,
       IStravaTilesProvider _stravaTilesProvider) => new WebServerImpl(
+        _ctx,
         _appConfig,
         _documentStorage,
         _logger["kestrel"],
-        _webSocketCtrl,
         _roomsController,
         _reqRateLimiter,
         _fCMPublisher,
@@ -42,7 +42,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
   private readonly IDbProvider p_documentStorage;
   private readonly ILog p_logger;
-  private readonly IWebSocketCtrl p_webSocketCtrl;
   private readonly IRoomsController p_roomsController;
   private readonly IReqRateLimiter p_reqRateLimiter;
   private readonly IFCMPublisher p_fCMPublisher;
@@ -50,10 +49,10 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   private readonly IStravaTilesProvider p_stravaTilesProvider;
 
   private WebServerImpl(
+    IAppDependencyCtx _appCtx,
     IAppConfig _appConfig,
     IDbProvider _documentStorage,
     ILog _log,
-    IWebSocketCtrl _webSocketCtrl,
     IRoomsController _roomsController,
     IReqRateLimiter _reqRateLimiter,
     IFCMPublisher _fCMPublisher,
@@ -63,7 +62,6 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   {
     p_documentStorage = _documentStorage;
     p_logger = _log;
-    p_webSocketCtrl = _webSocketCtrl;
     p_roomsController = _roomsController;
     p_reqRateLimiter = _reqRateLimiter;
     p_fCMPublisher = _fCMPublisher;
@@ -80,7 +78,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         if (life == null)
           throw new InvalidOperationException("Failed to create child lifetime");
 
-        using (var host = CreateWebHost(_appConfig, life))
+        using (var host = CreateWebHost(_appCtx, _appConfig, life))
         {
           _log.Info($"__Host__ **created**, **starting**...");
           await host.RunAsync(_lifetime.Token);
@@ -99,9 +97,13 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
   }
 
   private IHost CreateWebHost(
+    IAppDependencyCtx _appCtx,
     IAppConfig _config,
     IReadOnlyLifetime _life)
   {
+    var wsCtrl = _appCtx.Locate<IWebSocketCtrl>();
+    var sseCtrl = _appCtx.Locate<ISseServerCtrl>();
+
     var builder = WebApplication.CreateSlimBuilder();
 
     builder.Logging.ClearProviders();
@@ -117,6 +119,10 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     {
       _opt.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(130);
       _opt.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(90);
+      _opt.ConfigureEndpointDefaults(_listenOptions =>
+      {
+        _listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
+      });
       _opt.Listen(_config.BindIp, _config.BindPort);
     });
 
@@ -127,14 +133,15 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
     builder.Services.AddSingleton(p_stravaTilesProvider);
+    builder.Services.AddSingleton(sseCtrl);
     builder.Services.AddCustomProblemDetails();
     builder.Services.AddCustomRequestId();
     builder.Services.AddCustomRequestLog(true);
     builder.Services.AddRequestToolkit(RestJsonCtx.Default);
     builder.Services.AddCorsMiddleware(
       new HashSet<string>(["http://localhost:5173", "https://webapp.local", "http://webapp.local:5544"]),
-      new HashSet<string>(["GET", "POST", "OPTIONS", "HEAD"]),
-      new HashSet<string>(["User-Agent", "X-Requested-With", "If-Modified-Since", "Cache-Control", "Content-Type", "Range"]),
+      new HashSet<string>(["GET", "POST"]),
+      new HashSet<string>([]),
       false);
     builder.Services.AddSingleton<FailToBanMiddleware>();
     builder.Services.AddScoped<LogMiddleware>();
@@ -142,9 +149,9 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
     var app = builder.Build();
     app
+      .UseMiddleware<ForwardProxyMiddleware>()
       .UseMiddleware<LogMiddleware>()
       .UseMiddleware<CorsMiddleware>()
-      .UseMiddleware<ForwardProxyMiddleware>()
       .UseMiddleware<FailToBanMiddleware>()
       .UseMiddleware<ApiTokenAuthMiddleware>(p_logger)
       .UseMiddleware<CommonErrorsHandlerMiddleware>()
@@ -159,7 +166,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
 
     var apiCtrlV1 = new ApiControllerV1(
       _config,
-      p_webSocketCtrl,
+      wsCtrl,
       p_roomsController,
       p_reqRateLimiter,
       p_httpClientProvider);

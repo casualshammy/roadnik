@@ -1,8 +1,10 @@
-﻿using Ax.Fw;
+﻿using Amazon.Runtime.Internal;
+using Ax.Fw;
 using Ax.Fw.App.Interfaces;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
 using Ax.Fw.Web.Data;
+using Ax.Fw.Web.Extensions;
 using Ax.Fw.Web.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Roadnik.Common.Data;
@@ -65,6 +67,7 @@ internal class ApiControllerV1
     apiGroup.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId).WithMetadata(ctrlInfo);
     apiGroup.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid).WithMetadata(ctrlInfo);
     apiGroup.MapGet("/ws", ConnectToWsAsync).WithMetadata(ctrlInfo);
+    apiGroup.MapGet("/events", EventsAsync).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration).WithMetadata(ctrlInfo);
     apiGroup.MapGet(ReqPaths.LIST_REGISTERED_ROOMS, ListRooms).WithMetadata(ctrlInfo);
@@ -424,6 +427,35 @@ internal class ApiControllerV1
     using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
     _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId);
     _log.Info($"**Ws connection** '__{sessionIndex}__' for room '__{_roomId}__' is **closed**");
+
+    return Results.Empty;
+  }
+
+  public async Task<IResult> EventsAsync(
+    IScopedLog _log,
+    IRequestToolkit _reqToolkit,
+    ISseServerCtrl _sseServerCtrl,
+    HttpRequest _httpRequest,
+    [FromQuery(Name = "roomId")] string _roomId,
+    CancellationToken _ct)
+  {
+    if (!ReqResUtil.IsRoomIdValid(_roomId))
+      return _reqToolkit.BadRequest("Room Id is incorrect!");
+
+    var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
+    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+      return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
+
+    _httpRequest.HttpContext.Response.SetSseHeaders();
+
+    try
+    {
+      using var _ = _sseServerCtrl.AcceptClient(_roomId, out var session);
+      await foreach (var entry in session.ReadMessagesAsync(_httpRequest, _ct))
+        await _httpRequest.HttpContext.Response.WriteSseMsgAsync(entry, _ct);
+    }
+    catch (OperationCanceledException)
+    { /* we don't care if user disconnects */ }
 
     return Results.Empty;
   }

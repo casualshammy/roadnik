@@ -49,13 +49,13 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Log" Version="15.0.288" />
-				<PackageReference Include="CommunityToolkit.Maui" Version="14.0.1" />
-				<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.50" />
-				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.50" />
+				<PackageReference Include="Ax.Fw.Log" Version="15.0.294" />
+				<PackageReference Include="CommunityToolkit.Maui" Version="14.1.1" />
+				<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.60" />
+				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.60" />
 				<PackageReference Include="Oscore.Maui.Android.InAppUpdates" Version="1.5.1" />
-				<PackageReference Include="Plugin.BLE" Version="3.2.0" />
-				<PackageReference Include="QRCoder" Version="1.7.0" />
+				<PackageReference Include="Plugin.BLE" Version="3.2.1" />
+				<PackageReference Include="QRCoder" Version="1.8.0" />
 
 				<PackageReference Include="Xamarin.Firebase.Iid" Version="[121.1.0]" />
 				<PackageReference Include="Xamarin.Firebase.Messaging" Version="[122.0.0]" />

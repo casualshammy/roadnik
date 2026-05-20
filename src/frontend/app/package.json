@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "debug": "vite",
-    "watch": "concurrently --raw --kill-others \"vite\" \"vue-tsc --build --force --watch\"",
+    "debug": "concurrently --raw --kill-others \"vite\" \"vue-tsc --build --force --watch\"",
     "build": "npm run type-check && vite build --mode production",
     "type-check": "vue-tsc --build --force"
   },
@@ -20,8 +19,7 @@
     "rxjs": "^7.8.1",
     "v-dialogs": "^3.0.3",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0",
-    "websocket-ts": "^2.1.5"
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.10.4",

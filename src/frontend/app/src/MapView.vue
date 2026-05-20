@@ -231,23 +231,25 @@ function setupDataFlow(_map: L.Map) {
       switchMap(async () => await updatePathsAsync()))
     .subscribe();
 
-  if (p_appCtx.roomId !== null) {
-    p_backendApi.setupWs(p_appCtx.roomId, async (_ws, _data) => {
-      console.log(`WS MSG: ${_data.Type}`);
-      if (_data.Type === Consts.WS_MSG_TYPE_HELLO) {
-        const msgData: WsMsgHello = _data.Payload;
+  if (p_appCtx.roomId !== null) { 
+    p_backendApi.setupEventSource(p_appCtx.roomId, {
+      [Consts.WS_MSG_TYPE_HELLO]: async _ev => {
+        console.log(`Received SSE '${Consts.WS_MSG_TYPE_HELLO}' message from server`);
+        const msgData: WsMsgHello = JSON.parse(_ev.data);
         p_appCtx.maxTrackPoints = msgData.MaxPathPointsPerRoom;
         console.log(`Max saved points: ${p_appCtx.maxTrackPoints}`);
         console.log(`Server time: ${new Date(msgData.UnixTimeMs).toISOString()}`);
 
         p_tracksUpdateRequired$.next();
         await updatePointsAsync();
-      }
-      else if (_data.Type === Consts.WS_MSG_TYPE_DATA_UPDATED) {
+      },
+      [Consts.WS_MSG_TYPE_DATA_UPDATED]: () => {
+        console.log(`Received SSE '${Consts.WS_MSG_TYPE_DATA_UPDATED}' message from server`);
         p_tracksUpdateRequired$.next();
-      }
-      else if (_data.Type == Consts.WS_MSG_PATH_WIPED) {
-        const msgData: WsMsgPathWiped = _data.Payload;
+      },
+      [Consts.WS_MSG_PATH_WIPED]: _ev => {
+        console.log(`Received SSE '${Consts.WS_MSG_PATH_WIPED}' message from server`);
+        const msgData: WsMsgPathWiped = JSON.parse(_ev.data);
 
         const path = p_paths.get(msgData.AppId);
         path?.setLatLngs([]);
@@ -257,13 +259,14 @@ function setupDataFlow(_map: L.Map) {
           geoEntries.length = 0;
 
         updatePathArrows(msgData.AppId, msgData.UserName);
-      }
-      else if (_data.Type == Consts.WS_MSG_ROOM_POINTS_UPDATED) {
-        console.log("Points were changed, updating markers...");
+      },
+      [Consts.WS_MSG_ROOM_POINTS_UPDATED]: async () => {
+        console.log(`Received SSE '${Consts.WS_MSG_ROOM_POINTS_UPDATED}' message from server`);
         await updatePointsAsync();
-      }
-      else if (_data.Type == Consts.WS_MSG_PATH_TRUNCATED) {
-        const msgData: WsMsgPathTruncated = _data.Payload;
+      },
+      [Consts.WS_MSG_PATH_TRUNCATED]: _ev => {
+        console.log(`Received SSE '${Consts.WS_MSG_PATH_TRUNCATED}' message from server`);
+        const msgData: WsMsgPathTruncated = JSON.parse(_ev.data);
 
         const geoEntries = p_gEntries.get(msgData.AppId);
         if (geoEntries !== undefined) {
@@ -697,7 +700,7 @@ watch(computed(() => p_mapState.value.selectedAppId), _newAppId => {
   const value = _newAppId !== null
     ? (p_appIds.get(_newAppId) ?? undefined)
     : undefined;
-    
+
   pathsComboBoxSelectedEntry.value = value;
 }, { immediate: true });
 

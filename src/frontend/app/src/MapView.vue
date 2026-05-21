@@ -69,6 +69,7 @@ const p_pointMarkers: { [key: number]: L.Marker } = {};
 const p_pointMarkersPool = new Pool<L.Marker>(() => L.marker([0, 0]));
 const p_gEntries = reactive(new Map<AppId, TimedStorageEntry[]>());
 const p_tracksUpdateRequired$ = new Subject<void>();
+const p_userPathUpdated$ = new Subject<AppId[]>();
 
 const p_map = shallowRef<L.Map>();
 const p_backendApi = new BackendApi(p_appCtx.apiUrl);
@@ -103,6 +104,8 @@ const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = comp
 
 const pathsComboBoxSelectedEntry: Ref<string | undefined> = ref();
 
+document.title = `Roadnik: ${p_appCtx.roomId}`;
+
 function onMapCreated(_map: L.Map) {
   p_map.value = _map;
 
@@ -128,6 +131,7 @@ function setupMap(_map: L.Map) {
     else
       p_hostApi.sendMapStateToRoadnikApp();
   });
+
   _map.on('overlayadd', function (_e) {
     const overlay = _e.name;
     if (!p_mapState.value.overlays.includes(overlay))
@@ -140,6 +144,7 @@ function setupMap(_map: L.Map) {
     else
       p_hostApi.sendMapStateToRoadnikApp();
   });
+
   _map.on('overlayremove', function (_e) {
     const overlay = _e.name;
     p_mapState.value.overlays = p_mapState.value.overlays.filter(_v => _v !== overlay);
@@ -151,15 +156,19 @@ function setupMap(_map: L.Map) {
     else
       p_hostApi.sendMapStateToRoadnikApp();
   });
-  _map.on('zoomend', () => {
+
+  function onMapMoveOrZoom() {
     const location = _map.getCenter();
 
     p_mapState.value.lat = location.lat;
     p_mapState.value.lng = location.lng;
     p_mapState.value.zoom = _map.getZoom();
 
-    for (const [appId, userName] of p_appIds.entries())
-      updatePathArrows(appId, userName);
+    for (const appId of p_appIds.keys()) {
+      const geoEntries = p_gEntries.get(appId);
+      if (geoEntries !== undefined)
+        updatePathArrows(appId, geoEntries);
+    }
 
     if (!p_appCtx.isRoadnikApp) {
       const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
@@ -168,25 +177,11 @@ function setupMap(_map: L.Map) {
     else {
       p_hostApi.sendMapStateToRoadnikApp();
     }
-  });
-  _map.on('moveend', () => {
-    const location = _map.getCenter();
+  }
 
-    p_mapState.value.lat = location.lat;
-    p_mapState.value.lng = location.lng;
-    p_mapState.value.zoom = _map.getZoom();
+  _map.on('zoomend', onMapMoveOrZoom);
+  _map.on('moveend', onMapMoveOrZoom);
 
-    for (const [appId, userName] of p_appIds.entries())
-      updatePathArrows(appId, userName);
-
-    if (!p_appCtx.isRoadnikApp) {
-      const stateString = `${p_mapState.value.lat}:${p_mapState.value.lng}:${p_mapState.value.zoom}`;
-      Cookies.set(Consts.COOKIE_MAP_STATE, stateString);
-    }
-    else {
-      p_hostApi.sendMapStateToRoadnikApp();
-    }
-  });
   _map.on("contextmenu", function (_e) {
     if (p_appCtx.roomId === null)
       return;
@@ -201,6 +196,7 @@ function setupMap(_map: L.Map) {
         p_backendApi.createPointAsync(p_appCtx.roomId, "", _e.latlng, msg);
     }
   });
+
   _map.on('dragstart', (event) => {
     if (p_appCtx.isRoadnikApp) {
       p_hostApi.sendMapDragStarted();
@@ -231,7 +227,25 @@ function setupDataFlow(_map: L.Map) {
       switchMap(async () => await updatePathsAsync()))
     .subscribe();
 
-  if (p_appCtx.roomId !== null) { 
+  p_userPathUpdated$
+    .pipe(
+      observeOn(asyncScheduler))
+    .subscribe(_appIds => {
+      for (const appId of _appIds) {
+        const entries = p_gEntries.get(appId) ?? [];
+        const username = p_appIds.get(appId);
+        if (username === undefined) {
+          console.error(`Error occured while trying to update controls for user '${appId}': username is undefined`);
+          return;
+        }
+
+        initControlsForUser(appId, username);
+        updateControlsForUser(appId, entries);
+        updatePathArrows(appId, entries);
+      }
+    });
+
+  if (p_appCtx.roomId !== null) {
     p_backendApi.setupEventSource(p_appCtx.roomId, {
       [Consts.WS_MSG_TYPE_HELLO]: async _ev => {
         console.log(`Received SSE '${Consts.WS_MSG_TYPE_HELLO}' message from server`);
@@ -239,6 +253,28 @@ function setupDataFlow(_map: L.Map) {
         p_appCtx.maxTrackPoints = msgData.MaxPathPointsPerRoom;
         console.log(`Max saved points: ${p_appCtx.maxTrackPoints}`);
         console.log(`Server time: ${new Date(msgData.UnixTimeMs).toISOString()}`);
+
+        for (const appId of [...p_gEntries.keys()]) {
+          if (!(appId in msgData.Timestamps)) {
+            removeUserPath(appId);
+            console.log(`Removed user '${appId}' as server indicates that it's not exist anymore`);
+            continue;
+          }
+
+          const oldestTimestamp = msgData.Timestamps[appId];
+          const geoEntries = p_gEntries.get(appId);
+          if (geoEntries === undefined)
+            continue;
+
+          const oldEntries = geoEntries.filter(_ => _.UnixTimeMs < oldestTimestamp);
+          if (oldEntries.length === 0)
+            continue;
+
+          geoEntries.splice(0, oldEntries.length);
+
+          const username = p_appIds.get(appId) ?? "unknown";
+          console.log(`Removed ${oldEntries.length} old entries for user '${appId}/${username}' due to server's indication that they are not exist anymore`);
+        }
 
         p_tracksUpdateRequired$.next();
         await updatePointsAsync();
@@ -250,15 +286,11 @@ function setupDataFlow(_map: L.Map) {
       [Consts.WS_MSG_PATH_WIPED]: _ev => {
         console.log(`Received SSE '${Consts.WS_MSG_PATH_WIPED}' message from server`);
         const msgData: WsMsgPathWiped = JSON.parse(_ev.data);
-
-        const path = p_paths.get(msgData.AppId);
-        path?.setLatLngs([]);
-
-        const geoEntries = p_gEntries.get(msgData.AppId);
-        if (geoEntries !== undefined)
-          geoEntries.length = 0;
-
-        updatePathArrows(msgData.AppId, msgData.UserName);
+        const username = p_appIds.get(msgData.AppId) ?? "unknown";
+        if (p_gEntries.has(msgData.AppId)) {
+          removeUserPath(msgData.AppId);
+          console.log(`Wiped path of user '${msgData.AppId}/${username}' as server indicates that it's wiped`);
+        }
       },
       [Consts.WS_MSG_ROOM_POINTS_UPDATED]: async () => {
         console.log(`Received SSE '${Consts.WS_MSG_ROOM_POINTS_UPDATED}' message from server`);
@@ -267,18 +299,14 @@ function setupDataFlow(_map: L.Map) {
       [Consts.WS_MSG_PATH_TRUNCATED]: _ev => {
         console.log(`Received SSE '${Consts.WS_MSG_PATH_TRUNCATED}' message from server`);
         const msgData: WsMsgPathTruncated = JSON.parse(_ev.data);
-
         const geoEntries = p_gEntries.get(msgData.AppId);
-        if (geoEntries !== undefined) {
+        if (geoEntries !== undefined && geoEntries.length > 0) {
           const entriesToDelete = geoEntries.length - msgData.PathPoints;
           if (entriesToDelete > 0) {
             geoEntries.splice(0, entriesToDelete);
-
-            const path = p_paths.get(msgData.AppId);
-            if (path !== undefined) {
-              const points = geoEntries.map(_x => new L.LatLng(_x.Latitude, _x.Longitude, _x.Altitude));
-              path.setLatLngs(points);
-            }
+            p_userPathUpdated$.next([msgData.AppId]);
+            const username = p_appIds.get(msgData.AppId) ?? "unknown";
+            console.log(`Truncated path of user '${msgData.AppId}/${username}' by removing ${entriesToDelete} old entries as server indicates that they are not exist anymore`);
           }
         }
       }
@@ -381,17 +409,9 @@ async function updatePathsAsync() {
   p_appCtx.lastTracksOffset = data.LastUpdateUnixMs;
   console.log(`New last offset: ${p_appCtx.lastTracksOffset}; points to process: ${data.Entries.length}`);
 
-  const userAppsMap = updateData(data.Entries);
+  const appIdWithChanges: AppId[] = updateData(data.Entries);
+  p_userPathUpdated$.next(appIdWithChanges);
 
-  for (const [appId, userData] of userAppsMap) {
-    const username = userData[0].Username;
-
-    initControlsForUser(appId, username);
-    updateControlsForUser(appId, username, userData);
-    updatePathArrows(appId, username);
-  }
-
-  document.title = `Roadnik: ${p_appCtx.roomId} (${p_paths.size})`;
   if (data.MoreEntriesAvailable) {
     p_tracksUpdateRequired$.next();
     return;
@@ -422,9 +442,13 @@ async function updatePathsAsync() {
   }
 }
 
-function updateData(_newEntries: TimedStorageEntry[]): [string, TimedStorageEntry[]][] {
+/**
+ * Updates p_gEntries and p_appIds
+ */
+function updateData(_newEntries: TimedStorageEntry[]): AppId[] {
   const userAppsMap = CommonToolkit.groupBy(_newEntries, _ => _.AppId);
 
+  const result: AppId[] = [];
   const entryPairs = Object.entries(userAppsMap);
   for (const [appId, userData] of entryPairs) {
     const userName = userData[0].Username;
@@ -440,25 +464,19 @@ function updateData(_newEntries: TimedStorageEntry[]): [string, TimedStorageEntr
       p_gEntries.set(appId, geoEntries);
     }
 
-    const sortedEntries = userData.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
-    geoEntries.push(...sortedEntries);
+    geoEntries.push(...userData);
+    geoEntries.sort((_a, _b) => _a.UnixTimeMs - _b.UnixTimeMs);
 
     const geoEntriesExcessiveCount = geoEntries.length - p_appCtx.maxTrackPoints;
     if (geoEntriesExcessiveCount > 0) {
       const removedEntries = geoEntries.splice(0, geoEntriesExcessiveCount);
       console.log(`${removedEntries.length} geo entries were removed for user '${appId}/${userName}'`);
     }
+
+    result.push(appId);
   }
 
-  const knownAppIds = new Set(p_gEntries.keys());
-  for (const appId of Object.keys(p_appIds)) {
-    if (!knownAppIds.has(appId)) {
-      p_appIds.delete(appId);
-      console.log(`User '${appId}' was removed`);
-    }
-  }
-
-  return entryPairs;
+  return result;
 }
 
 async function updatePointsAsync() {
@@ -511,10 +529,16 @@ async function updatePointsAsync() {
   console.log(`Points visible: ${validPointIds.length}; points in pool: ${p_pointMarkersPool.getAvailableCount()}`);
 }
 
-function initControlsForUser(_appId: string, _username: string): void {
+function initControlsForUser(
+  _appId: string,
+  _username: string
+): void {
+  if (p_markers.has(_appId) && p_circles.has(_appId) && p_paths.has(_appId))
+    return;
+
   const map = p_map.value;
   if (map === undefined) {
-    console.error(`Error occured while trying to init controls for user '${_appId}': map is undefined`);
+    console.error(`Error occured while trying to init controls for user '${_appId}/${_username}': map is undefined`);
     return;
   }
 
@@ -531,9 +555,11 @@ function initControlsForUser(_appId: string, _username: string): void {
 
     p_markers.set(_appId, marker);
   }
+
   if (p_circles.get(_appId) === undefined)
     p_circles.set(_appId, L.circle([51.4768, 0.0006], { radius: 100, color: color, fillColor: '*', fillOpacity: 0.3 })
       .addTo(map));
+
   if (p_paths.get(_appId) === undefined) {
     const path = L.polyline([], { color: color, smoothFactor: 1, weight: 6, renderer: MapToolkit.TOLERANT_RENDERER })
       .addTo(map)
@@ -566,60 +592,78 @@ function initControlsForUser(_appId: string, _username: string): void {
 
 function updateControlsForUser(
   _appId: string,
-  _username: string,
   _entries: TimedStorageEntry[]
 ): void {
-  if (_entries.length === 0)
+  const username = p_appIds.get(_appId) ?? "unknown";
+
+  const map = p_map.value;
+  if (map === undefined) {
+    console.error(`Error occured while trying to update path of user '${_appId}/${username}': map is undefined`);
     return;
+  }
 
   const path = p_paths.get(_appId);
   if (path === undefined) {
-    console.error(`Error occured while trying to update path of user '${_appId}/${_username}': leaflet's polyline is undefined`);
+    console.error(`Error occured while trying to update path of user '${_appId}/${username}': leaflet's polyline is undefined`);
     return;
   }
-
-  const geoEntries = p_gEntries.get(_appId);
-  if (geoEntries === undefined) {
-    console.error(`Error occured while trying to update path of user '${_appId}/${_username}': geo entries are undefined`);
-    return;
-  }
-
-  const lastEntry = geoEntries[geoEntries.length - 1];
-  const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
 
   const circle = p_circles.get(_appId);
-  if (circle !== undefined) {
-    circle.setLatLng(lastLocation);
-    circle.setRadius(lastEntry.Accuracy ?? 100);
-    circle.bringToFront();
+  if (circle === undefined) {
+    console.error(`Error occured while trying to update path of user '${_appId}/${username}': leaflet's circle is undefined`);
+    return;
   }
 
   const marker = p_markers.get(_appId);
-  if (marker !== undefined)
-    marker.setLatLng(lastLocation);
+  if (marker === undefined) {
+    console.error(`Error occured while trying to update path of user '${_appId}/${username}': leaflet's marker is undefined`);
+    return;
+  }
+
+  if (_entries.length === 0) {
+    circle.remove();
+    marker.remove();
+    path.setLatLngs([]);
+    return;
+  }
+
+  const lastEntry = _entries[_entries.length - 1];
+  const lastLocation = new L.LatLng(lastEntry.Latitude, lastEntry.Longitude, lastEntry.Altitude);
+
+  circle.setLatLng(lastLocation);
+  circle.setRadius(lastEntry.Accuracy ?? 100);
+  circle.addTo(map);
+  circle.bringToFront();
+
+  marker.setLatLng(lastLocation);
+  marker.addTo(map);
 
   if (p_mapState.value.selectedAppId === _appId) {
     if (document.hasFocus()) // if we fly to location in background, path position will be uncorrect until next location update
-      p_mapInteractor.setMapCenter(lastLocation.lat, lastLocation.lng, p_map.value!.getZoom(), 500);
+      p_mapInteractor.setMapCenter(lastLocation.lat, lastLocation.lng, map.getZoom(), 500);
   }
 
-  const points = geoEntries.map(_ => new L.LatLng(_.Latitude, _.Longitude, _.Altitude));
+  const points = _entries.map(_ => new L.LatLng(_.Latitude, _.Longitude, _.Altitude));
   path.setLatLngs(points);
-  console.log(`Path '${_appId}/${_username}' now contains ${points.length} points`);
+  console.log(`Path '${_appId}/${username}' now contains ${points.length} points`);
 }
 
 function updatePathArrows(
   _appId: string,
-  _username: string) {
+  _entries: TimedStorageEntry[]
+): void {
+  const username = p_appIds.get(_appId) ?? "unknown";
+
   const map = p_map.value;
-  if (!map)
+  if (!map) {
+    console.error(`Error occured while trying to update path arrows of user '${_appId}/${username}': map is undefined`);
     return;
+  }
 
   const existingArrows = p_pathArrows.get(_appId) ?? [];
-  const geoEntries = p_gEntries.get(_appId);
 
   // If not enough points, remove any existing arrows and exit
-  if (!geoEntries || geoEntries.length < 2) {
+  if (_entries.length < 2) {
     for (const m of existingArrows)
       m.remove();
 
@@ -630,13 +674,13 @@ function updatePathArrows(
   const minPixelSpacing = 100; // px between arrows
 
   // Start from the first point, compare with subsequent points
-  let prevGeoPoint = geoEntries[0];
+  let prevGeoPoint = _entries[0];
   let prevScreenPt = map.latLngToContainerPoint([prevGeoPoint.Latitude, prevGeoPoint.Longitude]);
   let arrowsIndex = -1;
   let newMarkersCounter = 0;
 
-  for (let i = 1; i < geoEntries.length - 1; i++) {
-    const entry = geoEntries[i];
+  for (let i = 1; i < _entries.length - 1; i++) {
+    const entry = _entries[i];
     const entryLatLng: L.LatLngExpression = [entry.Latitude, entry.Longitude];
     const screenPt = map.latLngToContainerPoint(entryLatLng);
     const isInView = mapBounds.contains(entryLatLng);
@@ -670,7 +714,7 @@ function updatePathArrows(
     existingArrows[i].remove();
 
   p_pathArrows.set(_appId, existingArrows);
-  console.log(`Total arrow markers for user '${_appId}/${_username}'': ${arrowsIndex + 1}/${existingArrows.length} (new: ${newMarkersCounter})`);
+  console.log(`Total arrow markers for user '${_appId}/${username}'': ${arrowsIndex + 1}/${existingArrows.length} (new: ${newMarkersCounter})`);
 }
 
 function buildPathPointPopup(_entry: TimedStorageEntry): string {
@@ -694,6 +738,18 @@ function buildPathPointPopup(_entry: TimedStorageEntry): string {
     </p>`;
 
   return popUpText;
+}
+
+function removeUserPath(
+  _appId: AppId
+): void {
+  p_circles.get(_appId)?.remove();
+  p_markers.get(_appId)?.remove();
+  p_paths.get(_appId)?.setLatLngs([]);
+  p_pathArrows.get(_appId)?.forEach(a => a.remove());
+
+  p_gEntries.delete(_appId);
+  p_appIds.delete(_appId);
 }
 
 watch(computed(() => p_mapState.value.selectedAppId), _newAppId => {

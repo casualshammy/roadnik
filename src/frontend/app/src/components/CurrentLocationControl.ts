@@ -50,6 +50,8 @@ export class CurrentLocationControl {
       interactive: false,
     };
     this.p_headingMarker = L.marker([0, 0], headingMarkerOptions);
+    this.p_headingMarker.setOpacity(0);
+    this.p_headingMarker.addTo(_map);
 
     const directionLine = L.polyline([[0, 0], [0, 0]], { color: 'black', fillColor: '*', fillOpacity: 0.3, interactive: false, dashArray: [8] });
     this.p_directionLine = directionLine.addTo(_map);
@@ -134,11 +136,10 @@ export class CurrentLocationControl {
     this.p_fixedCircleBg
       .setLatLng([_lat, _lng]);
 
-    if (_heading == null)
-    {
+    if (_heading == null) {
       this.p_headingMarker.setOpacity(0);
     }
-    else{
+    else {
       this.p_headingMarker
         .setLatLng([_lat, _lng])
         .setRotationAngle(_heading)
@@ -165,7 +166,7 @@ export class CurrentLocationControl {
       const longSnappedTimeS = CurrentLocationControl.nextTimeStep(shortSnappedTimeS);
 
       this.updateReachCircle(this.p_reachCircleShort, this.p_reachLabelShort, _lat, _lng, shortSnappedTimeS, avgSpeed, 0.04);
-      this.updateReachCircle(this.p_reachCircleLong,  this.p_reachLabelLong,  _lat, _lng, longSnappedTimeS,  avgSpeed, 0.02);
+      this.updateReachCircle(this.p_reachCircleLong, this.p_reachLabelLong, _lat, _lng, longSnappedTimeS, avgSpeed, 0.02);
     } else {
       this.p_reachCircleShort.setStyle({ opacity: 0, fillOpacity: 0 });
       this.p_reachCircleLong.setStyle({ opacity: 0, fillOpacity: 0 });
@@ -230,7 +231,7 @@ export class CurrentLocationControl {
     const idx = REACH_TIME_STEPS_S.indexOf(_currentTimeS);
     if (idx >= 0 && idx < REACH_TIME_STEPS_S.length - 1)
       return REACH_TIME_STEPS_S[idx + 1];
-    
+
     return _currentTimeS;
   }
 

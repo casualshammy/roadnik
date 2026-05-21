@@ -69,7 +69,7 @@
     <div v-else-if="selectedUser !== undefined" class="usb-bar">
       <div class="usb-bar-accent" :style="{ background: selectedUser.color }" />
       <div class="usb-bar-body">
-        <div class="usb-row1">
+        <div class="usb-row">
           <button
             class="usb-name-link"
             :style="{ color: selectedUser.color, '--usb-user-color': selectedUser.color }"
@@ -80,11 +80,11 @@
           <span class="usb-time">{{ selectedTimestamp }}</span>
           <button class="usb-close" title="Stop tracking" @click="emit('deselect')">✕</button>
         </div>
-        <div class="usb-row2">
+        <div class="usb-row">
           <span>🚀 {{ selectedUser.speedStr }} km/h</span>
           <span v-if="selectedUser.hrStr !== undefined">{{ selectedUser.hrStr }}</span>
         </div>
-        <div class="usb-row3">
+        <div class="usb-row">
           <span v-if="selectedUser.battery !== undefined">🔋 {{ selectedUser.battery }}%</span>
           <span v-if="selectedUser.gsmSignal !== undefined">📶 {{ selectedUser.gsmSignal }}%</span>
           <span>⛰ {{ selectedUser.altitude }} m</span>
@@ -305,7 +305,8 @@ onUnmounted(() => {
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
 }
 
-.usb-pill-icon {
+.usb-pill-icon,
+.usb-bar-count-icon {
   font-size: 16px;
 }
 
@@ -349,9 +350,7 @@ onUnmounted(() => {
   gap: 3px;
 }
 
-.usb-row1,
-.usb-row2,
-.usb-row3 {
+.usb-row {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -360,14 +359,18 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.usb-row1 {
+.usb-row:first-child {
   font-size: 13px;
 }
 
 /* Name-link button */
-.usb-name-link {
+.usb-name-link,
+.usb-close {
   all: unset;
   cursor: pointer;
+}
+
+.usb-name-link {
   font-weight: 600;
   font-size: 13px;
   text-decoration: underline dotted var(--usb-user-color, #3b82f6);
@@ -391,8 +394,6 @@ onUnmounted(() => {
 }
 
 .usb-close {
-  all: unset;
-  cursor: pointer;
   font-size: 13px;
   color: #9ca3af;
   line-height: 1;
@@ -422,10 +423,6 @@ onUnmounted(() => {
 
 .usb-bar-count:hover {
   background: #f9fafb;
-}
-
-.usb-bar-count-icon {
-  font-size: 16px;
 }
 
 /* ── Popover ──────────────────────────────────────────────────── */
@@ -540,15 +537,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.usb-pop-speed {
-  font-size: 11px;
-  color: #374151;
-}
-
+.usb-pop-speed,
 .usb-pop-time {
   font-size: 11px;
-  color: #9ca3af;
 }
+
+.usb-pop-speed { color: #374151; }
+.usb-pop-time  { color: #9ca3af; }
 
 .usb-pop-empty {
   padding: 16px;

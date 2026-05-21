@@ -4,35 +4,25 @@
               :location="p_mapLocation"
               :layers="[p_mapsData[p_mapState.layer]]" />
 
-  <SelectedUserPopup
-                     v-if="floatingWindowData !== undefined"
-                     :state="floatingWindowData"
-                     :left="p_mapState.selectedPathWindowLeft"
-                     :bottom="p_mapState.selectedPathWindowBottom"
-                     @onMoved="onSelectedUserPopupMoved"
-                     @onDblClick="onSelectedUserPopupDblClick"
-                     @onCloseButton="() => p_mapInteractor.setObservedUser(null)" />
-
-  <ComboBox
-            v-if="p_appIds.size > 0"
-            class="paths_combobox"
-            :options="p_appIds"
-            :value="pathsComboBoxSelectedEntry"
-            @changed="onUsersComboBoxChanged">
-  </ComboBox>
+  <UserStatusBar
+                 v-if="p_appIds.size > 0"
+                 :appIds="p_appIds"
+                 :gEntries="p_gEntries"
+                 :selectedAppId="p_mapState.selectedAppId"
+                 @select="onUserStatusBarSelect"
+                 @deselect="() => p_mapInteractor.setObservedUser(null)"
+                 @centerOnUser="_appId => p_mapInteractor.setMapCenterToUser(_appId)" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComputedRef, type Ref, shallowRef, watch, onMounted, type WatchHandle, onUnmounted, reactive } from "vue";
+import { ref, computed, shallowRef, reactive } from "vue";
 import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
 import { DialogAlertError } from 'v-dialogs'
 
 import LeafletMap from './components/LeafletMap.vue';
-import SelectedUserPopup from './components/SelectedUserPopup.vue';
-import ComboBox from './components/ComboBox.vue';
-import { type SelectedUserPopupState } from './components/SelectedUserPopup.vue';
+import UserStatusBar from './components/UserStatusBar.vue';
 
 import { type LatLngZoom } from './data/LatLngZoom';
 import * as MapToolkit from './toolkit/mapToolkit';
@@ -75,34 +65,6 @@ const p_map = shallowRef<L.Map>();
 const p_backendApi = new BackendApi(p_appCtx.apiUrl);
 const p_hostApi = new HostApi(p_appCtx);
 const p_mapInteractor = new MapInteractor(p_appCtx, p_hostApi, p_map, p_paths, p_gEntries);
-
-const floatingWindowData: ComputedRef<SelectedUserPopupState | undefined> = computed(() => {
-  const appId = p_mapState.value.selectedAppId;
-  if (appId === null)
-    return undefined;
-
-  const entries = p_gEntries.get(appId);
-  if (entries === undefined || entries.length === 0)
-    return undefined;
-
-  const lastEntry = entries[entries.length - 1];
-  const data: SelectedUserPopupState = {
-    appId: appId,
-    userName: lastEntry.Username,
-    timestamp: lastEntry.UnixTimeMs,
-    battery: lastEntry.Battery ?? undefined,
-    gsmSignal: lastEntry.GsmSignal ?? undefined,
-    speed: (lastEntry.Speed ?? 0) * 3.6,
-    altitude: lastEntry.Altitude,
-    accuracy: lastEntry.Accuracy ?? undefined,
-    color: getCachedColor(appId),
-    hr: lastEntry.HR ?? undefined
-  };
-
-  return data;
-});
-
-const pathsComboBoxSelectedEntry: Ref<string | undefined> = ref();
 
 document.title = `Roadnik: ${p_appCtx.roomId}`;
 
@@ -366,30 +328,9 @@ function setupDataFlow(_map: L.Map) {
   }, false);
 }
 
-function onSelectedUserPopupMoved(_left: number, _bottom: number) {
-  p_mapState.value.selectedPathWindowLeft = _left;
-  p_mapState.value.selectedPathWindowBottom = _bottom;
-
-  if (!p_appCtx.isRoadnikApp) {
-    Cookies.set(Consts.COOKIE_SELECTED_PATH_LEFT, _left.toString());
-    Cookies.set(Consts.COOKIE_SELECTED_PATH_BOTTOM, _bottom.toString());
-  }
-  else {
-    p_hostApi.sendMapStateToRoadnikApp();
-  }
-}
-
-function onSelectedUserPopupDblClick() {
-  const appId = p_mapState.value.selectedAppId;
-  if (appId !== null)
-    p_mapInteractor.setMapCenterToUser(appId);
-}
-
-function onUsersComboBoxChanged(_appId: AppId | undefined, _userName: string | undefined) {
-  p_mapInteractor.setObservedUser(_appId ?? null, true);
-
-  if (_appId !== undefined)
-    p_mapInteractor.setMapCenterToUser(_appId);
+function onUserStatusBarSelect(_appId: AppId) {
+  p_mapInteractor.setObservedUser(_appId);
+  p_mapInteractor.setMapCenterToUser(_appId);
 }
 
 async function updatePathsAsync() {
@@ -752,21 +693,7 @@ function removeUserPath(
   p_appIds.delete(_appId);
 }
 
-watch(computed(() => p_mapState.value.selectedAppId), _newAppId => {
-  const value = _newAppId !== null
-    ? (p_appIds.get(_newAppId) ?? undefined)
-    : undefined;
-
-  pathsComboBoxSelectedEntry.value = value;
-}, { immediate: true });
-
 </script>
 
 <style scoped>
-.paths_combobox {
-  position: fixed;
-  z-index: 10000;
-  left: 5px;
-  bottom: 5px;
-}
 </style>

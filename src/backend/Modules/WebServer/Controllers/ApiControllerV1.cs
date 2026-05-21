@@ -99,6 +99,7 @@ internal class ApiControllerV1
       {
         _log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**cached**)");
         _httpCtx.Response.Headers.Append(HEADER_CACHED_TILE, $"{cachedMeta.DocId}/{cachedMeta.Version}");
+        _httpCtx.Response.Headers.Append("Cache-Control", "public, max-age=604800");
         return Results.Stream(cachedStream, MimeTypes.Png.Mime);
       }
     }
@@ -138,6 +139,7 @@ internal class ApiControllerV1
 
       _log.Info($"**Handled** request of **map tile** __{_mapType}/{_z}/{_x}/{_y}__ (**live**)");
 
+      _httpCtx.Response.Headers.Append("Cache-Control", "public, max-age=604800");
       return Results.Bytes(imageBytes, httpRes.Content.Headers.ContentType?.ToString());
     }
     catch (HttpRequestException hex) when (hex.StatusCode == HttpStatusCode.NotFound)

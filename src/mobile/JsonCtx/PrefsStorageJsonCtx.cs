@@ -11,4 +11,5 @@ namespace Roadnik.MAUI.JsonCtx;
 [JsonSerializable(typeof(TrackpointReportingConditionType))]
 [JsonSerializable(typeof(LocationProviders))]
 [JsonSerializable(typeof(HrmDeviceInfo))]
+[JsonSerializable(typeof(IReadOnlyList<BookmarkEntry>))]
 internal partial class PrefsStorageJsonCtx : JsonSerializerContext { }

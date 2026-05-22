@@ -1,5 +1,6 @@
 ﻿using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using static Roadnik.MAUI.Data.AppConsts;
@@ -36,9 +37,12 @@ public partial class OptionsPage : CContentPage
       _device =>
       {
         if (_device == null)
-          p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, (HrmDeviceInfo?)null);
+          p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, null, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
         else
-          p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, new HrmDeviceInfo(_device.Id, _device.Name ?? string.Empty));
+          p_storage.SetValue(
+            PREF_BLE_HRM_DEVICE_INFO, 
+            new HrmDeviceInfo(_device.Id, _device.Name ?? string.Empty), 
+            PrefsStorageJsonCtx.Default.HrmDeviceInfo);
       },
       () => Navigation.PopModalAsync());
 

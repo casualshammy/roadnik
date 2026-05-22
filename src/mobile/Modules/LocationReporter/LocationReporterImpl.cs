@@ -69,16 +69,16 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
       .Select(_ => new
       {
         ServerAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS,
-        RoomId = _storage.GetValueOrDefault<string>(PREF_ROOM),
-        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault<int>(PREF_TIME_INTERVAL)),
-        DistanceInterval = _storage.GetValueOrDefault<int>(PREF_DISTANCE_INTERVAL),
-        ReportingCondition = _storage.GetValueOrDefault<TrackpointReportingConditionType>(PREF_TRACKPOINT_REPORTING_CONDITION),
-        MinAccuracy = _storage.GetValueOrDefault<int>(PREF_MIN_ACCURACY),
-        Username = _storage.GetValueOrDefault<string>(PREF_USERNAME),
-        LocationProviders = _storage.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS),
-        WipeOldPath = _storage.GetValueOrDefault<bool>(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED),
-        HrmReportEnabled = _storage.GetValueOrDefault<bool>(PREF_BLE_HRM_ENABLED),
-        HrmDevice = _storage.GetValueOrDefault<HrmDeviceInfo>(PREF_BLE_HRM_DEVICE_INFO),
+        RoomId = _storage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String),
+        TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault(PREF_TIME_INTERVAL, PrefsStorageJsonCtx.Default.Int32)),
+        DistanceInterval = _storage.GetValueOrDefault(PREF_DISTANCE_INTERVAL, PrefsStorageJsonCtx.Default.Int32),
+        ReportingCondition = _storage.GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType),
+        MinAccuracy = _storage.GetValueOrDefault(PREF_MIN_ACCURACY, PrefsStorageJsonCtx.Default.Int32),
+        Username = _storage.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String),
+        LocationProviders = _storage.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders),
+        WipeOldPath = _storage.GetValueOrDefault(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, PrefsStorageJsonCtx.Default.Boolean),
+        HrmReportEnabled = _storage.GetValueOrDefault(PREF_BLE_HRM_ENABLED, PrefsStorageJsonCtx.Default.Boolean),
+        HrmDevice = _storage.GetValueOrDefault(PREF_BLE_HRM_DEVICE_INFO, PrefsStorageJsonCtx.Default.HrmDeviceInfo),
         AppId = _storage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid)
       })
       .Replay(1)

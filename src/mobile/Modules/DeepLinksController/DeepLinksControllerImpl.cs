@@ -2,6 +2,7 @@
 using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using System.Text.RegularExpressions;
 using static Roadnik.MAUI.Data.AppConsts;
 
@@ -60,7 +61,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
       return;
 
     var oldServerAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
-    var oldRoomId = p_preferencesStorage.GetValueOrDefault<string>(PREF_ROOM);
+    var oldRoomId = p_preferencesStorage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
 
     var newServerAddress = match.Groups[1].Value;
     var newRoomId = match.Groups[2].Value;
@@ -82,7 +83,7 @@ internal partial class DeepLinksControllerImpl : IDeepLinksController, IAppModul
 
     if (result)
     {
-      p_preferencesStorage.SetValue(PREF_ROOM, newRoomId);
+      p_preferencesStorage.SetValue(PREF_ROOM, newRoomId, PrefsStorageJsonCtx.Default.String);
 
       await Toast
         .Make("Saved")

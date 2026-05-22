@@ -3,6 +3,7 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Platforms.Android.Toolkit;
 using System.Collections.Concurrent;
 using System.Reactive;
@@ -46,7 +47,7 @@ internal class PushMessagesControllerImpl : IPushMessagesController, IAppModule<
           return _acc;
         }
 
-        var roomId = _preferencesStorage.GetValueOrDefault<string>(PREF_ROOM);
+        var roomId = _preferencesStorage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
         if (roomId != _acc)
         {
           if (!_acc.IsNullOrEmpty())

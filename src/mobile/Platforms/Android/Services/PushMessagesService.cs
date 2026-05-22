@@ -86,7 +86,7 @@ public class PushMessagesService : FirebaseMessagingService
 
           var appId = prefStorage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
           var concealedAppId = GenericToolkit.ConcealAppInstanceId(appId);
-          var enabled = prefStorage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_POINT);
+          var enabled = prefStorage.GetValueOrDefault(PREF_NOTIFY_NEW_POINT, PrefsStorageJsonCtx.Default.Boolean);
           if (enabled == true && concealedAppId != msgData.AppId)
           {
             var username = msgData.UserName;
@@ -119,7 +119,7 @@ public class PushMessagesService : FirebaseMessagingService
 
           var appId = prefStorage.GetValueOrDefault(PREF_APP_INSTALLATION_ID, PrefsStorageJsonCtx.Default.Guid);
           var concealedAppId = GenericToolkit.ConcealAppInstanceId(appId);
-          var enabled = prefStorage.GetValueOrDefault<bool>(PREF_NOTIFY_NEW_TRACK);
+          var enabled = prefStorage.GetValueOrDefault(PREF_NOTIFY_NEW_TRACK, PrefsStorageJsonCtx.Default.Boolean);
           if (enabled == true && concealedAppId != msgData.AppId)
           {
             log.Info($"NewTrackStarted: '{msgData.AppId}/{msgData.Username}'");

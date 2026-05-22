@@ -107,7 +107,7 @@ internal class OptionsPageViewModel : BaseViewModel
 
       SetProperty(ref p_roomId, value);
       if (p_roomId != null)
-        p_storage.SetValue(PREF_ROOM, p_roomId);
+        p_storage.SetValue(PREF_ROOM, p_roomId, PrefsStorageJsonCtx.Default.String);
     }
   }
   public string? Nickname
@@ -119,7 +119,7 @@ internal class OptionsPageViewModel : BaseViewModel
         return;
 
       SetProperty(ref p_username, value);
-      p_storage.SetValue(PREF_USERNAME, value);
+      p_storage.SetValue(PREF_USERNAME, value, PrefsStorageJsonCtx.Default.String);
     }
   }
   public int MinimumTime
@@ -128,7 +128,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minimumTime, value);
-      p_storage.SetValue(PREF_TIME_INTERVAL, p_minimumTime);
+      p_storage.SetValue(PREF_TIME_INTERVAL, p_minimumTime, PrefsStorageJsonCtx.Default.Int32);
     }
   }
   public int MinimumDistance
@@ -137,7 +137,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minimumDistance, value);
-      p_storage.SetValue(PREF_DISTANCE_INTERVAL, p_minimumDistance);
+      p_storage.SetValue(PREF_DISTANCE_INTERVAL, p_minimumDistance, PrefsStorageJsonCtx.Default.Int32);
     }
   }
   public string TrackpointReportingConditionText
@@ -155,7 +155,7 @@ internal class OptionsPageViewModel : BaseViewModel
         return;
 
       SetProperty(ref p_trackpointReportingCondition, condition);
-      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, p_trackpointReportingCondition);
+      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, p_trackpointReportingCondition, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
     }
   }
   public int MinAccuracy
@@ -164,7 +164,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_minAccuracy, value);
-      p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy);
+      p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy, PrefsStorageJsonCtx.Default.Int32);
     }
   }
 
@@ -174,7 +174,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_wipeOldTrackOnNewEnabled, value);
-      p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled);
+      p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -188,7 +188,7 @@ internal class OptionsPageViewModel : BaseViewModel
         : p_locationProviders & ~LocationProviders.Gps;
 
       SetProperty(ref p_locationProviders, newValue);
-      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
     }
   }
 
@@ -202,7 +202,7 @@ internal class OptionsPageViewModel : BaseViewModel
         : p_locationProviders & ~LocationProviders.Network;
 
       SetProperty(ref p_locationProviders, newValue);
-      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
     }
   }
 
@@ -216,7 +216,7 @@ internal class OptionsPageViewModel : BaseViewModel
         : p_locationProviders & ~LocationProviders.Passive;
 
       SetProperty(ref p_locationProviders, newValue);
-      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue);
+      p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
     }
   }
 
@@ -226,7 +226,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_notificationOnNewTrack, value);
-      p_storage.SetValue(PREF_NOTIFY_NEW_TRACK, p_notificationOnNewTrack);
+      p_storage.SetValue(PREF_NOTIFY_NEW_TRACK, p_notificationOnNewTrack, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
   public bool NotificationOnNewPoint
@@ -235,7 +235,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_notificationOnNewPoint, value);
-      p_storage.SetValue(PREF_NOTIFY_NEW_POINT, p_notificationOnNewPoint);
+      p_storage.SetValue(PREF_NOTIFY_NEW_POINT, p_notificationOnNewPoint, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -245,7 +245,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_bleHrmEnabled, value);
-      p_storage.SetValue(PREF_BLE_HRM_ENABLED, p_bleHrmEnabled);
+      p_storage.SetValue(PREF_BLE_HRM_ENABLED, p_bleHrmEnabled, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -258,7 +258,7 @@ internal class OptionsPageViewModel : BaseViewModel
         ? null
         : new HrmDeviceInfo(value.Value, p_bleHrmDeviceInfo?.DeviceName ?? string.Empty);
       SetProperty(ref p_bleHrmDeviceInfo, newValue);
-      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo);
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
     }
   }
 
@@ -271,7 +271,7 @@ internal class OptionsPageViewModel : BaseViewModel
         ? null
         : new HrmDeviceInfo(p_bleHrmDeviceInfo?.DeviceId ?? Guid.Empty, value);
       SetProperty(ref p_bleHrmDeviceInfo, newValue);
-      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo);
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
     }
   }
 
@@ -281,7 +281,7 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       SetProperty(ref p_displayOnLockScreenEnabled, value);
-      p_storage.SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, p_displayOnLockScreenEnabled);
+      p_storage.SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, p_displayOnLockScreenEnabled, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -568,7 +568,7 @@ internal class OptionsPageViewModel : BaseViewModel
       var json = JsonSerializer.SerializeToUtf8Bytes(token, DiscordJsonCtx.Default.String);
       var encToken = aes.Encrypt(json);
       var encTokenString = Convert.ToBase64String(encToken);
-      p_storage.SetValue(PREF_DISCORD_TOKEN, encTokenString);
+      p_storage.SetValue(PREF_DISCORD_TOKEN, encTokenString, PrefsStorageJsonCtx.Default.String);
 
       p_log.Info($"Discord login: token saved");
     }
@@ -592,7 +592,7 @@ internal class OptionsPageViewModel : BaseViewModel
   private void OnDiscordEnabled(object? _arg)
   {
     if (_arg is bool toggled)
-      p_storage.SetValue(PREF_DISCORD_ENABLED, toggled);
+      p_storage.SetValue(PREF_DISCORD_ENABLED, toggled, PrefsStorageJsonCtx.Default.Boolean);
   }
 
   private async void OnDiscordStatus(object? _arg)
@@ -613,7 +613,7 @@ internal class OptionsPageViewModel : BaseViewModel
     if (status == null)
       return;
 
-    p_storage.SetValue(PREF_DISCORD_STATUS, status.Trim());
+    p_storage.SetValue(PREF_DISCORD_STATUS, status.Trim(), PrefsStorageJsonCtx.Default.String);
   }
 
 }

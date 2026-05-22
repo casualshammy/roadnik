@@ -99,7 +99,7 @@ public partial class MainPage : CContentPage
     p_prefs.PreferencesChanged
       .Select(_ =>
       {
-        var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
+        var roomId = p_prefs.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
         return (IsDebug: DEBUG_APP_ADDRESS != null, RoomId: roomId);
       })
       .DistinctUntilChanged(_ => HashCode.Combine(_.IsDebug, _.RoomId))
@@ -124,7 +124,7 @@ public partial class MainPage : CContentPage
           return;
         }
 
-        var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
+        var username = p_prefs.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String);
         var mapState = p_prefs.GetValueOrDefault(PREF_WEBAPP_MAP_STATE, JsBridgeJsonCtx.Default.HostMsgMapStateData);
 
         var toastText = isDebug ? $"DEBUG MODE\n{roomId}\n{username}" : $"{roomId}\n{username}";
@@ -195,7 +195,7 @@ public partial class MainPage : CContentPage
     p_pageIsVisible
       .Subscribe(_ =>
       {
-        var showOnLockScreen = p_prefs.GetValueOrDefault<bool>(PREF_DISPLAY_ON_LOCK_SCREEN);
+        var showOnLockScreen = p_prefs.GetValueOrDefault(PREF_DISPLAY_ON_LOCK_SCREEN, PrefsStorageJsonCtx.Default.Boolean);
 
         if (pageController.CurrentPage == this)
           Platform.CurrentActivity?.SetShowWhenLocked(showOnLockScreen);
@@ -300,7 +300,7 @@ public partial class MainPage : CContentPage
   private async void FAB_Clicked(object _sender, EventArgs _e)
   {
     // privacy policy
-    var version = p_prefs.GetValueOrDefault<int>(PREF_PRIVACY_POLICY_VERSION);
+    var version = p_prefs.GetValueOrDefault(PREF_PRIVACY_POLICY_VERSION, PrefsStorageJsonCtx.Default.Int32);
     if (version < PRIVACY_POLICY_VERSION)
     {
       var agreed = false;
@@ -309,7 +309,7 @@ public partial class MainPage : CContentPage
       if (!agreed)
         return;
 
-      p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, PRIVACY_POLICY_VERSION);
+      p_prefs.SetValue(PREF_PRIVACY_POLICY_VERSION, PRIVACY_POLICY_VERSION, PrefsStorageJsonCtx.Default.Int32);
     }
 
     // check permissions and run
@@ -332,7 +332,7 @@ public partial class MainPage : CContentPage
       locationReporter.SetState(true);
 
       var providers = new List<string>();
-      var locProvider = p_prefs.GetValueOrDefault<LocationProviders>(PREF_LOCATION_PROVIDERS);
+      var locProvider = p_prefs.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders);
       if ((locProvider & LocationProviders.Gps) != 0)
         providers.Add(L.page_options_power_mode_high_accuracy);
       if ((locProvider & LocationProviders.Network) != 0)
@@ -416,7 +416,7 @@ public partial class MainPage : CContentPage
   private async void Share_Clicked(object _sender, EventArgs _e)
   {
     var serverAddress = DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS;
-    var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
+    var roomId = p_prefs.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
     if (serverAddress.IsNullOrWhiteSpace() || roomId.IsNullOrWhiteSpace())
     {
       await DisplayAlertAsync("Room id is invalid", null, "Ok");
@@ -492,11 +492,11 @@ public partial class MainPage : CContentPage
     if (serverAddress.IsNullOrWhiteSpace())
       return;
 
-    var roomId = p_prefs.GetValueOrDefault<string>(PREF_ROOM);
+    var roomId = p_prefs.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
     if (roomId.IsNullOrWhiteSpace())
       return;
 
-    var username = p_prefs.GetValueOrDefault<string>(PREF_USERNAME);
+    var username = p_prefs.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String);
     if (username.IsNullOrWhiteSpace())
       return;
 

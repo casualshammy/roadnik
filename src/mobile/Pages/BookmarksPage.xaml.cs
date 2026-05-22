@@ -3,6 +3,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using CommunityToolkit.Maui.Alerts;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Interfaces;
+using Roadnik.MAUI.JsonCtx;
 using Roadnik.MAUI.Toolkit;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -34,13 +35,13 @@ public partial class BookmarksPage : CContentPage
       var bookmark = _o.Bookmark;
       var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
       if (p_bookmarks.TryRemove(hashCode, out _))
-        p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
+        p_preferences.SetValue(PREF_BOOKMARKS_LIST, [.. p_bookmarks.Values.Select(_ => _.Bookmark)], PrefsStorageJsonCtx.Default.IReadOnlyListBookmarkEntry);
     });
 
     p_preferences.PreferencesChanged
       .DistinctUntilChanged(_ =>
       {
-        var bookmarks = p_preferences.GetValueOrDefault<IReadOnlyList<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
+        var bookmarks = p_preferences.GetValueOrDefault(PREF_BOOKMARKS_LIST, PrefsStorageJsonCtx.Default.IReadOnlyListBookmarkEntry) ?? [];
         var hash = bookmarks.Aggregate(0, (_acc, _entry) => _acc ^ _entry.GetHashCode());
         return hash;
       })
@@ -48,7 +49,7 @@ public partial class BookmarksPage : CContentPage
       {
         p_bookmarks.Clear();
 
-        var bookmarks = p_preferences.GetValueOrDefault<IReadOnlyList<BookmarkEntry>>(PREF_BOOKMARKS_LIST) ?? [];
+        var bookmarks = p_preferences.GetValueOrDefault(PREF_BOOKMARKS_LIST, PrefsStorageJsonCtx.Default.IReadOnlyListBookmarkEntry) ?? [];
         foreach (var bookmark in bookmarks)
         {
           var hashCode = HashCode.Combine(bookmark.RoomId, bookmark.Username);
@@ -62,8 +63,8 @@ public partial class BookmarksPage : CContentPage
     p_preferences.PreferencesChanged
       .DistinctUntilChanged(_ =>
       {
-        var activeRoom = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
-        var activeUser = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
+        var activeRoom = p_preferences.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
+        var activeUser = p_preferences.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String);
         return HashCode.Combine(activeRoom, activeUser);
       })
       .Subscribe(_ => MainThread.BeginInvokeOnMainThread(RecalculateData), p_lifetime);
@@ -103,22 +104,22 @@ public partial class BookmarksPage : CContentPage
     if (!dialogResult)
       return;
 
-    p_preferences.SetValue(PREF_ROOM, wrapper.Bookmark.RoomId);
-    p_preferences.SetValue(PREF_USERNAME, wrapper.Bookmark.Username);
+    p_preferences.SetValue(PREF_ROOM, wrapper.Bookmark.RoomId, PrefsStorageJsonCtx.Default.String);
+    p_preferences.SetValue(PREF_USERNAME, wrapper.Bookmark.Username, PrefsStorageJsonCtx.Default.String);
 
     await Toast.Make("Done").Show();
   }
 
   private async void AddCurrentCredentials_Clicked(object _sender, EventArgs _e)
   {
-    var roomId = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
+    var roomId = p_preferences.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
     if (roomId.IsNullOrWhiteSpace())
     {
       await DisplayAlertAsync("Current room id is empty", "Please go to options page and fill it", "Close");
       return;
     }
 
-    var username = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
+    var username = p_preferences.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String);
     if (username.IsNullOrWhiteSpace())
     {
       await DisplayAlertAsync("Current username is empty", "Please go to options page and fill it", "Close");
@@ -134,13 +135,13 @@ public partial class BookmarksPage : CContentPage
       return;
     }
 
-    p_preferences.SetValue(PREF_BOOKMARKS_LIST, p_bookmarks.Values.Select(_ => _.Bookmark).ToArray());
+    p_preferences.SetValue(PREF_BOOKMARKS_LIST, [.. p_bookmarks.Values.Select(_ => _.Bookmark)], PrefsStorageJsonCtx.Default.IReadOnlyListBookmarkEntry);
   }
 
   private void RecalculateData()
   {
-    var activeRoom = p_preferences.GetValueOrDefault<string>(PREF_ROOM);
-    var activeUser = p_preferences.GetValueOrDefault<string>(PREF_USERNAME);
+    var activeRoom = p_preferences.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
+    var activeUser = p_preferences.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String);
 
     foreach (var (hashCode, existing) in p_bookmarks)
     {

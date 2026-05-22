@@ -39,21 +39,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
   public IObservable<Unit> PreferencesChanged => p_prefChangedFlow;
 
-  [Obsolete]
-  public T? GetValueOrDefault<T>(string _key)
-  {
-    if (p_cache.TryGet(_key, out var obj))
-      return (T?)obj;
-
-    var preferenceValue = Preferences.Default.Get(_key, (string?)null);
-    if (preferenceValue == null)
-      return default;
-
-    obj = JsonSerializer.Deserialize<T>(preferenceValue);
-    p_cache.Put(_key, obj);
-    return (T?)obj;
-  }
-
   public T? GetValueOrDefault<T>(string _key, JsonTypeInfo<T> _jsonTypeInfo)
   {
     if (p_cache.TryGet(_key, out var obj))
@@ -66,15 +51,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     obj = JsonSerializer.Deserialize(preferenceValue, _jsonTypeInfo);
     p_cache.Put(_key, obj);
     return (T?)obj;
-  }
-
-  [Obsolete]
-  public void SetValue<T>(string _key, T? _value)
-  {
-    var json = JsonSerializer.Serialize(_value);
-    Preferences.Default.Set(_key, json);
-    p_cache.Put(_key, _value);
-    p_prefChangedFlow.OnNext();
   }
 
   public void SetValue<T>(string _key, T _value, JsonTypeInfo<T> _jsonTypeInfo)
@@ -94,30 +70,30 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
   private void SetupDefaultPreferences()
   {
-    if (GetValueOrDefault<int>(PREF_DB_VERSION) != default)
+    if (GetValueOrDefault(PREF_DB_VERSION, PrefsStorageJsonCtx.Default.Int32) != default)
       return;
 
-    SetValue(PREF_DB_VERSION, 1);
+    SetValue(PREF_DB_VERSION, 1, PrefsStorageJsonCtx.Default.Int32);
 
-    SetValue(PREF_ROOM, CommonUtilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false));
-    SetValue(PREF_TIME_INTERVAL, 10);
-    SetValue(PREF_DISTANCE_INTERVAL, 100);
-    SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
-    SetValue(PREF_MIN_ACCURACY, 20);
-    SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}");
-    SetValue(PREF_NOTIFY_NEW_POINT, true);
-    SetValue(PREF_NOTIFY_NEW_TRACK, true);
-    SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true);
-    SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
-    SetValue(PREF_BLE_HRM_ENABLED, false);
-    SetValue(PREF_BLE_HRM_DEVICE_INFO, (HrmDeviceInfo?)null);
+    SetValue(PREF_ROOM, CommonUtilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false), PrefsStorageJsonCtx.Default.String);
+    SetValue(PREF_TIME_INTERVAL, 10, PrefsStorageJsonCtx.Default.Int32);
+    SetValue(PREF_DISTANCE_INTERVAL, 100, PrefsStorageJsonCtx.Default.Int32);
+    SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
+    SetValue(PREF_MIN_ACCURACY, 20, PrefsStorageJsonCtx.Default.Int32);
+    SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}", PrefsStorageJsonCtx.Default.String);
+    SetValue(PREF_NOTIFY_NEW_POINT, true, PrefsStorageJsonCtx.Default.Boolean);
+    SetValue(PREF_NOTIFY_NEW_TRACK, true, PrefsStorageJsonCtx.Default.Boolean);
+    SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, true, PrefsStorageJsonCtx.Default.Boolean);
+    SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All, PrefsStorageJsonCtx.Default.LocationProviders);
+    SetValue(PREF_BLE_HRM_ENABLED, false, PrefsStorageJsonCtx.Default.Boolean);
+    SetValue(PREF_BLE_HRM_DEVICE_INFO, null, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
     SetValue(PREF_APP_INSTALLATION_ID, Guid.NewGuid(), PrefsStorageJsonCtx.Default.Guid);
-    SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, false);
+    SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, false, PrefsStorageJsonCtx.Default.Boolean);
   }
 
   private void MigratePreferences()
   {
-    var dbVersion = GetValueOrDefault<int>(PREF_DB_VERSION);
+    var dbVersion = GetValueOrDefault(PREF_DB_VERSION, PrefsStorageJsonCtx.Default.Int32);
     if (!int.TryParse(AppInfo.Current.BuildString, out var appVersion))
     {
       p_log.Error($"Can't parse app version: '{AppInfo.Current.BuildString}'");
@@ -144,7 +120,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
         p_log.Info($"Db is migrated to version -->> {i}");
       }
 
-    SetValue(PREF_DB_VERSION, appVersion);
+    SetValue(PREF_DB_VERSION, appVersion, PrefsStorageJsonCtx.Default.Int32);
   }
 
   private IReadOnlyDictionary<int, Action> GetMigrations()
@@ -161,20 +137,20 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
     migrations.Add(175, () =>
     {
-      var roomId = GetValueOrDefault<string>(PREF_ROOM);
+      var roomId = GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String);
       if (!roomId.IsNullOrEmpty() && roomId.Length < ReqResUtil.MinRoomIdLength)
       {
         var length = ReqResUtil.MinRoomIdLength - roomId.Length;
         var newRoomId = $"{roomId}{new string('-', length)}";
-        SetValue(PREF_ROOM, newRoomId);
+        SetValue(PREF_ROOM, newRoomId, PrefsStorageJsonCtx.Default.String);
         p_log.Info($"Migration 175: new room id: '{newRoomId}'");
       }
     });
     migrations.Add(192, () =>
     {
-      var reportingCondition = GetValueOrDefault<int>(PREF_TRACKPOINT_REPORTING_CONDITION);
+      var reportingCondition = GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.Int32);
       if (reportingCondition == default)
-        SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance);
+        SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
     });
     migrations.Add(270, () =>
     {
@@ -187,7 +163,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     migrations.Add(351, () =>
     {
       RemoveValue("settings.report.location-provider"); // PREF_LOCATION_PROVIDER
-      SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All);
+      SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All, PrefsStorageJsonCtx.Default.LocationProviders);
     });
 
     return migrations;

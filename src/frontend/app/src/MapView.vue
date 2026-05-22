@@ -5,13 +5,15 @@
               :layers="[p_mapsData[p_mapState.layer]]" />
 
   <UserStatusBar
-                 v-if="p_appIds.size > 0"
                  :appIds="p_appIds"
                  :gEntries="p_gEntries"
                  :selectedAppId="p_mapState.selectedAppId"
+                 :left="p_mapState.usbLeft"
+                 :bottom="p_mapState.usbBottom"
                  @select="onUserStatusBarSelect"
                  @deselect="() => p_mapInteractor.setObservedUser(null)"
-                 @centerOnUser="_appId => p_mapInteractor.setMapCenterToUser(_appId)" />
+                 @centerOnUser="_appId => p_mapInteractor.setMapCenterToUser(_appId)"
+                 @moved="onUsbMoved" />
 </template>
 
 <script setup lang="ts">
@@ -331,6 +333,19 @@ function setupDataFlow(_map: L.Map) {
 function onUserStatusBarSelect(_appId: AppId) {
   p_mapInteractor.setObservedUser(_appId);
   p_mapInteractor.setMapCenterToUser(_appId);
+}
+
+function onUsbMoved(_left: number, _bottom: number) {
+  p_mapState.value.usbLeft = _left;
+  p_mapState.value.usbBottom = _bottom;
+
+  if (!p_appCtx.isRoadnikApp) {
+    Cookies.set(Consts.COOKIE_USB_LEFT, _left.toString());
+    Cookies.set(Consts.COOKIE_USB_BOTTOM, _bottom.toString());
+  }
+  else {
+    p_hostApi.sendMapStateToRoadnikApp();
+  }
 }
 
 async function updatePathsAsync() {

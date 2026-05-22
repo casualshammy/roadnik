@@ -651,6 +651,10 @@ public partial class MainPage : CContentPage
       query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
     if (_mapState?.SelectedPathWindowBottom != null)
       query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.UsbLeft != null)
+      query["usb_left"] = _mapState.UsbLeft.Value.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.UsbBottom != null)
+      query["usb_bottom"] = _mapState.UsbBottom.Value.ToString(CultureInfo.InvariantCulture);
 
     urlBuilder.Query = query.ToString();
 

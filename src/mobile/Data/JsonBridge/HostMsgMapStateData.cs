@@ -8,4 +8,6 @@ internal record HostMsgMapStateData(
   IReadOnlyList<string> Overlays,
   string? SelectedAppId,
   double? SelectedPathWindowLeft,
-  double? SelectedPathWindowBottom);
+  double? SelectedPathWindowBottom,
+  double? UsbLeft,
+  double? UsbBottom);

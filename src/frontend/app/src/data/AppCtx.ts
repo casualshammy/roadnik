@@ -138,6 +138,34 @@ export function CreateAppCtx(
       selectedPathWindowBottom = fl;
   }
 
+  let usbLeft: number | null = null;
+  const urlParamUsbLeft = urlParams.get('usb_left');
+  const cookieUsbLeft = !isRoadnikApp ? Cookies.get(Consts.COOKIE_USB_LEFT) : null;
+  if (urlParamUsbLeft !== null) {
+    const fl = parseFloat(urlParamUsbLeft);
+    if (fl >= 0 && fl < (window.innerWidth - 10))
+      usbLeft = fl;
+  }
+  else if (cookieUsbLeft != null) {
+    const fl = parseFloat(cookieUsbLeft);
+    if (fl >= 0 && fl < (window.innerWidth - 10))
+      usbLeft = fl;
+  }
+
+  let usbBottom: number | null = null;
+  const urlParamUsbBottom = urlParams.get('usb_bottom');
+  const cookieUsbBottom = !isRoadnikApp ? Cookies.get(Consts.COOKIE_USB_BOTTOM) : null;
+  if (urlParamUsbBottom !== null) {
+    const fl = parseFloat(urlParamUsbBottom);
+    if (fl >= 0 && fl < (window.innerHeight - 10))
+      usbBottom = fl;
+  }
+  else if (cookieUsbBottom != null) {
+    const fl = parseFloat(cookieUsbBottom);
+    if (fl >= 0 && fl < (window.innerHeight - 10))
+      usbBottom = fl;
+  }
+
   return {
     apiUrl: _apiUrl,
     isRoadnikApp: isRoadnikApp,
@@ -155,7 +183,9 @@ export function CreateAppCtx(
       overlays: overlays,
       selectedAppId: selectedAppId,
       selectedPathWindowLeft: selectedPathWindowLeft,
-      selectedPathWindowBottom: selectedPathWindowBottom
+      selectedPathWindowBottom: selectedPathWindowBottom,
+      usbLeft: usbLeft,
+      usbBottom: usbBottom
     })
   };
 }

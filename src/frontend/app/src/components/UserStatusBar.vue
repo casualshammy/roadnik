@@ -1,9 +1,11 @@
 <template>
-  <div class="usb-root">
-    <!-- Backdrop -->
-    <Teleport to="body">
-      <div v-if="p_popoverOpen" class="usb-backdrop" @click="closePopover" />
-    </Teleport>
+  <!-- Controls: pill or status bar -->
+  <div
+    ref="p_rootEl"
+    class="usb-root"
+    :style="p_pos ? { left: `${p_pos.left}px`, bottom: `${p_pos.bottom}px` } : undefined"
+    @mousedown="onRootMouseDown"
+    @touchstart.passive="onRootTouchStart">
 
     <!-- Popover -->
     <Transition name="usb-pop">
@@ -55,9 +57,11 @@
       </div>
     </Transition>
 
-    <!-- Pill: no user selected -->
+    <!-- Backdrop -->
+    <div v-if="p_popoverOpen" class="usb-backdrop" @click="closePopover" />
+    <!-- Pill: no user selected, or selected user has no data yet -->
     <div
-      v-if="props.selectedAppId === null"
+      v-if="selectedUser === undefined"
       class="usb-pill"
       title="Select a user to track"
       @click="togglePopover">
@@ -65,20 +69,26 @@
       <span class="usb-badge">{{ props.appIds.size }}</span>
     </div>
 
-    <!-- Status bar: user selected -->
-    <div v-else-if="selectedUser !== undefined" class="usb-bar">
+    <!-- Status bar: user selected and has data -->
+    <div
+      v-else
+      class="usb-bar"
+      :title="`Center map on ${selectedUser.userName}`"
+      @click="emit('centerOnUser', props.selectedAppId!)">
       <div class="usb-bar-accent" :style="{ background: selectedUser.color }" />
       <div class="usb-bar-body">
         <div class="usb-row">
-          <button
+          <span
             class="usb-name-link"
-            :style="{ color: selectedUser.color, '--usb-user-color': selectedUser.color }"
-            :title="`Center map on ${selectedUser.userName}`"
-            @click="emit('centerOnUser', props.selectedAppId!)">
+            :style="{ color: selectedUser.color, '--usb-user-color': selectedUser.color }">
             {{ selectedUser.userName }}
-          </button>
-          <span class="usb-time">{{ selectedTimestamp }}</span>
-          <button class="usb-close" title="Stop tracking" @click="emit('deselect')">✕</button>
+          </span>
+          <span
+            class="usb-time"
+            @click.stop="onTimestampClick"
+            @mouseenter="onTimestampMouseEnter"
+            @mouseleave="onTimestampMouseLeave">{{ selectedTimestamp }}</span>
+          <button class="usb-close" title="Stop tracking" @click.stop="emit('deselect')">✕</button>
         </div>
         <div class="usb-row">
           <span>🚀 {{ selectedUser.speedStr }} km/h</span>
@@ -87,14 +97,25 @@
         <div class="usb-row">
           <span v-if="selectedUser.battery !== undefined">🔋 {{ selectedUser.battery }}%</span>
           <span v-if="selectedUser.gsmSignal !== undefined">📶 {{ selectedUser.gsmSignal }}%</span>
+          <!-- On landscape: altitude+accuracy in this row; on portrait: moved to row 4 -->
+          <span class="usb-landscape-only">⛰ {{ selectedUser.altitude }} m</span>
+          <span v-if="selectedUser.accuracy !== undefined" class="usb-landscape-only">📡 {{ selectedUser.accuracy }} m</span>
+        </div>
+        <!-- Row 4: portrait only -->
+        <div class="usb-row usb-portrait-only">
           <span>⛰ {{ selectedUser.altitude }} m</span>
           <span v-if="selectedUser.accuracy !== undefined">📡 {{ selectedUser.accuracy }} m</span>
         </div>
       </div>
-      <div class="usb-bar-count" title="Show all members" @click="togglePopover">
+      <div class="usb-bar-count" title="Show all members" @click.stop="togglePopover">
         <span class="usb-bar-count-icon">👥</span>
         <span class="usb-badge">{{ props.appIds.size }}</span>
       </div>
+    </div>
+
+    <!-- Timestamp tooltip (outside .usb-bar to escape overflow:hidden) -->
+    <div v-if="p_showTimestampTip && selectedTimestampTooltip" class="usb-ts-tooltip">
+      {{ selectedTimestampTooltip }}
     </div>
   </div>
 </template>
@@ -135,19 +156,28 @@ const props = defineProps<{
   appIds: Map<AppId, string>;
   gEntries: Map<AppId, TimedStorageEntry[]>;
   selectedAppId: AppId | null;
+  left?: number | null;
+  bottom?: number | null;
 }>();
 
 const emit = defineEmits<{
   select: [_appId: AppId];
   deselect: [];
   centerOnUser: [_appId: AppId];
+  moved: [_left: number, _bottom: number];
 }>();
 
+const p_rootEl = ref<HTMLDivElement>();
 const p_popoverOpen = ref(false);
 const p_searchQuery = ref('');
 const p_now = ref(Date.now());
 const p_searchInputEl = ref<HTMLInputElement>();
+const p_pos = ref<{ left: number; bottom: number } | null>(
+  props.left != null && props.bottom != null ? { left: props.left, bottom: props.bottom } : null
+);
+const p_showTimestampTip = ref(false);
 let p_tickerId: ReturnType<typeof setInterval> | undefined;
+let p_timestampTipTimer: ReturnType<typeof setTimeout> | undefined;
 
 function elapsedStr(_timestampMs: number): string {
   const elapsed = TimeSpan.fromMilliseconds(p_now.value - _timestampMs);
@@ -155,6 +185,35 @@ function elapsedStr(_timestampMs: number): string {
     return 'just now';
 
   return `${elapsed.toString(false)} ago`;
+}
+
+function elapsedShort(_timestampMs: number): string {
+  const sec = Math.floor((p_now.value - _timestampMs) / 1000);
+  if (sec < 60)
+    return `${Math.max(0, sec)} sec`;
+
+  if (sec < 3600)
+    return `${Math.floor(sec / 60)} min`;
+
+  if (sec < 86400)
+    return `${Math.floor(sec / 3600)} h`;
+
+  return `${Math.floor(sec / 86400)} days`;
+}
+
+function onTimestampClick() {
+  p_showTimestampTip.value = true;
+  clearTimeout(p_timestampTipTimer);
+  p_timestampTipTimer = setTimeout(() => { p_showTimestampTip.value = false; }, 3000);
+}
+
+function onTimestampMouseEnter() {
+  clearTimeout(p_timestampTipTimer);
+  p_showTimestampTip.value = true;
+}
+
+function onTimestampMouseLeave() {
+  p_timestampTipTimer = setTimeout(() => { p_showTimestampTip.value = false; }, 150);
 }
 
 const memberList = computed<MemberEntry[]>(() => {
@@ -228,7 +287,15 @@ const selectedTimestamp = computed(() => {
   if (ts === undefined)
     return '';
 
-  return elapsedStr(ts);
+  return elapsedShort(ts);
+});
+
+const selectedTimestampTooltip = computed(() => {
+  const ts = selectedUser.value?.timestamp;
+  if (ts === undefined)
+    return '';
+
+  return `Last update: ${new Date(ts).toLocaleString()}`;
 });
 
 async function togglePopover() {
@@ -251,12 +318,71 @@ function onSelectMember(_appId: AppId) {
   emit('select', _appId);
 }
 
+function onRootMouseDown(_e: MouseEvent) {
+  const root = p_rootEl.value;
+  if (root === undefined)
+    return;
+
+  const rect = root.getBoundingClientRect();
+  const offsetX = _e.clientX - rect.left;
+  const offsetY = _e.clientY - rect.top;
+
+  function onMouseMove(e: MouseEvent) {
+    const w = root!.offsetWidth;
+    const h = root!.offsetHeight;
+    const left = Math.max(0, Math.min(window.innerWidth - w, e.clientX - offsetX));
+    const bottom = Math.max(0, Math.min(window.innerHeight - h, window.innerHeight - (e.clientY - offsetY) - h));
+    p_pos.value = { left, bottom };
+    emit('moved', left, bottom);
+  }
+
+  function onMouseUp() {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  }
+
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+}
+
+function onRootTouchStart(_e: TouchEvent) {
+  const root = p_rootEl.value;
+  if (root === undefined)
+    return;
+
+  const rect = root.getBoundingClientRect();
+  const t0 = _e.touches[0];
+  const offsetX = t0.clientX - rect.left;
+  const offsetY = t0.clientY - rect.top;
+
+  function onTouchMove(e: TouchEvent) {
+    const t = e.touches[0];
+    const w = root!.offsetWidth;
+    const h = root!.offsetHeight;
+    const left = Math.max(0, Math.min(window.innerWidth - w, t.clientX - offsetX));
+    const bottom = Math.max(0, Math.min(window.innerHeight - h, window.innerHeight - (t.clientY - offsetY) - h));
+    p_pos.value = { left, bottom };
+    emit('moved', left, bottom);
+  }
+
+  function onTouchEnd() {
+    window.removeEventListener('touchmove', onTouchMove);
+    window.removeEventListener('touchend', onTouchEnd);
+    window.removeEventListener('touchcancel', onTouchEnd);
+  }
+
+  window.addEventListener('touchmove', onTouchMove);
+  window.addEventListener('touchend', onTouchEnd);
+  window.addEventListener('touchcancel', onTouchEnd);
+}
+
 onMounted(() => {
   p_tickerId = setInterval(() => { p_now.value = Date.now(); }, 1000);
 });
 
 onUnmounted(() => {
   clearInterval(p_tickerId);
+  clearTimeout(p_timestampTipTimer);
 });
 </script>
 
@@ -265,18 +391,20 @@ onUnmounted(() => {
 .usb-root {
   position: fixed;
   bottom: 18px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: calc(50vw - 50%);
   z-index: 10000;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
-.usb-root > * {
-  pointer-events: auto;
+.usb-root:active {
+  cursor: grabbing;
 }
 
 /* ── Backdrop ─────────────────────────────────────────────────── */
@@ -334,6 +462,7 @@ onUnmounted(() => {
   overflow: hidden;
   min-width: 240px;
   max-width: 380px;
+  cursor: pointer;
 }
 
 .usb-bar-accent {
@@ -364,7 +493,6 @@ onUnmounted(() => {
 }
 
 /* Name-link button */
-.usb-name-link,
 .usb-close {
   all: unset;
   cursor: pointer;
@@ -391,6 +519,27 @@ onUnmounted(() => {
   color: #9ca3af;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.usb-time:hover {
+  color: #6b7280;
+}
+
+.usb-ts-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.88);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 5px;
+  pointer-events: none;
+  z-index: 10002;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .usb-close {
@@ -427,17 +576,20 @@ onUnmounted(() => {
 
 /* ── Popover ──────────────────────────────────────────────────── */
 .usb-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   background: #fff;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
-  width: 300px;
+  width: min(300px, calc(100vw - 16px));
   max-height: 340px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 10001;
-  pointer-events: auto;
 }
 
 .usb-pop-header {
@@ -561,6 +713,37 @@ onUnmounted(() => {
 .usb-pop-enter-from,
 .usb-pop-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(-50%) translateY(8px);
+}
+
+/* ── Portrait layout ──────────────────────────────────────────── */
+.usb-landscape-only { display: inline; }
+.usb-portrait-only  { display: none; }
+
+@media (orientation: portrait) {
+  /* Controls bar: bottom-left corner */
+  .usb-root {
+    left: 16px;
+    align-items: flex-start;
+  }
+
+  /* Status bar: narrower since we now have 4 rows */
+  .usb-bar {
+    min-width: 0;
+    max-width: 240px;
+  }
+
+  /* Popover: top-center so keyboard doesn't cover it */
+  .usb-popover {
+    position: fixed;
+    bottom: auto;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-height: min(340px, calc(100svh - 100px));
+  }
+
+  .usb-landscape-only { display: none; }
+  .usb-portrait-only  { display: flex; }
 }
 </style>

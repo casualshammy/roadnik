@@ -10,6 +10,8 @@ export type MapState = {
   selectedAppId: string | null;
   selectedPathWindowLeft: number | null;
   selectedPathWindowBottom: number | null;
+  usbLeft: number | null;
+  usbBottom: number | null;
 }
 
 type JsToCSharpMsg = {

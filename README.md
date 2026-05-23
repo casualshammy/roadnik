@@ -1,6 +1,16 @@
 # Roadnik
 
-**Roadnik** is a privacy-friendly geolocation sharing system that lets you share your real-time location with others. The **server** and the built-in **web map** are fully self-hostable. The **Android app** is bound to the public instance at [roadnik.app](https://roadnik.app) and is not intended for use with a self-hosted server ([but if you're ready to edit code...](#self-hosted-android)).
+**Roadnik** is a privacy-friendly geolocation sharing system that lets you share your real-time location with others. The **server** and the built-in **web map** are fully self-hostable.
+
+## Public instance
+
+A ready-to-use instance is available at **[roadnik.app](https://roadnik.app)** — no registration required. Download the Android app from [Google Play](https://play.google.com/store/apps/details?id=com.axiolab.roadnik), open it, and it will generate a room key for you automatically.
+
+The public instance is free to use. It has rate limits and storage quotas applied per room. No personal data is collected beyond the location points you choose to share.
+
+<a href="https://play.google.com/store/apps/details?id=com.axiolab.roadnik">
+  <img alt="Google Play" width="200px" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+</a>
 
 ## How it works
 
@@ -17,22 +27,20 @@ A .NET 10 application that stores geolocation points and serves the web map. Key
 
 - Stores latitude, longitude, altitude, speed, bearing, accuracy, battery level, signal strength, and heart rate
 - Per-room track storage with configurable point limits and age expiry
-- Built-in interactive map (Vue 3 + Leaflet) with auto-tracking
-- Map tile support: **OpenStreetMap** (no key required), **Thunderforest** (optional API key), and **Strava heatmaps**
-- WebSocket-based real-time updates
-- Optional user registration for higher rate limits and point quotas
-- Optional Firebase Cloud Messaging (FCM) push notifications (used by the Android app on roadnik.app; not applicable to self-hosted instances)
-
-See [server documentation](docs/server.md) for the full config reference and API.
+- Built-in interactive map (Vue 3 + Leaflet) with auto-centering on the selected user
+- Map tile support: **OpenStreetMap** (no key required), **Thunderforest** (optional API key), and **Strava heatmaps** (requires token)
+- Real-time updates
+- Optional room registration for higher rate limits and point quotas (via [API](./docs/api/room-management-api.md) only)
+- Optional Firebase Cloud Messaging (FCM) push notifications
 
 ### Android App
 
-A .NET MAUI Android app (API 28+) that sends your location to **roadnik.app** in the background. Features include:
-
-- Foreground service for continuous background reporting
+A .NET MAUI Android app (API 28+) that sends your location to **roadnik.app** in the background.  
+Features include:
+- Built-in map with real-time location updates
+- Uninterrupted background location reporting
 - BLE heart rate monitor (HRM) support — pairs with any standard BLE HRM device and includes heart rate in each location report
 - QR code room sharing
-- In-app updates
 - Discord Rich Presence — while sharing is active, broadcasts approximate location, speed, and heart rate as a Discord activity with a direct link to the room
 
 > [!NOTE]
@@ -40,8 +48,6 @@ A .NET MAUI Android app (API 28+) that sends your location to **roadnik.app** in
 
 <details><a id="self-hosted-android" name="self-hosted-android"></a>
 <summary>Adapting the app for a self-hosted server</summary>
-
-Two constants must be changed before building:
 
 1. **`src/mobile/Data/AppConsts.cs`** — set `ROADNIK_APP_ADDRESS` to your server URL:
    ```csharp
@@ -53,13 +59,15 @@ Two constants must be changed before building:
    DataHost = "your-domain.example",
    ```
 
+3. You must create and configure a Firebase project and link it to the app and server. This process is outside the scope of this README — refer to the [Firebase documentation](https://firebase.google.com/docs) for guidance.
+
 After these changes, rebuild the app with `python build-client.py --framework net10.0-android`.
 
 </details>
 
 ### Web Map
 
-A Vue 3 / TypeScript SPA bundled with the server. It shows all tracks in a room on an interactive Leaflet map with auto-centering and live updates via WebSocket. Each user's popup shows speed, battery, signal strength, and — when available — heart rate with colour-coded intensity (💙💚💛🧡❤️).
+A Vue 3 / TypeScript SPA bundled with the server. It shows all tracks in a room on an interactive Leaflet map with auto-centering and live updates. Clicking a user's marker opens a popup with speed, battery, signal strength, and — when available — heart rate.
 
 ## Running the server
 
@@ -76,7 +84,7 @@ services:
     restart: always
     ports:
       - "0.0.0.0:8080:8080/tcp"
-    user: "1004:1004"
+    user: "1004:1004" # UID:GID of the roadnik user on the host
     environment:
       ROADNIK_WEBROOT: "/app/www"
       ROADNIK_LOG_DIR: "/var/roadnik/logs"
@@ -85,7 +93,7 @@ services:
       ROADNIK_BIND_PORT: "8080"
       ROADNIK_MAX_PATH_POINTS_PER_ROOM: "1000"
       ROADNIK_MAX_PATH_POINTS_AGE_HOURS: "720"
-      ROADNIK_MIN_REPORT_INTERVAL: "9900"
+      ROADNIK_MIN_REPORT_INTERVAL: "9900" # ms
       ROADNIK_FIREBASE_JSON: "/var/roadnik/google_service_account.json"
       ROADNIK_FIREBASE_PROJECT_ID: "<your-firebase-project-id>"
       ROADNIK_TF_API_KEY: "<your-thunderforest-api-key>"       # optional
@@ -128,11 +136,15 @@ All settings are passed via environment variables.
 ### Behind NGINX
 
 ```nginx
-location /roadnik/ {
+location / {
     proxy_pass http://127.0.0.1:8080/;
+
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
     proxy_http_version 1.1;
+
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
 }

@@ -50,6 +50,10 @@ internal static class LocationToolkit
         ?? data?.Address?.City
         ?? data?.Address?.Town;
 
+      name = name?
+        .Replace("район", string.Empty, StringComparison.InvariantCultureIgnoreCase)
+        .Trim();
+
       if (name != null)
         p_lastApproxLocation = new LastApproxLocation(_lat, _lng, name);
 

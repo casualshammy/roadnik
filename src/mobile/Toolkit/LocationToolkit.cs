@@ -52,6 +52,7 @@ internal static class LocationToolkit
 
       name = name?
         .Replace("район", string.Empty, StringComparison.InvariantCultureIgnoreCase)
+        .Replace("округ", string.Empty, StringComparison.InvariantCultureIgnoreCase)
         .Trim();
 
       if (name != null)

@@ -29,6 +29,14 @@ public partial class OptionsPage : CContentPage
     p_discordEnabled.SwitchIsToggled = p_bindingCtx.DiscordEnabled;
 
     p_bleHrmDevice.TapCommand = new Command(OnBleHrmDeviceChanged);
+
+    p_bindingCtx.PropertyChanged += BindingCtx_PropertyChanged;
+  }
+
+  private void BindingCtx_PropertyChanged(object? _sender, System.ComponentModel.PropertyChangedEventArgs _e)
+  {
+    if (_e.PropertyName == nameof(p_bindingCtx.DiscordEnabled))
+      p_discordEnabled.SwitchIsToggled = p_bindingCtx.DiscordEnabled;
   }
 
   private async void OnBleHrmDeviceChanged(object? _arg)

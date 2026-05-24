@@ -6,6 +6,8 @@ internal static class AppConsts
 {
   public static string? DEBUG_APP_ADDRESS = null; // "http://192.168.1.100:5544"; // null;
 
+  public static Brush DISCORD_BTN_BRUSH = new SolidColorBrush(Color.FromArgb("#5865F2"));
+
   public const string USER_AGENT = "Roadnik/1.0";
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";

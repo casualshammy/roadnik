@@ -1,3 +1,8 @@
-  - performance tweaks
-  - minor bug fixes
-  - the latest changes are available here: https://github.com/casualshammy/roadnik/releases
+- Discord integration: share your activity (heart rate, speed) in Discord Rich Presence
+- Reach circles added to the map
+- User status widget on the map is now movable and adapts to screen orientation
+- Redesigned settings and bookmarks pages
+- BLE device scanner is now faster
+- Fixed compass and location desync
+- Fixed reporting settings not being applied during an active session
+- Minor bug fixes

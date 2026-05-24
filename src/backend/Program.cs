@@ -78,7 +78,7 @@ public partial class Program
     await app.RunWaitAsync();
   }
 
-  [GeneratedRegex(@".+\.log")]
+  [GeneratedRegex(@".+\.(log|gzip)")]
   private static partial Regex GetLogFilesCleanerRegex();
 
 }

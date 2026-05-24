@@ -134,6 +134,20 @@ public partial class MainPage : CContentPage
         p_bindingCtx.WebViewUrl = url;
       }, p_lifetime);
 
+    p_prefs.PreferencesChanged
+      .Subscribe(_unit =>
+      {
+        var tokenExists = !p_prefs.GetValueOrDefault(PREF_DISCORD_TOKEN, PrefsStorageJsonCtx.Default.String).IsNullOrEmpty();
+        var isEnabled = p_prefs.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean);
+        _ = MainThread.InvokeOnMainThreadAsync(() =>
+        {
+          p_bindingCtx.IsDiscordButtonVisible = tokenExists;
+          p_bindingCtx.DiscordButtonColor = isEnabled
+            ? DISCORD_BTN_BRUSH
+            : Brush.Black;
+        });
+      }, p_lifetime);
+
     p_lifetime.ToDisposeOnEnded(SharedPool<EventLoopScheduler>.Get(out var webAppDataScheduler));
 
     p_webView.JsonData
@@ -595,6 +609,12 @@ public partial class MainPage : CContentPage
   private void ShellOpen_Clicked(object sender, EventArgs e)
   {
     Shell.Current.FlyoutIsPresented = true;
+  }
+
+  private void DiscordToggle_Clicked(object _sender, EventArgs _e)
+  {
+    var isEnabled = p_prefs.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean);
+    p_prefs.SetValue(PREF_DISCORD_ENABLED, !isEnabled, PrefsStorageJsonCtx.Default.Boolean);
   }
 
   private async Task RequestIgnoreBatteryOptimizationAsync(CancellationToken _ct)

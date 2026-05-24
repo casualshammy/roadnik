@@ -131,6 +131,27 @@
             Source="hamburger_button.svg"
             InputTransparent="True"/>
 
+        <!-- Discord Integration Toggle -->
+        <Button
+            AbsoluteLayout.LayoutFlags="None"
+            AbsoluteLayout.LayoutBounds="10, 120, 44, 44"
+            WidthRequest="44"
+            HeightRequest="44"
+            CornerRadius="22"
+            Background="{Binding DiscordButtonColor}"
+            Opacity="0.35"
+            IsVisible="{Binding IsDiscordButtonVisible}"
+            Clicked="DiscordToggle_Clicked"
+            SemanticProperties.Description="{Binding DiscordToggleButtonDescription}" />
+        <ImageButton
+            AbsoluteLayout.LayoutFlags="None"
+            AbsoluteLayout.LayoutBounds="10, 120, 44, 44"
+            WidthRequest="26"
+            HeightRequest="26"
+            Source="discord.svg"
+            IsVisible="{Binding IsDiscordButtonVisible}"
+            InputTransparent="True"/>
+
     </AbsoluteLayout>
 
 

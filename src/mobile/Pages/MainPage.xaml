@@ -168,6 +168,42 @@
             </Grid>
         </Border>
 
+        <!-- Heart Rate Broadcasting Toggle -->
+        <Border
+            x:Name="p_hrmFrame"
+            AbsoluteLayout.LayoutFlags="None"
+            AbsoluteLayout.LayoutBounds="{Binding HrmBtnBounds}"
+            HeightRequest="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_COLLAPSED_SIZE}"
+            Background="{Binding HrmBtnColor}"
+            Opacity="{Binding HrmBtnOpacity}"
+            StrokeThickness="0"
+            IsVisible="{Binding IsHrmButtonVisible}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_CORNER_RADIUS}" />
+            </Border.StrokeShape>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="HrmToggle_Tapped" />
+            </Border.GestureRecognizers>
+            <Grid>
+                <Image
+                    Source="heart_rate.svg"
+                    WidthRequest="26"
+                    HeightRequest="26"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Center"
+                    Margin="9,0,0,0"
+                    InputTransparent="True" />
+                <Label
+                    Text="{Binding HrmStatusText}"
+                    TextColor="White"
+                    FontSize="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_LABEL_FONT_SIZE_SP}"
+                    LineBreakMode="TailTruncation"
+                    VerticalOptions="Center"
+                    Margin="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_LABEL_MARGIN}"
+                    InputTransparent="True" />
+            </Grid>
+        </Border>
+
     </AbsoluteLayout>
 
 

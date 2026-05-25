@@ -7,6 +7,7 @@
     xmlns:tookit="clr-namespace:Roadnik.MAUI.Toolkit"
     xmlns:controls="clr-namespace:Roadnik.MAUI.Controls"
     xmlns:converters="clr-namespace:Roadnik.MAUI.Converters"
+    xmlns:pageConsts="clr-namespace:Roadnik.MAUI.Data.PageConsts"
     x:Class="Roadnik.MAUI.Pages.MainPage"
     x:DataType="views:MainPageViewModel"
     Title="{Binding Title}"
@@ -132,25 +133,40 @@
             InputTransparent="True"/>
 
         <!-- Discord Integration Toggle -->
-        <Button
+        <Border
+            x:Name="p_discordFrame"
             AbsoluteLayout.LayoutFlags="None"
-            AbsoluteLayout.LayoutBounds="10, 120, 44, 44"
-            WidthRequest="44"
-            HeightRequest="44"
-            CornerRadius="22"
-            Background="{Binding DiscordButtonColor}"
-            Opacity="0.35"
-            IsVisible="{Binding IsDiscordButtonVisible}"
-            Clicked="DiscordToggle_Clicked"
-            SemanticProperties.Description="{Binding DiscordToggleButtonDescription}" />
-        <ImageButton
-            AbsoluteLayout.LayoutFlags="None"
-            AbsoluteLayout.LayoutBounds="10, 120, 44, 44"
-            WidthRequest="26"
-            HeightRequest="26"
-            Source="discord.svg"
-            IsVisible="{Binding IsDiscordButtonVisible}"
-            InputTransparent="True"/>
+            AbsoluteLayout.LayoutBounds="{Binding DiscordBtnBounds}"
+            HeightRequest="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_COLLAPSED_SIZE}"
+            Background="{Binding DiscordBtnColor}"
+            Opacity="{Binding DiscordBtnOpacity}"
+            StrokeThickness="0"
+            IsVisible="{Binding IsDiscordButtonVisible}">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_CORNER_RADIUS}" />
+            </Border.StrokeShape>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Tapped="DiscordToggle_Tapped" />
+            </Border.GestureRecognizers>
+            <Grid>
+                <Image
+                    Source="discord.svg"
+                    WidthRequest="26"
+                    HeightRequest="26"
+                    HorizontalOptions="Start"
+                    VerticalOptions="Center"
+                    Margin="9,0,0,0"
+                    InputTransparent="True" />
+                <Label
+                    Text="{Binding DiscordStatusText}"
+                    TextColor="White"
+                    FontSize="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_LABEL_FONT_SIZE_SP}"
+                    LineBreakMode="TailTruncation"
+                    VerticalOptions="Center"
+                    Margin="{x:Static pageConsts:MainPageConsts.MAP_SIDE_BTN_LABEL_MARGIN}"
+                    InputTransparent="True" />
+            </Grid>
+        </Border>
 
     </AbsoluteLayout>
 

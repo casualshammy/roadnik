@@ -6,8 +6,6 @@ internal static class AppConsts
 {
   public static string? DEBUG_APP_ADDRESS = null; // "http://192.168.1.100:5544"; // null;
 
-  public static Brush DISCORD_BTN_BRUSH = new SolidColorBrush(Color.FromArgb("#5865F2"));
-
   public const string USER_AGENT = "Roadnik/1.0";
   public const string ROADNIK_APP_ADDRESS = "https://roadnik.app";
   public const string WEBAPP_HOST = "webapp.local";
@@ -16,7 +14,6 @@ internal static class AppConsts
   public const string PREF_DB_VERSION = "settings.db-version";
   public const string PREF_PRIVACY_POLICY_VERSION = "settings.privacy-policy-version";
 
-  //public const string PREF_SERVER_ADDRESS = "settings.network.server-address";
   public const string PREF_ROOM = "settings.network.room";
   public const string PREF_USERNAME = "settings.network.username";
   public const string PREF_TIME_INTERVAL = "settings.report.time-interval";
@@ -27,7 +24,6 @@ internal static class AppConsts
   public const string PREF_NOTIFY_NEW_TRACK = "settings.notifications.on-new-track";
   public const string PREF_NOTIFY_NEW_POINT = "settings.notifications.on-new-point";
   public const string PREF_WEBAPP_MAP_STATE = "webapp.map-state";
-  //public const string PREF_LOCATION_PROVIDER = "settings.report.location-provider";
   public const string PREF_LOCATION_PROVIDERS = "settings.report.location-providers";
   public const string PREF_BLE_HRM_ENABLED = "settings.report.ble-hrm-enabled";
   public const string PREF_BLE_HRM_DEVICE_INFO = "settings.report.ble-hrm-device-info";
@@ -57,7 +53,6 @@ internal static class AppConsts
   public static Guid BLE_CHARACTERISTIC_ID_HEART_RATE_MEASUREMENT { get; } = GuidExtension.UuidFromPartial(0x2A37);
 
   public const string PREF_DISCORD_ENABLED = "integrations.discord.enabled";
-  //public const string PREF_DISCORD_USERNAME = "integrations.discord.username";
   public const string PREF_DISCORD_STATUS = "integrations.discord.status";
   public const string PREF_DISCORD_TOKEN = "integrations.discord.token";
   public const string DISCORD_APPLICATION_ID = "1504087516674916392";

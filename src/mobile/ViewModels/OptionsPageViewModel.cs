@@ -74,26 +74,29 @@ internal class OptionsPageViewModel : BaseViewModel
       .StartWithDefault()
       .Subscribe(_ =>
       {
-        SetProperty(ref p_roomId, p_storage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String), nameof(RoomId));
-        SetProperty(ref p_username, p_storage.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String), nameof(Nickname));
-        SetProperty(ref p_minimumTime, p_storage.GetValueOrDefault(PREF_TIME_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumTime));
-        SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault(PREF_DISTANCE_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumDistance));
-        SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType), nameof(TrackpointReportingConditionText));
-        SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault(PREF_MIN_ACCURACY, PrefsStorageJsonCtx.Default.Int32), nameof(MinAccuracy));
-        SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(WipeOldTrackOnNewEnabled));
-        SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders),
-          nameof(LocationProviderGpsEnabled),
-          nameof(LocationProviderNetworkEnabled),
-          nameof(LocationProviderPassiveEnabled));
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+          SetProperty(ref p_roomId, p_storage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String), nameof(RoomId));
+          SetProperty(ref p_username, p_storage.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String), nameof(Nickname));
+          SetProperty(ref p_minimumTime, p_storage.GetValueOrDefault(PREF_TIME_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumTime));
+          SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault(PREF_DISTANCE_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumDistance));
+          SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType), nameof(TrackpointReportingConditionText));
+          SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault(PREF_MIN_ACCURACY, PrefsStorageJsonCtx.Default.Int32), nameof(MinAccuracy));
+          SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(WipeOldTrackOnNewEnabled));
+          SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders),
+            nameof(LocationProviderGpsEnabled),
+            nameof(LocationProviderNetworkEnabled),
+            nameof(LocationProviderPassiveEnabled));
 
-        SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault(PREF_NOTIFY_NEW_TRACK, PrefsStorageJsonCtx.Default.Boolean), nameof(NotificationOnNewTrack));
-        SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault(PREF_NOTIFY_NEW_POINT, PrefsStorageJsonCtx.Default.Boolean), nameof(NotificationOnNewPoint));
-        SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault(PREF_BLE_HRM_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(BleHrmEnabled));
-        SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault(PREF_BLE_HRM_DEVICE_INFO, PrefsStorageJsonCtx.Default.HrmDeviceInfo), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
-        SetProperty(ref p_displayOnLockScreenEnabled, p_storage.GetValueOrDefault(PREF_DISPLAY_ON_LOCK_SCREEN, PrefsStorageJsonCtx.Default.Boolean), nameof(DisplayOnLockScreenEnabled));
-        SetProperty(ref p_discordTokenExist, !p_storage.GetValueOrDefault(PREF_DISCORD_TOKEN, PrefsStorageJsonCtx.Default.String).IsNullOrEmpty(), nameof(DiscordAuthenticated), nameof(DiscordNotAuthenticated));
-        SetProperty(ref p_discordEnabled, p_storage.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(DiscordEnabled));
-        SetProperty(ref p_discordCustomStatus, p_storage.GetValueOrDefault(PREF_DISCORD_STATUS, PrefsStorageJsonCtx.Default.String), nameof(DiscordCustomStatus));
+          SetProperty(ref p_notificationOnNewTrack, p_storage.GetValueOrDefault(PREF_NOTIFY_NEW_TRACK, PrefsStorageJsonCtx.Default.Boolean), nameof(NotificationOnNewTrack));
+          SetProperty(ref p_notificationOnNewPoint, p_storage.GetValueOrDefault(PREF_NOTIFY_NEW_POINT, PrefsStorageJsonCtx.Default.Boolean), nameof(NotificationOnNewPoint));
+          SetProperty(ref p_bleHrmEnabled, p_storage.GetValueOrDefault(PREF_BLE_HRM_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(BleHrmEnabled));
+          SetProperty(ref p_bleHrmDeviceInfo, p_storage.GetValueOrDefault(PREF_BLE_HRM_DEVICE_INFO, PrefsStorageJsonCtx.Default.HrmDeviceInfo), nameof(BleHrmDeviceGuid), nameof(BleHrmDeviceName));
+          SetProperty(ref p_displayOnLockScreenEnabled, p_storage.GetValueOrDefault(PREF_DISPLAY_ON_LOCK_SCREEN, PrefsStorageJsonCtx.Default.Boolean), nameof(DisplayOnLockScreenEnabled));
+          SetProperty(ref p_discordTokenExist, !p_storage.GetValueOrDefault(PREF_DISCORD_TOKEN, PrefsStorageJsonCtx.Default.String).IsNullOrEmpty(), nameof(DiscordAuthenticated), nameof(DiscordNotAuthenticated));
+          SetProperty(ref p_discordEnabled, p_storage.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(DiscordEnabled));
+          SetProperty(ref p_discordCustomStatus, p_storage.GetValueOrDefault(PREF_DISCORD_STATUS, PrefsStorageJsonCtx.Default.String), nameof(DiscordCustomStatus));
+        });
       }, lifetime);
   }
 

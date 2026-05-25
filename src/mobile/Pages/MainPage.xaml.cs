@@ -25,6 +25,7 @@ using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Globalization;
 using System.Net.Http.Json;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -32,6 +33,7 @@ using System.Text;
 using System.Text.Json;
 using System.Web;
 using static Roadnik.MAUI.Data.AppConsts;
+using static Roadnik.MAUI.Data.PageConsts.MainPageConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
 
 namespace Roadnik.MAUI.Pages;
@@ -52,6 +54,7 @@ public partial class MainPage : CContentPage
   private readonly PowerManager p_powerManager;
   private readonly MapInteractor p_mapInteractor;
   private bool p_mapFollowingMe = false;
+  private CancellationTokenSource? p_sideBtnAnimCts;
 
   public MainPage()
   {
@@ -142,7 +145,7 @@ public partial class MainPage : CContentPage
         _ = MainThread.InvokeOnMainThreadAsync(() =>
         {
           p_bindingCtx.IsDiscordButtonVisible = tokenExists;
-          p_bindingCtx.DiscordButtonColor = isEnabled
+          p_bindingCtx.DiscordBtnColor = isEnabled
             ? DISCORD_BTN_BRUSH
             : Brush.Black;
         });
@@ -183,7 +186,7 @@ public partial class MainPage : CContentPage
       .DistinctUntilChanged()
       .Subscribe(_enabled =>
       {
-        _ = MainThread.InvokeOnMainThreadAsync(() =>
+        _ = MainThread.InvokeOnMainThreadAsync(async () =>
         {
           if (_enabled)
           {
@@ -191,6 +194,8 @@ public partial class MainPage : CContentPage
               p_startRecordButton.Background = brush;
             else
               p_log.Error($"Resource 'DangerLowBrush' is not found!");
+
+            await SetupAndShowDiscordBtnAnimationAsync();
           }
           else
           {
@@ -198,6 +203,10 @@ public partial class MainPage : CContentPage
               p_startRecordButton.Background = brush;
             else
               p_log.Error($"Resource 'PrimaryBrush' is not found!");
+
+            p_sideBtnAnimCts?.Cancel();
+            p_sideBtnAnimCts = null;
+            await CollapseDiscordButtonAsync();
           }
         });
       }, p_lifetime);
@@ -611,10 +620,101 @@ public partial class MainPage : CContentPage
     Shell.Current.FlyoutIsPresented = true;
   }
 
-  private void DiscordToggle_Clicked(object _sender, EventArgs _e)
+  private void DiscordToggle_Tapped(object _sender, TappedEventArgs _e)
   {
     var isEnabled = p_prefs.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean);
     p_prefs.SetValue(PREF_DISCORD_ENABLED, !isEnabled, PrefsStorageJsonCtx.Default.Boolean);
+  }
+
+  private async Task SetupAndShowDiscordBtnAnimationAsync()
+  {
+    var tokenExists = !p_prefs.GetValueOrDefault(PREF_DISCORD_TOKEN, PrefsStorageJsonCtx.Default.String).IsNullOrEmpty();
+    var discordEnabled = p_prefs.GetValueOrDefault(PREF_DISCORD_ENABLED, PrefsStorageJsonCtx.Default.Boolean);
+    var statusText = p_prefs.GetValueOrDefault(PREF_DISCORD_STATUS, PrefsStorageJsonCtx.Default.String);
+    if (tokenExists && discordEnabled && !statusText.IsNullOrWhiteSpace())
+    {
+      p_bindingCtx.DiscordStatusText = statusText;
+
+      p_sideBtnAnimCts?.Cancel();
+      var cts = p_sideBtnAnimCts = new CancellationTokenSource();
+
+      // calculate target width of button based on text width and screen width
+      var density = DeviceDisplay.Current.MainDisplayInfo.Density;
+      var screenWidth = DeviceDisplay.Current.MainDisplayInfo.Width / density;
+      var maxTargetWidth = screenWidth * 0.8;
+      var context = global::Android.App.Application.Context;
+      using var paint = new Android.Graphics.Paint();
+      paint.TextSize = Android.Util.TypedValue.ApplyDimension(
+        Android.Util.ComplexUnitType.Sp,
+        (float)MAP_SIDE_BTN_LABEL_FONT_SIZE_SP,
+        context.Resources!.DisplayMetrics);
+      var textWidthDp = paint.MeasureText(statusText ?? string.Empty) / density;
+      var targetWidth = Math.Min(maxTargetWidth, MAP_SIDE_BTN_COLLAPSED_SIZE + textWidthDp + 16); // 16: padding on the right side of label
+      targetWidth = Math.Max(MAP_SIDE_BTN_COLLAPSED_SIZE, targetWidth);
+
+      var bounds = p_bindingCtx.DiscordBtnBounds;
+      if (bounds.Width >= targetWidth)
+        return;
+
+      var startWidth = bounds.Width;
+      var startOpacity = p_bindingCtx.DiscordBtnOpacity;
+      var tcs = new TaskCompletionSource<Unit>();
+
+      var animation = new Animation();
+      animation.Add(0, 1, new Animation(_t =>
+      {
+        var w = startWidth + (targetWidth - startWidth) * _t;
+        p_bindingCtx.DiscordBtnBounds = new Rect(bounds.X, bounds.Y, w, bounds.Height);
+      }));
+      animation.Add(0, 1, new Animation(_t =>
+      {
+        const double expandedOpacity = MAP_SIDE_BTN_COLLAPSED_OPACITY * 2;
+        p_bindingCtx.DiscordBtnOpacity = startOpacity + (expandedOpacity - startOpacity) * _t;
+      }));
+
+      animation.Commit(p_discordFrame, "DiscordResize", 16, 300, Easing.CubicOut, (_, __) => tcs.TrySetResult(Unit.Default));
+      await tcs.Task;
+
+      try
+      {
+        await Task.Delay(5000, cts.Token);
+      }
+      catch (System.OperationCanceledException) { }
+
+      if (!cts.IsCancellationRequested)
+        await CollapseDiscordButtonAsync();
+    }
+  }
+
+  private async Task CollapseDiscordButtonAsync()
+  {
+    var bounds = p_bindingCtx.DiscordBtnBounds;
+    if (bounds.Width <= MAP_SIDE_BTN_COLLAPSED_SIZE)
+    {
+      p_bindingCtx.DiscordBtnOpacity = MAP_SIDE_BTN_COLLAPSED_OPACITY;
+      p_bindingCtx.DiscordStatusText = null;
+      return;
+    }
+
+    var startWidth = bounds.Width;
+    var startOpacity = p_bindingCtx.DiscordBtnOpacity;
+    var tcs = new TaskCompletionSource<Unit>();
+
+    var animation = new Animation();
+    animation.Add(0, 1, new Animation(_t =>
+    {
+      var w = startWidth + (MAP_SIDE_BTN_COLLAPSED_SIZE - startWidth) * _t;
+      p_bindingCtx.DiscordBtnBounds = new Rect(bounds.X, bounds.Y, w, bounds.Height);
+    }));
+    animation.Add(0, 1, new Animation(_t =>
+    {
+      p_bindingCtx.DiscordBtnOpacity = startOpacity + (MAP_SIDE_BTN_COLLAPSED_OPACITY - startOpacity) * _t;
+    }));
+
+    animation.Commit(p_discordFrame, "DiscordResize", 16, 300, Easing.CubicIn, (_, __) => tcs.TrySetResult(Unit.Default));
+    await tcs.Task;
+
+    p_bindingCtx.DiscordStatusText = null;
   }
 
   private async Task RequestIgnoreBatteryOptimizationAsync(CancellationToken _ct)

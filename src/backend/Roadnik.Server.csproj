@@ -10,8 +10,11 @@
 				<PublishAot>true</PublishAot>
 				<AssemblyName>roadnik-server</AssemblyName>
 				<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-				<!-- ILC crashes with InvalidCastException in CompileMultiThreaded when cross-compiling arm64 via QEMU -->
+				<!-- ILC crashes with InvalidCastException in CompileMultiThreaded when cross-compiling arm64 via QEMU.
+				     IlcMaxParallelism controls code-gen threads (--maxGenCodeThreads); IlcExtraArgs --parallelism
+				     controls ILScanner threads — both must be 1 to fully disable multi-threading in ILC. -->
 				<IlcMaxParallelism>1</IlcMaxParallelism>
+				<IlcExtraArgs>--parallelism 1</IlcExtraArgs>
 		</PropertyGroup>
 
 		<ItemGroup>

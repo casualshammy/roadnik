@@ -32,3 +32,13 @@ print(f"===========================================", flush=True)
 git.create_tag_and_push(version, "origin", "casualshammy", True)
 utils.callThrowIfError("git stash", True)
 git.merge("main", git.get_current_branch_name(), True, "casualshammy", True)
+
+# read README.md from repo root
+with open("README.md", "r") as f:
+  readme = f.read()
+  docker.updateDockerHubDescription(
+    "oixa/roadnik",
+    dockerLogin,
+    dockerPassword,
+    readme,
+    None)

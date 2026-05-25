@@ -1,7 +1,7 @@
 FROM dhi.io/dotnet:10-sdk AS build-dotnet
 ARG TARGETARCH
 WORKDIR /app
-# RUN apt update && apt -y install clang zlib1g-dev
+RUN apt update && apt -y install clang zlib1g-dev
 COPY ./ ./
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
         dotnet publish -r linux-x64 -o out src/backend && chmod +x /app/out/roadnik-server; \

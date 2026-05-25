@@ -3,9 +3,11 @@ ARG TARGETARCH
 WORKDIR /app
 RUN apk add --no-cache clang musl-dev zlib-dev
 COPY ./ ./
-COPY ./src/backend/dotnet_publish.sh ./
-RUN chmod +x ./dotnet_publish.sh
-RUN ./dotnet_publish.sh $TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        dotnet publish -r linux-musl-x64 -o out src/backend && chmod +x /app/out/roadnik-server; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        dotnet publish -r linux-musl-arm64 -o out src/backend && chmod +x /app/out/roadnik-server; \
+    fi
 
 FROM node:alpine AS build-node
 WORKDIR /app

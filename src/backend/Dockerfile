@@ -9,7 +9,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
         dotnet publish -r linux-musl-arm64 -o out src/backend && chmod +x /app/out/roadnik-server; \
     fi
 
-FROM node:alpine AS build-node
+FROM dhi.io/node:26-alpine3.23 AS build-node
 WORKDIR /app
 COPY ./src/frontend/app ./
 RUN npm i

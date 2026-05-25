@@ -10,6 +10,8 @@
 				<PublishAot>true</PublishAot>
 				<AssemblyName>roadnik-server</AssemblyName>
 				<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+				<!-- ILC crashes with InvalidCastException in CompileMultiThreaded when cross-compiling arm64 via QEMU -->
+				<IlcMaxParallelism>1</IlcMaxParallelism>
 		</PropertyGroup>
 
 		<ItemGroup>

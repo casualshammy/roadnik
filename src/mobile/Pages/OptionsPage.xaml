@@ -73,10 +73,9 @@
                         TapCommand="{Binding MinAccuracyCommand}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsSwitch
-                        x:Name="p_deleteOldRouteOnNew"
                         Title="{x:Static l:AppResources.page_options_delete_old_route_title}"
                         DetailsText="{x:Static l:AppResources.page_options_delete_old_route_desc}"
-                        SwitchTapped="{Binding WipeOldTrackOnNewCommand}"/>
+                        SwitchIsToggled="{Binding WipeOldTrackOnNewEnabled}"/>
                 </VerticalStackLayout>
             </Border>
 
@@ -86,22 +85,19 @@
             <Border Style="{StaticResource OptionsCard}">
                 <VerticalStackLayout>
                     <controls:OptionsSwitch
-                        x:Name="p_locationProvidersGps"
                         Title="{x:Static l:AppResources.page_options_power_mode_high_accuracy}"
                         DetailsText="{x:Static l:AppResources.page_options_gps_tooltip}"
-                        SwitchTapped="{Binding OnLocationProviderGpsSwitched}"/>
+                        SwitchIsToggled="{Binding LocationProviderGpsEnabled}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsSwitch
-                        x:Name="p_locationProvidersNetwork"
                         Title="{x:Static l:AppResources.page_options_power_mode_medium_accuracy}"
                         DetailsText="{x:Static l:AppResources.page_options_network_tooltip}"
-                        SwitchTapped="{Binding OnLocationProviderNetworkSwitched}"/>
+                        SwitchIsToggled="{Binding LocationProviderNetworkEnabled}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsSwitch
-                        x:Name="p_locationProvidersPassive"
                         Title="{x:Static l:AppResources.page_options_power_mode_passive}"
                         DetailsText="{x:Static l:AppResources.page_options_passive_tooltip}"
-                        SwitchTapped="{Binding OnLocationProviderPassiveSwitched}"/>
+                        SwitchIsToggled="{Binding LocationProviderPassiveEnabled}"/>
                 </VerticalStackLayout>
             </Border>
 
@@ -111,10 +107,9 @@
             <Border Style="{StaticResource OptionsCard}">
                 <VerticalStackLayout>
                     <controls:OptionsSwitch
-                        x:Name="p_hrReporting"
                         Title="Heart rate reporting"
                         DetailsText="Heart rate reporting details"
-                        SwitchTapped="{Binding BleHrmEnabledCommand}"/>
+                        SwitchIsToggled="{Binding BleHrmEnabled}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsTextValue
                         x:Name="p_bleHrmDevice"
@@ -130,10 +125,9 @@
             <Border Style="{StaticResource OptionsCard}">
                 <VerticalStackLayout>
                     <controls:OptionsSwitch
-                        x:Name="p_displayOnLockScreen"
                         Title="{x:Static l:AppResources.page_options_display_on_lockscreen_title}"
                         DetailsText="{x:Static l:AppResources.page_options_display_on_lockscreen_desc}"
-                        SwitchTapped="{Binding DisplayOnLockScreenCommand}"/>
+                        SwitchIsToggled="{Binding DisplayOnLockScreenEnabled}"/>
                 </VerticalStackLayout>
             </Border>
 
@@ -143,16 +137,14 @@
             <Border Style="{StaticResource OptionsCard}">
                 <VerticalStackLayout>
                     <controls:OptionsSwitch
-                        x:Name="p_notifyNewTrack"
                         Title="{x:Static l:AppResources.page_options_notifications_new_track_title}"
                         DetailsText="{x:Static l:AppResources.page_options_notifications_new_track_desc}"
-                        SwitchTapped="{Binding NotifyNewTrackCommand}"/>
+                        SwitchIsToggled="{Binding NotificationOnNewTrack}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsSwitch
-                        x:Name="p_notifyNewPoint"
                         Title="{x:Static l:AppResources.page_options_notifications_new_point_title}"
                         DetailsText="{x:Static l:AppResources.page_options_notifications_new_point_desc}"
-                        SwitchTapped="{Binding NotifyNewPointCommand}"/>
+                        SwitchIsToggled="{Binding NotificationOnNewPoint}"/>
                 </VerticalStackLayout>
             </Border>
 
@@ -180,11 +172,10 @@
                     <controls:OptionsHorizontalLine
                         IsVisible="{Binding DiscordAuthenticated}"/>
                     <controls:OptionsSwitch
-                        x:Name="p_discordEnabled"
                         Title="Broadcast location on Discord"
                         DetailsText="Shows your approximate location and a tracking link as a Discord status while sharing"
                         IsEnabled="{Binding DiscordAuthenticated}"
-                        SwitchTapped="{Binding DiscordEnabledCommand}"/>
+                        SwitchIsToggled="{Binding DiscordEnabled}"/>
                     <controls:OptionsHorizontalLine />
                     <controls:OptionsTextValue
                         Title="Custom status message"

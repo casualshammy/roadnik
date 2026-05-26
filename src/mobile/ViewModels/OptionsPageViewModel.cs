@@ -4,7 +4,6 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Data;
-using Roadnik.MAUI.Data.Discord;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
 using Roadnik.MAUI.JsonCtx;
@@ -55,23 +54,14 @@ internal class OptionsPageViewModel : BaseViewModel
     MinimumDistanceCommand = new Command(OnMinimumDistance);
     TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
-    WipeOldTrackOnNewCommand = new Command(OnWipeOldTrackOnNew);
-    OnLocationProviderGpsSwitched = new Command(OnLocationProviderGpsSwitchedHandler);
-    OnLocationProviderNetworkSwitched = new Command(OnLocationProviderNetworkSwitchedHandler);
-    OnLocationProviderPassiveSwitched = new Command(OnLocationProviderPassiveSwitchedHandler);
-    NotifyNewTrackCommand = new Command(OnNotifyNewTrack);
-    NotifyNewPointCommand = new Command(OnNotifyNewPoint);
-    BleHrmEnabledCommand = new Command(OnBleHrmEnabled);
-    DisplayOnLockScreenCommand = new Command(OnDisplayOnLockScreen);
     DiscordAuthCommand = new Command(OnDiscordAuth);
     DiscordRevokeCommand = new Command(OnDiscordRevoke);
-    DiscordEnabledCommand = new Command(OnDiscordEnabled);
     DiscordStatusCommand = new Command(OnDiscordStatus);
 
     var lifetime = Container.Locate<IReadOnlyLifetime>();
     p_storage.PreferencesChanged
-      .Sample(TimeSpan.FromSeconds(1))
-      .StartWithDefault()
+      //.Sample(TimeSpan.FromSeconds(1))
+      //.StartWithDefault()
       .Subscribe(_ =>
       {
         MainThread.BeginInvokeOnMainThread(() =>
@@ -108,9 +98,7 @@ internal class OptionsPageViewModel : BaseViewModel
       if (value == null || !ReqResUtil.IsRoomIdValid(value))
         return;
 
-      SetProperty(ref p_roomId, value);
-      if (p_roomId != null)
-        p_storage.SetValue(PREF_ROOM, p_roomId, PrefsStorageJsonCtx.Default.String);
+      p_storage.SetValue(PREF_ROOM, value, PrefsStorageJsonCtx.Default.String);
     }
   }
   public string? Nickname
@@ -121,7 +109,6 @@ internal class OptionsPageViewModel : BaseViewModel
       if (!ReqResUtil.IsUsernameSafe(value))
         return;
 
-      SetProperty(ref p_username, value);
       p_storage.SetValue(PREF_USERNAME, value, PrefsStorageJsonCtx.Default.String);
     }
   }
@@ -130,8 +117,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_minimumTime;
     set
     {
-      SetProperty(ref p_minimumTime, value);
-      p_storage.SetValue(PREF_TIME_INTERVAL, p_minimumTime, PrefsStorageJsonCtx.Default.Int32);
+      p_storage.SetValue(PREF_TIME_INTERVAL, value, PrefsStorageJsonCtx.Default.Int32);
     }
   }
   public int MinimumDistance
@@ -139,8 +125,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_minimumDistance;
     set
     {
-      SetProperty(ref p_minimumDistance, value);
-      p_storage.SetValue(PREF_DISTANCE_INTERVAL, p_minimumDistance, PrefsStorageJsonCtx.Default.Int32);
+      p_storage.SetValue(PREF_DISTANCE_INTERVAL, value, PrefsStorageJsonCtx.Default.Int32);
     }
   }
   public string TrackpointReportingConditionText
@@ -157,8 +142,7 @@ internal class OptionsPageViewModel : BaseViewModel
       if (!Enum.TryParse<TrackpointReportingConditionType>(value, out var condition))
         return;
 
-      SetProperty(ref p_trackpointReportingCondition, condition);
-      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, p_trackpointReportingCondition, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
+      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, condition, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
     }
   }
   public int MinAccuracy
@@ -166,8 +150,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_minAccuracy;
     set
     {
-      SetProperty(ref p_minAccuracy, value);
-      p_storage.SetValue(PREF_MIN_ACCURACY, p_minAccuracy, PrefsStorageJsonCtx.Default.Int32);
+      p_storage.SetValue(PREF_MIN_ACCURACY, value, PrefsStorageJsonCtx.Default.Int32);
     }
   }
 
@@ -176,8 +159,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_wipeOldTrackOnNewEnabled;
     set
     {
-      SetProperty(ref p_wipeOldTrackOnNewEnabled, value);
-      p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, p_wipeOldTrackOnNewEnabled, PrefsStorageJsonCtx.Default.Boolean);
+      p_storage.SetValue(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, value, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -190,8 +172,10 @@ internal class OptionsPageViewModel : BaseViewModel
         ? p_locationProviders | LocationProviders.Gps
         : p_locationProviders & ~LocationProviders.Gps;
 
-      SetProperty(ref p_locationProviders, newValue);
       p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
+
+      if (!value)
+        ShowGpsDisabledWarning();
     }
   }
 
@@ -204,7 +188,6 @@ internal class OptionsPageViewModel : BaseViewModel
         ? p_locationProviders | LocationProviders.Network
         : p_locationProviders & ~LocationProviders.Network;
 
-      SetProperty(ref p_locationProviders, newValue);
       p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
     }
   }
@@ -218,7 +201,6 @@ internal class OptionsPageViewModel : BaseViewModel
         ? p_locationProviders | LocationProviders.Passive
         : p_locationProviders & ~LocationProviders.Passive;
 
-      SetProperty(ref p_locationProviders, newValue);
       p_storage.SetValue(PREF_LOCATION_PROVIDERS, newValue, PrefsStorageJsonCtx.Default.LocationProviders);
     }
   }
@@ -228,8 +210,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_notificationOnNewTrack;
     set
     {
-      SetProperty(ref p_notificationOnNewTrack, value);
-      p_storage.SetValue(PREF_NOTIFY_NEW_TRACK, p_notificationOnNewTrack, PrefsStorageJsonCtx.Default.Boolean);
+      p_storage.SetValue(PREF_NOTIFY_NEW_TRACK, value, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
   public bool NotificationOnNewPoint
@@ -237,8 +218,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_notificationOnNewPoint;
     set
     {
-      SetProperty(ref p_notificationOnNewPoint, value);
-      p_storage.SetValue(PREF_NOTIFY_NEW_POINT, p_notificationOnNewPoint, PrefsStorageJsonCtx.Default.Boolean);
+      p_storage.SetValue(PREF_NOTIFY_NEW_POINT, value, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -247,8 +227,7 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_bleHrmEnabled;
     set
     {
-      SetProperty(ref p_bleHrmEnabled, value);
-      p_storage.SetValue(PREF_BLE_HRM_ENABLED, p_bleHrmEnabled, PrefsStorageJsonCtx.Default.Boolean);
+      p_storage.SetValue(PREF_BLE_HRM_ENABLED, value, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
@@ -260,8 +239,8 @@ internal class OptionsPageViewModel : BaseViewModel
       var newValue = value == null
         ? null
         : new HrmDeviceInfo(value.Value, p_bleHrmDeviceInfo?.DeviceName ?? string.Empty);
-      SetProperty(ref p_bleHrmDeviceInfo, newValue);
-      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
+
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, newValue, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
     }
   }
 
@@ -273,8 +252,8 @@ internal class OptionsPageViewModel : BaseViewModel
       var newValue = value == null
         ? null
         : new HrmDeviceInfo(p_bleHrmDeviceInfo?.DeviceId ?? Guid.Empty, value);
-      SetProperty(ref p_bleHrmDeviceInfo, newValue);
-      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, p_bleHrmDeviceInfo, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
+
+      p_storage.SetValue(PREF_BLE_HRM_DEVICE_INFO, newValue, PrefsStorageJsonCtx.Default.HrmDeviceInfo);
     }
   }
 
@@ -283,14 +262,20 @@ internal class OptionsPageViewModel : BaseViewModel
     get => p_displayOnLockScreenEnabled;
     set
     {
-      SetProperty(ref p_displayOnLockScreenEnabled, value);
-      p_storage.SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, p_displayOnLockScreenEnabled, PrefsStorageJsonCtx.Default.Boolean);
+      p_storage.SetValue(PREF_DISPLAY_ON_LOCK_SCREEN, value, PrefsStorageJsonCtx.Default.Boolean);
     }
   }
 
   public bool DiscordAuthenticated => p_discordTokenExist;
   public bool DiscordNotAuthenticated => !p_discordTokenExist;
-  public bool DiscordEnabled => p_discordEnabled;
+  public bool DiscordEnabled
+  {
+    get => p_discordEnabled;
+    set
+    {
+      p_storage.SetValue(PREF_DISCORD_ENABLED, value, PrefsStorageJsonCtx.Default.Boolean);
+    }
+  }
   public string? DiscordCustomStatus => p_discordCustomStatus;
 
   public ICommand RoomIdCommand { get; }
@@ -299,17 +284,8 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand MinimumDistanceCommand { get; }
   public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
-  public ICommand WipeOldTrackOnNewCommand { get; }
-  public ICommand OnLocationProviderGpsSwitched { get; }
-  public ICommand OnLocationProviderNetworkSwitched { get; }
-  public ICommand OnLocationProviderPassiveSwitched { get; }
-  public ICommand NotifyNewTrackCommand { get; }
-  public ICommand NotifyNewPointCommand { get; }
-  public ICommand BleHrmEnabledCommand { get; }
-  public ICommand DisplayOnLockScreenCommand { get; }
   public ICommand DiscordAuthCommand { get; }
   public ICommand DiscordRevokeCommand { get; }
-  public ICommand DiscordEnabledCommand { get; }
   public ICommand DiscordStatusCommand { get; }
 
   private async void OnRoomIdCommand(object _arg)
@@ -460,77 +436,19 @@ internal class OptionsPageViewModel : BaseViewModel
     MinAccuracy = minAccuracy;
   }
 
-  private void OnWipeOldTrackOnNew(object? _arg)
+  private async void ShowGpsDisabledWarning()
   {
-    if (_arg is not bool toggled)
-      return;
-
-    WipeOldTrackOnNewEnabled = toggled;
-  }
-
-  private async void OnLocationProviderGpsSwitchedHandler(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
     var currentPage = p_pagesController.CurrentPage;
     if (currentPage == null)
       return;
 
-    LocationProviderGpsEnabled = toggled;
+    var body = L.page_options_power_mode_accuracy_warning
+      .Replace("%min-location-accuracy%", L.page_options_tracking_required_accuracy);
 
-    if (!toggled)
-    {
-      var body = L.page_options_power_mode_accuracy_warning
-        .Replace("%min-location-accuracy%", L.page_options_tracking_required_accuracy);
-
-      await currentPage.DisplayAlertAsync(
-        L.page_options_power_mode_accuracy_warning_title,
-        body,
-        "OK");
-    }
-  }
-
-  private void OnLocationProviderNetworkSwitchedHandler(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
-    LocationProviderNetworkEnabled = toggled;
-  }
-
-  private void OnLocationProviderPassiveSwitchedHandler(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
-    LocationProviderPassiveEnabled = toggled;
-  }
-
-  private void OnNotifyNewTrack(object? _arg)
-  {
-    if (_arg is not bool toggled)
-      return;
-
-    NotificationOnNewTrack = toggled;
-  }
-
-  private void OnNotifyNewPoint(object? _arg)
-  {
-    if (_arg is bool toggled)
-      NotificationOnNewPoint = toggled;
-  }
-
-  private void OnBleHrmEnabled(object? _arg)
-  {
-    if (_arg is bool toggled)
-      BleHrmEnabled = toggled;
-  }
-
-  private void OnDisplayOnLockScreen(object? _arg)
-  {
-    if (_arg is bool toggled)
-      DisplayOnLockScreenEnabled = toggled;
+    await currentPage.DisplayAlertAsync(
+      L.page_options_power_mode_accuracy_warning_title,
+      body,
+      "OK");
   }
 
   private async void OnDiscordAuth(object? _arg)
@@ -591,12 +509,6 @@ internal class OptionsPageViewModel : BaseViewModel
 
   private void OnDiscordRevoke(object? _arg)
     => p_discord.RevokeAuth();
-
-  private void OnDiscordEnabled(object? _arg)
-  {
-    if (_arg is bool toggled)
-      p_storage.SetValue(PREF_DISCORD_ENABLED, toggled, PrefsStorageJsonCtx.Default.Boolean);
-  }
 
   private async void OnDiscordStatus(object? _arg)
   {

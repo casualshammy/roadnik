@@ -13,7 +13,6 @@ using Roadnik.Common.ReqRes;
 using Roadnik.Common.Toolkit;
 using Roadnik.MAUI.Controls;
 using Roadnik.MAUI.Data;
-using Roadnik.MAUI.Data.JsonBridge;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Data.Serialization;
 using Roadnik.MAUI.Interfaces;
@@ -22,14 +21,11 @@ using Roadnik.MAUI.Modules.LocationProvider;
 using Roadnik.MAUI.Pages.Parts;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
-using System.Globalization;
 using System.Net.Http.Json;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using System.Text;
 using System.Text.Json;
-using System.Web;
 using static Roadnik.MAUI.Data.AppConsts;
 using static Roadnik.MAUI.Data.PageConsts.MainPageConsts;
 using L = Roadnik.MAUI.Resources.Strings.AppResources;
@@ -131,7 +127,7 @@ public partial class MainPage : CContentPage
         var toastText = isDebug ? $"DEBUG MODE\n{roomId}\n{username}" : $"{roomId}\n{username}";
         _ = MainThread.InvokeOnMainThreadAsync(() => Toast.Make(toastText, ToastDuration.Long).Show());
 
-        var url = GetWebAppAddress(DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS, roomId, mapState);
+        var url = MainPageHelper.GetWebAppAddress(DEBUG_APP_ADDRESS ?? ROADNIK_APP_ADDRESS, roomId, mapState);
         p_bindingCtx.WebViewUrl = url;
       }, p_lifetime);
 
@@ -210,8 +206,8 @@ public partial class MainPage : CContentPage
             p_sideBtnAnimCts?.Cancel();
             var cts = p_sideBtnAnimCts = new CancellationTokenSource();
 
-            await SetupAndShowDiscordBtnAnimationAsync(cts.Token);
-            await SetupAndShowHrmBtnAnimationAsync(cts.Token);
+            _ = MainThread.InvokeOnMainThreadAsync(async () => await SetupAndShowDiscordBtnAnimationAsync(cts.Token));
+            _ = MainThread.InvokeOnMainThreadAsync(async () => await SetupAndShowHrmBtnAnimationAsync(cts.Token));
           }
           else
           {
@@ -222,8 +218,8 @@ public partial class MainPage : CContentPage
 
             p_sideBtnAnimCts?.Cancel();
             p_sideBtnAnimCts = null;
-            await CollapseDiscordButtonAsync();
-            await CollapseHrmButtonAsync();
+            _ = MainThread.InvokeOnMainThreadAsync(async () => await CollapseDiscordButtonAsync());
+            _ = MainThread.InvokeOnMainThreadAsync(async () => await CollapseHrmButtonAsync());
           }
         });
       }, p_lifetime);
@@ -659,12 +655,12 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx.DiscordStatusText = statusText;
 
-    await MainPageSideBtnHelper.ExpandSideBtnAsync(
+    await MainPageHelper.ExpandSideBtnAsync(
       p_discordFrame,
       "DiscordResize",
       () => p_bindingCtx.DiscordBtnBounds, _r => p_bindingCtx.DiscordBtnBounds = _r,
       () => p_bindingCtx.DiscordBtnOpacity, _v => p_bindingCtx.DiscordBtnOpacity = _v,
-      MainPageSideBtnHelper.CalcSideBtnTargetWidth(statusText));
+      MainPageHelper.CalcSideBtnTargetWidth(statusText));
 
     try { await Task.Delay(5000, _ct); }
     catch (System.OperationCanceledException) { }
@@ -675,7 +671,7 @@ public partial class MainPage : CContentPage
 
   private Task CollapseDiscordButtonAsync()
   {
-    return MainPageSideBtnHelper.CollapseSideBtnAsync(
+    return MainPageHelper.CollapseSideBtnAsync(
       p_discordFrame,
       "DiscordResize",
       () => p_bindingCtx.DiscordBtnBounds, _r => p_bindingCtx.DiscordBtnBounds = _r,
@@ -692,12 +688,12 @@ public partial class MainPage : CContentPage
 
     p_bindingCtx.HrmStatusText = deviceInfo.DeviceName;
 
-    await MainPageSideBtnHelper.ExpandSideBtnAsync(
+    await MainPageHelper.ExpandSideBtnAsync(
       p_hrmFrame,
       "HrmResize",
       () => p_bindingCtx.HrmBtnBounds, _r => p_bindingCtx.HrmBtnBounds = _r,
       () => p_bindingCtx.HrmBtnOpacity, _v => p_bindingCtx.HrmBtnOpacity = _v,
-      MainPageSideBtnHelper.CalcSideBtnTargetWidth(deviceInfo.DeviceName));
+      MainPageHelper.CalcSideBtnTargetWidth(deviceInfo.DeviceName));
 
     try { await Task.Delay(5000, _ct); }
     catch (System.OperationCanceledException) { }
@@ -708,7 +704,7 @@ public partial class MainPage : CContentPage
 
   private Task CollapseHrmButtonAsync()
   {
-    return MainPageSideBtnHelper.CollapseSideBtnAsync(
+    return MainPageHelper.CollapseSideBtnAsync(
       p_hrmFrame,
       "HrmResize",
       () => p_bindingCtx.HrmBtnBounds, _r => p_bindingCtx.HrmBtnBounds = _r,
@@ -736,49 +732,6 @@ public partial class MainPage : CContentPage
     var intent = new Android.Content.Intent(Settings.ActionIgnoreBatteryOptimizationSettings);
     intent.AddFlags(Android.Content.ActivityFlags.NewTask);
     context.StartActivity(intent);
-  }
-
-  private static string GetWebAppAddress(
-    string _serverAddress,
-    string? _roomId,
-    HostMsgMapStateData? _mapState = null)
-  {
-    var serverUri = new Uri(_serverAddress);
-    var urlBuilder = new UriBuilder($"{serverUri.Scheme}://{WEBAPP_HOST}:{serverUri.Port}/r/");
-
-    var query = HttpUtility.ParseQueryString(urlBuilder.Query);
-    query["id"] = _roomId;
-    query["api_url"] = _serverAddress;
-    if (_mapState?.Lat != null)
-      query["lat"] = _mapState.Lat.ToString(CultureInfo.InvariantCulture);
-    if (_mapState?.Lng != null)
-      query["lng"] = _mapState.Lng.ToString(CultureInfo.InvariantCulture);
-    if (_mapState?.Zoom != null)
-      query["zoom"] = ((int)_mapState.Zoom).ToString(CultureInfo.InvariantCulture);
-    if (_mapState != null && !_mapState.Layer.IsNullOrWhiteSpace())
-      query["layer"] = _mapState.Layer;
-    if (_mapState?.Overlays != null)
-    {
-      var json = JsonSerializer.Serialize(_mapState.Overlays, JsBridgeJsonCtx.Default.IReadOnlyListString);
-      var jsonBytes = Encoding.UTF8.GetBytes(json);
-      var base64 = Convert.ToBase64String(jsonBytes);
-      query["overlays"] = base64;
-    }
-    if (_mapState != null && !_mapState.SelectedAppId.IsNullOrWhiteSpace())
-      query["selected_app_id"] = _mapState.SelectedAppId;
-    if (_mapState?.SelectedPathWindowLeft != null)
-      query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
-    if (_mapState?.SelectedPathWindowBottom != null)
-      query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture);
-    if (_mapState?.UsbLeft != null)
-      query["usb_left"] = _mapState.UsbLeft.Value.ToString(CultureInfo.InvariantCulture);
-    if (_mapState?.UsbBottom != null)
-      query["usb_bottom"] = _mapState.UsbBottom.Value.ToString(CultureInfo.InvariantCulture);
-
-    urlBuilder.Query = query.ToString();
-
-    var url = urlBuilder.ToString();
-    return url;
   }
 
   private async Task CancelFollowCurrentLocationAsync()

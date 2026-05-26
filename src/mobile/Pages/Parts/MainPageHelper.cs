@@ -1,10 +1,61 @@
-﻿using System.Reactive;
+﻿using Ax.Fw.Extensions;
+using Roadnik.MAUI.Data.JsonBridge;
+using Roadnik.MAUI.JsonCtx;
+using System.Globalization;
+using System.Reactive;
+using System.Text;
+using System.Text.Json;
+using System.Web;
+using static Roadnik.MAUI.Data.AppConsts;
 using static Roadnik.MAUI.Data.PageConsts.MainPageConsts;
 
 namespace Roadnik.MAUI.Pages.Parts;
 
-internal static class MainPageSideBtnHelper
+internal static class MainPageHelper
 {
+  public static string GetWebAppAddress(
+    string _serverAddress,
+    string? _roomId,
+    HostMsgMapStateData? _mapState = null)
+  {
+    var serverUri = new Uri(_serverAddress);
+    var urlBuilder = new UriBuilder($"{serverUri.Scheme}://{WEBAPP_HOST}:{serverUri.Port}/r/");
+
+    var query = HttpUtility.ParseQueryString(urlBuilder.Query);
+    query["id"] = _roomId;
+    query["api_url"] = _serverAddress;
+    if (_mapState?.Lat != null)
+      query["lat"] = _mapState.Lat.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.Lng != null)
+      query["lng"] = _mapState.Lng.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.Zoom != null)
+      query["zoom"] = ((int)_mapState.Zoom).ToString(CultureInfo.InvariantCulture);
+    if (_mapState != null && !_mapState.Layer.IsNullOrWhiteSpace())
+      query["layer"] = _mapState.Layer;
+    if (_mapState?.Overlays != null)
+    {
+      var json = JsonSerializer.Serialize(_mapState.Overlays, JsBridgeJsonCtx.Default.IReadOnlyListString);
+      var jsonBytes = Encoding.UTF8.GetBytes(json);
+      var base64 = Convert.ToBase64String(jsonBytes);
+      query["overlays"] = base64;
+    }
+    if (_mapState != null && !_mapState.SelectedAppId.IsNullOrWhiteSpace())
+      query["selected_app_id"] = _mapState.SelectedAppId;
+    if (_mapState?.SelectedPathWindowLeft != null)
+      query["selected_path_window_left"] = _mapState.SelectedPathWindowLeft.Value.ToString(CultureInfo.InvariantCulture); ;
+    if (_mapState?.SelectedPathWindowBottom != null)
+      query["selected_path_window_bottom"] = _mapState.SelectedPathWindowBottom.Value.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.UsbLeft != null)
+      query["usb_left"] = _mapState.UsbLeft.Value.ToString(CultureInfo.InvariantCulture);
+    if (_mapState?.UsbBottom != null)
+      query["usb_bottom"] = _mapState.UsbBottom.Value.ToString(CultureInfo.InvariantCulture);
+
+    urlBuilder.Query = query.ToString();
+
+    var url = urlBuilder.ToString();
+    return url;
+  }
+
   public static double CalcSideBtnTargetWidth(string _measureText)
   {
     var density = DeviceDisplay.Current.MainDisplayInfo.Density;

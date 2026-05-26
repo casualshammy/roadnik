@@ -39,10 +39,20 @@ public partial class OptionsSwitch : ContentView
       control.TapCommandHandler.Command = _new as ICommand;
     });
 
-  public static readonly BindableProperty SwitchTappedProperty = BindableProperty.Create(
-    nameof(SwitchTapped), 
-    typeof(ICommand), 
-    typeof(OptionsSwitch));
+  public static readonly BindableProperty SwitchIsToggledProperty = BindableProperty.Create(
+    nameof(SwitchIsToggled),
+    typeof(bool),
+    typeof(OptionsSwitch),
+    defaultValue: false,
+    defaultBindingMode: BindingMode.TwoWay,
+    propertyChanged: (_bindable, _old, _new) =>
+    {
+      var control = (OptionsSwitch)_bindable;
+      if (control.Switch.IsToggled == (bool)_new)
+        return;
+
+      control.Switch.IsToggled = (bool)_new;
+    });
 
 
   public string Title
@@ -65,16 +75,14 @@ public partial class OptionsSwitch : ContentView
 
   public bool SwitchIsToggled
   {
-    get => Switch.IsToggled;
-    set => Switch.IsToggled = value;
+    get => (bool)GetValue(SwitchIsToggledProperty);
+    set => SetValue(SwitchIsToggledProperty, value);
   }
 
-  public ICommand SwitchTapped
+  private void Switch_Toggled(object _sender, ToggledEventArgs _e)
   {
-    get => (ICommand)GetValue(SwitchTappedProperty);
-    set => SetValue(SwitchTappedProperty, value);
+    if (SwitchIsToggled != _e.Value)
+      SwitchIsToggled = _e.Value;
   }
-
-  private void Switch_Toggled(object _sender, ToggledEventArgs _e) => SwitchTapped.Execute(_e.Value);
 
 }

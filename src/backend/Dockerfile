@@ -14,7 +14,7 @@ WORKDIR /app
 COPY ./src/frontend/app ./
 RUN npm i
 RUN npm run build
-COPY ./src/frontend/main-page ./dist
+COPY ./src/frontend/landing ./dist
 
 FROM dhi.io/dotnet:10 AS final
 EXPOSE 8080

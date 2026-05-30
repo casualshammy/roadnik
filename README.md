@@ -1,5 +1,7 @@
 # Roadnik
 
+[![AI Level 2](https://ai-level.dev/badge/standard/2.svg)](https://ai-level.dev/level-2)
+
 **Roadnik** is a privacy-friendly geolocation sharing system that lets you share your real-time location with others. The **server** and the built-in **web map** are fully self-hostable.
 
 ## Public instance

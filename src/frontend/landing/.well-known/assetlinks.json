@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.axiolab.roadnik",
+    "sha256_cert_fingerprints": ["B5:66:40:C5:F7:6E:36:37:D1:71:48:26:F7:9F:AD:12:4A:03:EC:42:D2:64:68:F1:75:B5:08:29:DB:82:4B:FE"]
+  }
+}]

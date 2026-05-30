@@ -58,11 +58,17 @@ nav {
   min-height: 520px;
   padding: 80px 40px;
   display: flex;
-  align-items: center;
-  gap: 60px;
+  justify-content: center;
   position: relative;
   overflow: hidden;
   background: linear-gradient(160deg, #1a1f2e 0%, #1e2d4a 40%, #1a3040 100%);
+}
+.hero-inner {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  align-items: center;
+  gap: 60px;
 }
 .hero::before {
   content: '';
@@ -469,7 +475,8 @@ footer nav a:hover { color: rgba(245,240,232,.8); }
 @media (max-width: 768px) {
   nav { padding: 0 20px; }
   .nav-links { display: none; }
-  .hero { padding: 60px 20px; flex-direction: column; gap: 40px; min-height: auto; }
+  .hero { padding: 60px 20px; min-height: auto; }
+  .hero-inner { flex-direction: column; gap: 40px; }
   h1 { font-size: 38px; }
   .hero-phone { align-self: center; }
   .features { padding: 60px 20px; }

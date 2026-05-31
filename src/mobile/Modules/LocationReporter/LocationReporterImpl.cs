@@ -361,13 +361,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         if (!enabled)
           return;
 
-        _life.DoOnEnding(() =>
-        {
-          p_log.Info($"Stopping location provider...");
-          locationProvider.StopLocationWatcher();
-          p_log.Info($"Location provider is stopped");
-        });
-
         _life.DoOnEnding(async () =>
         {
           await MainThreadExt.InvokeAsync(_c =>
@@ -388,10 +381,17 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         });
 
         p_log.Info($"Starting location provider...");
-        locationProvider.StartLocationWatcher(
+        var locSubs = locationProvider.StartLocationWatcher(
           conf.LocationProviders,
           conf.TimeInterval);
         p_log.Info($"Location provider is started");
+
+        _life.DoOnEnded(() =>
+        {
+          p_log.Info($"Stopping location provider...");
+          locSubs.Dispose();
+          p_log.Info($"Location provider is stopped");
+        });
       });
 
     p_enableFlow.OnNext(false);

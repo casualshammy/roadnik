@@ -8,6 +8,7 @@ using Ax.Fw.SharedTypes.Interfaces;
 using Roadnik.MAUI.Data;
 using Roadnik.MAUI.Data.LocationProvider;
 using Roadnik.MAUI.Interfaces;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -17,10 +18,10 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
 {
   private static readonly LocationManager p_locationService;
   private static readonly Pool<ReplaySubject<LocationData>> p_locationSubjPool;
+  private readonly ILog p_logger;
   private readonly ReplaySubject<LocationData> p_locationFlow;
   private readonly Subject<string> p_providerDisabledSubj;
   private readonly Subject<string> p_providerEnabledSubj;
-  private readonly ILog p_logger;
   private readonly object p_startStopLock = new();
 
   static AndroidLocationProvider()
@@ -49,10 +50,10 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public void StartLocationWatcher(LocationProviders _providers, TimeSpan _freq)
+  public IDisposable StartLocationWatcher(LocationProviders _providers, TimeSpan _freq)
   {
     if (!p_locationService.IsLocationEnabled)
-      return;
+      return Disposable.Empty;
 
     var providers = new HashSet<string>();
     if ((_providers & LocationProviders.Gps) != 0)
@@ -65,6 +66,15 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     var frequency = !providers.Contains(LocationManager.GpsProvider)
       ? TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 10))
       : TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 1));
+
+    if (frequency.TotalMinutes >= 1)
+    {
+      p_logger.Info($"Subscribing to INFREQUENT location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {frequency}...");
+      var infrequentSub = SetupInfrequentUpdates(providers, frequency);
+      p_logger.Info($"Subscribed to INFREQUENT location updates, providers: '{string.Join(", ", _providers)}'; interval: {frequency}");
+
+      return infrequentSub;
+    }
 
     MainThread.BeginInvokeOnMainThread(() =>
     {
@@ -93,27 +103,8 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
         p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {frequency}");
       }
     });
-  }
 
-  public void StopLocationWatcher()
-  {
-    p_logger.Info($"Unsubscribing from location updates...");
-
-    MainThread.BeginInvokeOnMainThread(() =>
-    {
-      lock (p_startStopLock)
-      {
-        try
-        {
-          p_locationService.RemoveUpdates(this);
-          p_logger.Info($"Unsubscribed from location updates");
-        }
-        catch (Exception ex)
-        {
-          p_logger.Error($"Can't unsubscribe from location updates!", ex);
-        }
-      }
-    });
+    return Disposable.Create(() => StopLocationWatcher());
   }
 
   public void OnLocationChanged(Android.Locations.Location _location)
@@ -197,6 +188,86 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     {
       return null;
     }
+  }
+
+  private IDisposable SetupInfrequentUpdates(
+    HashSet<string> _providers,
+    TimeSpan _frequency)
+  {
+    return Observable
+      .Interval(_frequency)
+      .StartWithDefault()
+      .DelaySubscription(TimeSpan.FromSeconds(3))
+      .SelectAsync(async (_, _ct) =>
+      {
+        var accuracy = GeolocationAccuracy.Low;
+        if (_providers.Contains(LocationManager.NetworkProvider))
+          accuracy = GeolocationAccuracy.High;
+        if (_providers.Contains(LocationManager.GpsProvider))
+          accuracy = GeolocationAccuracy.Best;
+
+        try
+        {
+          var request = new GeolocationRequest(accuracy, TimeSpan.FromSeconds(10));
+          var location = await Geolocation.GetLocationAsync(request, _ct);
+          if (location == null)
+            return null;
+
+          return new LocationData(
+            Latitude: location.Latitude,
+            Longitude: location.Longitude,
+            Altitude: location.Altitude ?? 0d,
+            Accuracy: (float?)location.Accuracy ?? 1000f,
+            VerticalAccuracy: (float?)location.VerticalAccuracy,
+            Course: (float?)location.Course,
+            Speed: (float?)location.Speed,
+            Timestamp: location.Timestamp);
+        }
+        catch (FeatureNotSupportedException)
+        {
+          p_logger.Error($"Can't get location for INFREQUENT updates, feature not supported");
+          return null;
+        }
+        catch (FeatureNotEnabledException)
+        {
+          p_logger.Error($"Can't get location for INFREQUENT updates, feature not enabled");
+          return null;
+        }
+        catch (PermissionException)
+        {
+          p_logger.Error($"Can't get location for INFREQUENT updates, permission issue");
+          return null;
+        }
+        catch (System.OperationCanceledException) { return null; }
+        catch (Exception ex)
+        {
+          p_logger.Error($"Can't get location for INFREQUENT updates, unexpected error", ex);
+          return null;
+        }
+      })
+      .WhereNotNull()
+      .Subscribe(_ => p_locationFlow.OnNext(_));
+  }
+
+  private void StopLocationWatcher()
+  {
+    p_logger.Info($"Unsubscribing from location updates...");
+
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+      lock (p_startStopLock)
+      {
+        try
+        {
+          p_locationService.RemoveUpdates(this);
+          p_logger.Info($"Unsubscribed from location updates");
+        }
+        catch (Exception ex)
+        {
+          p_logger.Error($"Can't unsubscribe from location updates!", ex);
+        }
+      }
+    });
   }
 
 }

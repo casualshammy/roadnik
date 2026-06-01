@@ -70,7 +70,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     if (frequency.TotalMinutes >= 1)
     {
       p_logger.Info($"Subscribing to INFREQUENT location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {frequency}...");
-      var infrequentSub = SetupInfrequentUpdates(providers, frequency);
+      var infrequentSub = SetupInfrequentUpdates(_providers, frequency);
       p_logger.Info($"Subscribed to INFREQUENT location updates, providers: '{string.Join(", ", _providers)}'; interval: {frequency}");
 
       return infrequentSub;
@@ -191,7 +191,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   }
 
   private IDisposable SetupInfrequentUpdates(
-    HashSet<string> _providers,
+    LocationProviders _providers,
     TimeSpan _frequency)
   {
     return Observable
@@ -200,53 +200,23 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
       .DelaySubscription(TimeSpan.FromSeconds(3))
       .SelectAsync(async (_, _ct) =>
       {
-        var accuracy = GeolocationAccuracy.Low;
-        if (_providers.Contains(LocationManager.NetworkProvider))
-          accuracy = GeolocationAccuracy.High;
-        if (_providers.Contains(LocationManager.GpsProvider))
-          accuracy = GeolocationAccuracy.Best;
-
+        var subs = StartLocationWatcher(_providers, TimeSpan.FromSeconds(1));
         try
         {
-          var request = new GeolocationRequest(accuracy, TimeSpan.FromSeconds(10));
-          var location = await Geolocation.GetLocationAsync(request, _ct);
-          if (location == null)
-            return null;
-
-          return new LocationData(
-            Latitude: location.Latitude,
-            Longitude: location.Longitude,
-            Altitude: location.Altitude ?? 0d,
-            Accuracy: (float?)location.Accuracy ?? 1000f,
-            VerticalAccuracy: (float?)location.VerticalAccuracy,
-            Course: (float?)location.Course,
-            Speed: (float?)location.Speed,
-            Timestamp: location.Timestamp);
+          for (var i = 0; i < 100; i++)
+            await Task.Delay(TimeSpan.FromSeconds(100), _ct);
         }
-        catch (FeatureNotSupportedException)
-        {
-          p_logger.Error($"Can't get location for INFREQUENT updates, feature not supported");
-          return null;
-        }
-        catch (FeatureNotEnabledException)
-        {
-          p_logger.Error($"Can't get location for INFREQUENT updates, feature not enabled");
-          return null;
-        }
-        catch (PermissionException)
-        {
-          p_logger.Error($"Can't get location for INFREQUENT updates, permission issue");
-          return null;
-        }
-        catch (System.OperationCanceledException) { return null; }
+        catch (System.OperationCanceledException) { }
         catch (Exception ex)
         {
-          p_logger.Error($"Can't get location for INFREQUENT updates, unexpected error", ex);
-          return null;
+          p_logger.Error($"Error while waiting for location updates", ex);
+        }
+        finally
+        {
+          subs.Dispose();
         }
       })
-      .WhereNotNull()
-      .Subscribe(_ => p_locationFlow.OnNext(_));
+      .Subscribe();
   }
 
   private void StopLocationWatcher()

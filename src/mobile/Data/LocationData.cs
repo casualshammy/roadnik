@@ -45,6 +45,8 @@ internal record LocationData(
     return MEAN_EARTH_RADIUS_METRES * c;
   }
 
+  public string ToShortString() => $"{{ Lat: {Latitude:F2}, Lng: {Longitude:F2}, Acc: {Accuracy:F2}m }}";
+
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   private static double DegreesToRadians(double _degrees) => _degrees * DEGREES_TO_RAD;
 

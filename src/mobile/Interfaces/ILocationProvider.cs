@@ -10,5 +10,5 @@ internal interface ILocationProvider
   IObservable<string> ProviderEnabled { get; }
 
   static abstract Task<LocationData?> GetCurrentBestLocationAsync(TimeSpan _timeout, CancellationToken _ct);
-  IDisposable StartLocationWatcher(LocationProviders _providers, TimeSpan _frequency);
+  IDisposable StartLocationWatcher(LocationProviders _providers, TimeSpan _frequency, float _desiredAccuracy);
 }

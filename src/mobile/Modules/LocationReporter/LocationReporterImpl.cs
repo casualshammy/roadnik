@@ -374,7 +374,8 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         p_log.Info($"Starting location provider...");
         var locSubs = locationProvider.StartLocationWatcher(
           conf.LocationProviders,
-          conf.TimeInterval);
+          conf.TimeInterval,
+          conf.MinAccuracy);
         p_log.Info($"Location provider is started");
 
         _life.DoOnEnded(() =>

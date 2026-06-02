@@ -257,7 +257,7 @@ public partial class MainPage : CContentPage
             if (permissionGranted != PermissionStatus.Granted)
               return;
 
-            _life.ToDisposeOnEnding(webAppLocationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1)));
+            _life.ToDisposeOnEnding(webAppLocationProvider.StartLocationWatcher(LocationProviders.All, TimeSpan.FromSeconds(1), float.MaxValue));
 
             var semaphore = 0;
 

@@ -50,7 +50,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   public IObservable<string> ProviderDisabled { get; }
   public IObservable<string> ProviderEnabled { get; }
 
-  public IDisposable StartLocationWatcher(LocationProviders _providers, TimeSpan _freq)
+  public IDisposable StartLocationWatcher(LocationProviders _providers, TimeSpan _freq, float _desiredAccuracy)
   {
     if (!p_locationService.IsLocationEnabled)
       return Disposable.Empty;
@@ -61,7 +61,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
 
     var subs = frequency.TotalMinutes < 1
       ? SetupFrequentUpdates(_providers, frequency)
-      : SetupInfrequentUpdates(_providers, frequency);
+      : SetupInfrequentUpdates(_providers, frequency, _desiredAccuracy);
 
     return subs;
   }
@@ -151,7 +151,8 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
 
   private IDisposable SetupInfrequentUpdates(
     LocationProviders _providers,
-    TimeSpan _frequency)
+    TimeSpan _frequency,
+    float _desiredAccuracy)
   {
     p_logger.Info($"Subscribing to INFREQUENT location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {_frequency}...");
 
@@ -161,11 +162,14 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
       .DelaySubscription(TimeSpan.FromSeconds(3))
       .SelectAsync(async (_, _ct) =>
       {
-        var subs = StartLocationWatcher(_providers, TimeSpan.FromSeconds(1));
+        var subs = StartLocationWatcher(_providers, TimeSpan.FromSeconds(1), _desiredAccuracy);
         try
         {
-          for (var i = 0; i < 100; i++)
-            await Task.Delay(TimeSpan.FromMilliseconds(100), _ct);
+          var locationData = await p_locationFlow
+            .Where(_ => _.Accuracy <= _desiredAccuracy)
+            .FirstOrDefaultAsync(TimeSpan.FromSeconds(20), _ct);
+
+          p_logger.Info($"Received INFREQUENT location update: {locationData?.ToShortString() ?? "n/a"}");
         }
         catch (System.OperationCanceledException) { }
         catch (Exception ex)

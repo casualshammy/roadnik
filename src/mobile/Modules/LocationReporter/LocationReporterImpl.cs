@@ -72,7 +72,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
         RoomId = _storage.GetValueOrDefault(PREF_ROOM, PrefsStorageJsonCtx.Default.String),
         TimeInterval = TimeSpan.FromSeconds(_storage.GetValueOrDefault(PREF_TIME_INTERVAL, PrefsStorageJsonCtx.Default.Int32)),
         DistanceInterval = _storage.GetValueOrDefault(PREF_DISTANCE_INTERVAL, PrefsStorageJsonCtx.Default.Int32),
-        ReportingCondition = _storage.GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType),
         MinAccuracy = _storage.GetValueOrDefault(PREF_MIN_ACCURACY, PrefsStorageJsonCtx.Default.Int32),
         Username = _storage.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String),
         LocationProviders = _storage.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders),
@@ -250,18 +249,10 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
           var distance = acc.Location?.GetDistanceTo(location);
 
-          if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
-          {
-            if (distance != null && distance < prefs.DistanceInterval)
-              return acc;
-            if (acc.LastReportAttemptTime != null && now - acc.LastReportAttemptTime < prefs.TimeInterval)
-              return acc;
-          }
-          else if (prefs.ReportingCondition == TrackpointReportingConditionType.TimeOrDistance)
-          {
-            if (distance != null && acc.LastReportAttemptTime != null && distance < prefs.DistanceInterval && now - acc.LastReportAttemptTime < prefs.TimeInterval)
-              return acc;
-          }
+          if (acc.LastReportAttemptTime != null && now - acc.LastReportAttemptTime < prefs.TimeInterval)
+            return acc;
+          if (prefs.DistanceInterval > 0 && distance != null && distance < prefs.DistanceInterval)
+            return acc;
 
           stats = stats with { Total = stats.Total + 1 };
           p_statsFlow.OnNext(stats);

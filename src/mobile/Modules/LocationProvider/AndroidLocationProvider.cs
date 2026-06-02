@@ -55,56 +55,15 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     if (!p_locationService.IsLocationEnabled)
       return Disposable.Empty;
 
-    var providers = new HashSet<string>();
-    if ((_providers & LocationProviders.Gps) != 0)
-      providers.Add(LocationManager.GpsProvider);
-    if ((_providers & LocationProviders.Network) != 0)
-      providers.Add(LocationManager.NetworkProvider);
-    if ((_providers & LocationProviders.Passive) != 0)
-      providers.Add(LocationManager.PassiveProvider);
-
-    var frequency = !providers.Contains(LocationManager.GpsProvider)
+    var frequency = ((_providers & LocationProviders.Gps) == 0)
       ? TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 10))
       : TimeSpan.FromSeconds(Math.Max(_freq.TotalSeconds, 1));
 
-    if (frequency.TotalMinutes >= 1)
-    {
-      p_logger.Info($"Subscribing to INFREQUENT location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {frequency}...");
-      var infrequentSub = SetupInfrequentUpdates(_providers, frequency);
-      p_logger.Info($"Subscribed to INFREQUENT location updates, providers: '{string.Join(", ", _providers)}'; interval: {frequency}");
+    var subs = frequency.TotalMinutes < 1
+      ? SetupFrequentUpdates(_providers, frequency)
+      : SetupInfrequentUpdates(_providers, frequency);
 
-      return infrequentSub;
-    }
-
-    MainThread.BeginInvokeOnMainThread(() =>
-    {
-      lock (p_startStopLock)
-      {
-        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {frequency}...");
-        var result = new HashSet<string>();
-
-        foreach (var provider in providers)
-        {
-          if (!p_locationService.IsProviderEnabled(provider))
-            continue;
-
-          try
-          {
-            p_locationService.RequestLocationUpdates(provider, (long)frequency.TotalMilliseconds, 0f, this);
-            result.Add(provider);
-            p_logger.Info($"Subscribed to '{provider}' provider");
-          }
-          catch (Exception ex)
-          {
-            p_logger.Error($"Can't subscribe to provider '{provider}'", ex);
-          }
-        }
-
-        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {frequency}");
-      }
-    });
-
-    return Disposable.Create(() => StopLocationWatcher());
+    return subs;
   }
 
   public void OnLocationChanged(Android.Locations.Location _location)
@@ -194,7 +153,9 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
     LocationProviders _providers,
     TimeSpan _frequency)
   {
-    return Observable
+    p_logger.Info($"Subscribing to INFREQUENT location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {_frequency}...");
+
+    var subs = Observable
       .Interval(_frequency)
       .StartWithDefault()
       .DelaySubscription(TimeSpan.FromSeconds(3))
@@ -204,7 +165,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
         try
         {
           for (var i = 0; i < 100; i++)
-            await Task.Delay(TimeSpan.FromSeconds(100), _ct);
+            await Task.Delay(TimeSpan.FromMilliseconds(100), _ct);
         }
         catch (System.OperationCanceledException) { }
         catch (Exception ex)
@@ -217,6 +178,52 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
         }
       })
       .Subscribe();
+
+    p_logger.Info($"Subscribed to INFREQUENT location updates, providers: '{string.Join(", ", _providers)}'; interval: {_frequency}");
+    return subs;
+  }
+
+  private IDisposable SetupFrequentUpdates(
+    LocationProviders _providers,
+    TimeSpan _frequency)
+  {
+    var providers = new HashSet<string>();
+    if ((_providers & LocationProviders.Gps) != 0)
+      providers.Add(LocationManager.GpsProvider);
+    if ((_providers & LocationProviders.Network) != 0)
+      providers.Add(LocationManager.NetworkProvider);
+    if ((_providers & LocationProviders.Passive) != 0)
+      providers.Add(LocationManager.PassiveProvider);
+
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+      lock (p_startStopLock)
+      {
+        p_logger.Info($"Subscribing to location updates, desired providers: '{string.Join(", ", _providers)}'; interval: {_frequency}...");
+        var result = new HashSet<string>();
+
+        foreach (var provider in providers)
+        {
+          if (!p_locationService.IsProviderEnabled(provider))
+            continue;
+
+          try
+          {
+            p_locationService.RequestLocationUpdates(provider, (long)_frequency.TotalMilliseconds, 0f, this);
+            result.Add(provider);
+            p_logger.Info($"Subscribed to '{provider}' provider");
+          }
+          catch (Exception ex)
+          {
+            p_logger.Error($"Can't subscribe to provider '{provider}'", ex);
+          }
+        }
+
+        p_logger.Info($"Subscribed to location updates, providers: '{string.Join(", ", result)}'; interval: {_frequency}");
+      }
+    });
+
+    return Disposable.Create(() => StopLocationWatcher());
   }
 
   private void StopLocationWatcher()

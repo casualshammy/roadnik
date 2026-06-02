@@ -8,7 +8,6 @@ namespace Roadnik.MAUI.JsonCtx;
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(Guid))]
-[JsonSerializable(typeof(TrackpointReportingConditionType))]
 [JsonSerializable(typeof(LocationProviders))]
 [JsonSerializable(typeof(HrmDeviceInfo))]
 [JsonSerializable(typeof(IReadOnlyList<BookmarkEntry>))]

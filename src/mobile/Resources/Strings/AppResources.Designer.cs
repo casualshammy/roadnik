@@ -381,7 +381,7 @@ namespace Roadnik.MAUI.Resources.Strings {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Minimum distance between sending location.
+        ///   Looks up a localized string similar to Minimum distance to travel before sending location. Set to 0 to disable.
         /// </summary>
         internal static string page_options_distance_hint {
             get {
@@ -583,24 +583,6 @@ namespace Roadnik.MAUI.Resources.Strings {
         internal static string page_options_roomId {
             get {
                 return ResourceManager.GetString("page.options.roomId", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Location share condition.
-        /// </summary>
-        internal static string page_options_share_condition {
-            get {
-                return ResourceManager.GetString("page.options.share_condition", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Your location will be sent when the following combination of the above conditions is met.
-        /// </summary>
-        internal static string page_options_share_condition_hint {
-            get {
-                return ResourceManager.GetString("page.options.share_condition.hint", resourceCulture);
             }
         }
         

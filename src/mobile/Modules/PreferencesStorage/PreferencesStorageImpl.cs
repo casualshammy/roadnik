@@ -77,8 +77,7 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
 
     SetValue(PREF_ROOM, CommonUtilities.GetRandomString(ReqResUtil.MaxRoomIdLength, false), PrefsStorageJsonCtx.Default.String);
     SetValue(PREF_TIME_INTERVAL, 10, PrefsStorageJsonCtx.Default.Int32);
-    SetValue(PREF_DISTANCE_INTERVAL, 100, PrefsStorageJsonCtx.Default.Int32);
-    SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
+    SetValue(PREF_DISTANCE_INTERVAL, 0, PrefsStorageJsonCtx.Default.Int32);
     SetValue(PREF_MIN_ACCURACY, 20, PrefsStorageJsonCtx.Default.Int32);
     SetValue(PREF_USERNAME, $"user-{Random.Shared.Next(100, 1000)}", PrefsStorageJsonCtx.Default.String);
     SetValue(PREF_NOTIFY_NEW_POINT, true, PrefsStorageJsonCtx.Default.Boolean);
@@ -146,12 +145,6 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
         p_log.Info($"Migration 175: new room id: '{newRoomId}'");
       }
     });
-    migrations.Add(192, () =>
-    {
-      var reportingCondition = GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.Int32);
-      if (reportingCondition == default)
-        SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, TrackpointReportingConditionType.TimeAndDistance, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
-    });
     migrations.Add(270, () =>
     {
       RemoveValue("settings.report.low-power-mode");
@@ -164,6 +157,10 @@ internal class PreferencesStorageImpl : IPreferencesStorage, IAppModule<IPrefere
     {
       RemoveValue("settings.report.location-provider"); // PREF_LOCATION_PROVIDER
       SetValue(PREF_LOCATION_PROVIDERS, LocationProviders.All, PrefsStorageJsonCtx.Default.LocationProviders);
+    });
+    migrations.Add(490, () =>
+    {
+      RemoveValue("settings.report.trackpoint-reporting-condition.v2");
     });
 
     return migrations;

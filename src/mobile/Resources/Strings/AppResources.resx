@@ -305,13 +305,7 @@ Passive mode uses data obtained from other applications.</value>
     <value>Distance</value>
   </data>
   <data name="page.options.distance.hint" xml:space="preserve">
-    <value>Minimum distance between sending location</value>
-  </data>
-  <data name="page.options.share_condition" xml:space="preserve">
-    <value>Location share condition</value>
-  </data>
-  <data name="page.options.share_condition.hint" xml:space="preserve">
-    <value>Your location will be sent when the following combination of the above conditions is met</value>
+    <value>Minimum distance to travel before sending location. Set to 0 to disable</value>
   </data>
   <data name="page.options.location_providers" xml:space="preserve">
     <value>🛰️ Location providers</value>

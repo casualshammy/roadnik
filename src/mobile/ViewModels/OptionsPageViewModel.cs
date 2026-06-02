@@ -27,7 +27,6 @@ internal class OptionsPageViewModel : BaseViewModel
   private string? p_username;
   private int p_minimumTime;
   private int p_minimumDistance;
-  private TrackpointReportingConditionType p_trackpointReportingCondition;
   private int p_minAccuracy;
   private LocationProviders p_locationProviders;
   private bool p_wipeOldTrackOnNewEnabled;
@@ -52,7 +51,6 @@ internal class OptionsPageViewModel : BaseViewModel
     UsernameCommand = new Command(OnUsernameCommand);
     MinimumIntervalCommand = new Command(OnMinimumInterval);
     MinimumDistanceCommand = new Command(OnMinimumDistance);
-    TrackpointReportingConditionCommand = new Command(OnTrackpointReportingCondition);
     MinAccuracyCommand = new Command(OnMinAccuracy);
     DiscordAuthCommand = new Command(OnDiscordAuth);
     DiscordRevokeCommand = new Command(OnDiscordRevoke);
@@ -70,7 +68,6 @@ internal class OptionsPageViewModel : BaseViewModel
           SetProperty(ref p_username, p_storage.GetValueOrDefault(PREF_USERNAME, PrefsStorageJsonCtx.Default.String), nameof(Nickname));
           SetProperty(ref p_minimumTime, p_storage.GetValueOrDefault(PREF_TIME_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumTime));
           SetProperty(ref p_minimumDistance, p_storage.GetValueOrDefault(PREF_DISTANCE_INTERVAL, PrefsStorageJsonCtx.Default.Int32), nameof(MinimumDistance));
-          SetProperty(ref p_trackpointReportingCondition, p_storage.GetValueOrDefault(PREF_TRACKPOINT_REPORTING_CONDITION, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType), nameof(TrackpointReportingConditionText));
           SetProperty(ref p_minAccuracy, p_storage.GetValueOrDefault(PREF_MIN_ACCURACY, PrefsStorageJsonCtx.Default.Int32), nameof(MinAccuracy));
           SetProperty(ref p_wipeOldTrackOnNewEnabled, p_storage.GetValueOrDefault(PREF_WIPE_OLD_TRACK_ON_NEW_ENABLED, PrefsStorageJsonCtx.Default.Boolean), nameof(WipeOldTrackOnNewEnabled));
           SetProperty(ref p_locationProviders, p_storage.GetValueOrDefault(PREF_LOCATION_PROVIDERS, PrefsStorageJsonCtx.Default.LocationProviders),
@@ -126,23 +123,6 @@ internal class OptionsPageViewModel : BaseViewModel
     set
     {
       p_storage.SetValue(PREF_DISTANCE_INTERVAL, value, PrefsStorageJsonCtx.Default.Int32);
-    }
-  }
-  public string TrackpointReportingConditionText
-  {
-    get
-    {
-      if (p_trackpointReportingCondition == TrackpointReportingConditionType.TimeAndDistance)
-        return "Time AND Distance";
-      else
-        return "Time OR Distance";
-    }
-    set
-    {
-      if (!Enum.TryParse<TrackpointReportingConditionType>(value, out var condition))
-        return;
-
-      p_storage.SetValue(PREF_TRACKPOINT_REPORTING_CONDITION, condition, PrefsStorageJsonCtx.Default.TrackpointReportingConditionType);
     }
   }
   public int MinAccuracy
@@ -282,7 +262,6 @@ internal class OptionsPageViewModel : BaseViewModel
   public ICommand UsernameCommand { get; }
   public ICommand MinimumIntervalCommand { get; }
   public ICommand MinimumDistanceCommand { get; }
-  public ICommand TrackpointReportingConditionCommand { get; }
   public ICommand MinAccuracyCommand { get; }
   public ICommand DiscordAuthCommand { get; }
   public ICommand DiscordRevokeCommand { get; }
@@ -392,24 +371,6 @@ internal class OptionsPageViewModel : BaseViewModel
       int.TryParse(mimimalDistanceRaw, out var mimimalDistance) &&
       mimimalDistance <= 10000)
       MinimumDistance = mimimalDistance;
-  }
-
-  private async void OnTrackpointReportingCondition(object _arg)
-  {
-    var currentPage = p_pagesController.CurrentPage;
-    if (currentPage == null)
-      return;
-
-    var and = "Time AND distance";
-    var or = "Time OR distance";
-    var result = await currentPage.DisplayActionSheetAsync("Trackpoint reporting condition", null, null, and, or);
-    if (result == null)
-      return;
-
-    if (result == and)
-      TrackpointReportingConditionText = TrackpointReportingConditionType.TimeAndDistance.ToString();
-    else if (result == or)
-      TrackpointReportingConditionText = TrackpointReportingConditionType.TimeOrDistance.ToString();
   }
 
   private async void OnMinAccuracy(object _arg)

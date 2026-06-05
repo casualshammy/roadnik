@@ -163,10 +163,11 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
       .SelectAsync(async (_, _ct) =>
       {
         var subs = StartLocationWatcher(_providers, TimeSpan.FromSeconds(1), _desiredAccuracy);
+        var now = DateTimeOffset.UtcNow;
         try
         {
           var locationData = await p_locationFlow
-            .Where(_ => _.Accuracy <= _desiredAccuracy)
+            .Where(_ => _.Accuracy <= _desiredAccuracy && _.Timestamp > now)
             .FirstOrDefaultAsync(TimeSpan.FromSeconds(20), _ct);
 
           p_logger.Info($"Received INFREQUENT location update: {locationData?.ToShortString() ?? "n/a"}");

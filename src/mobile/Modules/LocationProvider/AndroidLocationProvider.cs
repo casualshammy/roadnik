@@ -162,8 +162,8 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
       .DelaySubscription(TimeSpan.FromSeconds(3))
       .SelectAsync(async (_, _ct) =>
       {
-        var subs = StartLocationWatcher(_providers, TimeSpan.FromSeconds(1), _desiredAccuracy);
         var now = DateTimeOffset.UtcNow;
+        var subs = SetupFrequentUpdates(_providers, TimeSpan.FromSeconds(1));
         try
         {
           var locationData = await p_locationFlow
@@ -175,7 +175,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
         catch (System.OperationCanceledException) { }
         catch (Exception ex)
         {
-          p_logger.Error($"Error while waiting for location updates", ex);
+          p_logger.Error($"Error while waiting for INFREQUENT location updates", ex);
         }
         finally
         {

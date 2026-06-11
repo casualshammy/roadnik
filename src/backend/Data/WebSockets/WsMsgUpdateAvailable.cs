@@ -1,3 +1,6 @@
-﻿namespace Roadnik.Server.Data.WebSockets;
+﻿using Ax.Fw.Web.Data.SseServer;
 
-internal record WsMsgUpdateAvailable(long UnixTimeMs);
+namespace Roadnik.Server.Data.WebSockets;
+
+internal record WsMsgUpdateAvailable(long UnixTimeMs)
+  : SseAbstractMsg("ws-msg-data-updated");

@@ -283,7 +283,7 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
             HR = hr
           };
 
-          using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+          using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
           using var cts = CancellationTokenSource.CreateLinkedTokenSource(timedCts.Token, _lifetime.Token);
           using var content = JsonContent.Create(reqData, RestJsonCtx.Default.StorePathPointReq);
           using var res = await _httpClientProvider.Value.PostAsync($"{prefs.ServerAddress.TrimEnd('/')}/api/v1{ReqPaths.STORE_PATH_POINT}", content, cts.Token);

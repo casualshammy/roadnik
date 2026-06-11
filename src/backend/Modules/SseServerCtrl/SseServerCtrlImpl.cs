@@ -3,7 +3,6 @@ using Ax.Fw.Extensions;
 using Ax.Fw.SharedTypes.Interfaces;
 using Ax.Fw.Web.Data.SseServer;
 using Ax.Fw.Web.Modules.SseServer;
-using Roadnik.Server.Data.WebSockets;
 using Roadnik.Server.Interfaces;
 using Roadnik.Server.JsonCtx;
 using System.Reactive.Linq;
@@ -31,14 +30,6 @@ internal sealed class SseServerCtrlImpl
       _lifetime,
       _log,
       WebSocketJsonCtx.Default,
-      new Dictionary<string, Type>
-      {
-        {"ws-msg-hello", typeof(WsMsgHello) },
-        {"ws-msg-path-wiped", typeof(WsMsgPathWiped) },
-        {"ws-msg-room-points-updated", typeof(WsMsgRoomPointsUpdated) },
-        {"ws-msg-data-updated", typeof(WsMsgUpdateAvailable) },
-        {"ws-msg-path-truncated", typeof(WsMsgPathTruncated) },
-      },
       TimeSpan.FromSeconds(30),
       100);
 
@@ -58,11 +49,11 @@ internal sealed class SseServerCtrlImpl
     => p_sseServer.AcceptClient(Guid.NewGuid(), _roomId, out _session);
 
   public void SendMsg<T>(SseSession<Guid, string> _session, T _msg)
-    where T : notnull
+    where T : notnull, SseAbstractMsg
     => p_sseServer.SendMsg(_session, _msg);
 
   public void SendMsgByRoomId<T>(string _roomId, T _msg)
-    where T : notnull
+    where T : notnull, SseAbstractMsg
     => p_sseServer.PostBroadcastMsg(_roomId, _msg);
 
 }

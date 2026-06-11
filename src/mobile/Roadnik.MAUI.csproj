@@ -49,10 +49,10 @@
 		</ItemGroup>
 
 		<ItemGroup>
-				<PackageReference Include="Ax.Fw.Log" Version="15.0.295" />
-				<PackageReference Include="CommunityToolkit.Maui" Version="14.1.1" />
-				<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.70" />
-				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.70" />
+				<PackageReference Include="Ax.Fw.Log" Version="15.0.299" />
+				<PackageReference Include="CommunityToolkit.Maui" Version="14.2.0" />
+				<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.71" />
+				<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.71" />
 				<PackageReference Include="Oscore.Maui.Android.InAppUpdates" Version="1.5.1" />
 				<PackageReference Include="Plugin.BLE" Version="3.2.1" />
 				<PackageReference Include="QRCoder" Version="1.8.0" />

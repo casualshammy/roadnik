@@ -1,3 +1,6 @@
-﻿namespace Roadnik.Server.Data.WebSockets;
+﻿using Ax.Fw.Web.Data.SseServer;
 
-internal record WsMsgRoomPointsUpdated(long UnixTimeMs);
+namespace Roadnik.Server.Data.WebSockets;
+
+internal record WsMsgRoomPointsUpdated(long UnixTimeMs)
+  : SseAbstractMsg("ws-msg-room-points-updated");

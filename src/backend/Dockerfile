@@ -1,4 +1,4 @@
-FROM dhi.io/dotnet:10-sdk AS build-dotnet
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-dotnet
 ARG TARGETARCH
 WORKDIR /app
 RUN apt update && apt -y --allow-downgrades install clang zlib1g-dev

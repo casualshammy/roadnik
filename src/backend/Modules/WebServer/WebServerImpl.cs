@@ -143,6 +143,7 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       new HashSet<string>(["GET", "POST"]),
       new HashSet<string>([]),
       false);
+    builder.Services.AddSingleton<ForwardProxyMiddleware>();
     builder.Services.AddSingleton<FailToBanMiddleware>();
     builder.Services.AddScoped<LogMiddleware>();
     builder.Services.AddScoped<CommonErrorsHandlerMiddleware>();

@@ -1,7 +1,8 @@
-import type { GetPathResData, WsBaseMsg } from '@/data/backend';
+import type { GetPathResData, SseAbstractMsg } from '@/data/backend';
 import type { AppId } from '@/data/Guid';
 import { sleepAsync } from '@/toolkit/commonToolkit';
 import { LatLng } from 'leaflet';
+import { Observable, ReplaySubject, Subject } from 'rxjs';
 
 type RoomPoint = {
   PointId: number;
@@ -27,27 +28,38 @@ type CreateNewPointReq = {
 
 export class BackendApi {
   private readonly p_apiUrl: string;
+  private readonly p_eventSubj = new ReplaySubject<SseAbstractMsg>(5);
 
   constructor(_apiUrl: string) {
     this.p_apiUrl = _apiUrl;
   }
 
+  public get events(): Observable<SseAbstractMsg> {
+    return this.p_eventSubj;
+  }
+
   public setupEventSource(
-    _roomId: string,
-    _handlers: { [key: string]: (event: MessageEvent) => void }
+    _roomId: string
   ): void {
     console.log(`Setting up EventSource...`);
     const url = `${this.p_apiUrl}/api/v1/events?roomId=${_roomId}`;
     const eventSource = new EventSource(url);
 
-    for (const eventType in _handlers)
-      eventSource.addEventListener(eventType, _handlers[eventType]);
+    eventSource.onmessage = _ev => {
+      const rawMsg = JSON.parse(_ev.data);
+      if (rawMsg.MsgType === undefined)
+        return;
+
+      const msg: SseAbstractMsg = rawMsg;
+      console.log(`EventSource message: ${msg.MsgType}`);
+      this.p_eventSubj.next(msg);
+    }
 
     eventSource.onerror = _ev => {
       console.error("EventSource error:", _ev);
       eventSource.close();
       sleepAsync(1000).then(() => {
-        this.setupEventSource(_roomId, _handlers);
+        this.setupEventSource(_roomId);
       });
     };
   }

@@ -14,6 +14,11 @@
                  @deselect="() => p_mapInteractor.setObservedUser(null)"
                  @centerOnUser="_appId => p_mapInteractor.setMapCenterToUser(_appId)"
                  @moved="onUsbMoved" />
+
+  <AlertDialog v-if="p_alert"
+               :title="p_alert.title"
+               :body="p_alert.body"
+               @close="p_alert = null" />
 </template>
 
 <script setup lang="ts">
@@ -21,17 +26,28 @@ import { ref, computed, shallowRef, reactive } from "vue";
 import L, { type LeafletMouseEvent } from 'leaflet';
 import { Subject, switchMap, asyncScheduler, observeOn } from "rxjs";
 import Cookies from "js-cookie";
-import { DialogAlertError } from 'v-dialogs'
 
 import LeafletMap from './components/LeafletMap.vue';
 import UserStatusBar from './components/UserStatusBar.vue';
+import AlertDialog from './components/AlertDialog.vue';
 
 import { type LatLngZoom } from './data/LatLngZoom';
 import * as MapToolkit from './toolkit/mapToolkit';
 import { BackendApi } from './api/backendApi';
 import { HostApi } from './api/hostApi';
 import { CreateAppCtx, GetApiUrl } from './data/AppCtx';
-import type { TimedStorageEntry, GetPathResData, WsMsgHello, WsMsgPathWiped, WsMsgPathTruncated } from '@/data/backend';
+import {
+  type TimedStorageEntry,
+  type GetPathResData,
+  type SseMsgHello,
+  type SseMsgPathTruncated,
+  type SseMsgPathWiped,
+  SSE_MSG_TYPE_HELLO,
+  SSE_MSG_TYPE_DATA_UPDATED,
+  SSE_MSG_PATH_WIPED,
+  SSE_MSG_ROOM_POINTS_UPDATED,
+  SSE_MSG_PATH_TRUNCATED
+} from '@/data/backend';
 import * as Consts from './data/Consts';
 import * as CommonToolkit from './toolkit/commonToolkit';
 import { TimeSpan } from './toolkit/timespan';
@@ -40,6 +56,7 @@ import { MapInteractor } from "./parts/mapInteractor";
 import { getHeartRateString } from "./toolkit/commonToolkit";
 import { getCachedColor } from "./toolkit/mapToolkit";
 import type { AppId } from "./data/Guid";
+import { Semaphore } from "./toolkit/semaphore.ts";
 
 const apiUrl = GetApiUrl();
 const p_mapsData = MapToolkit.GetMapLayers(apiUrl);
@@ -67,6 +84,8 @@ const p_map = shallowRef<L.Map>();
 const p_backendApi = new BackendApi(p_appCtx.apiUrl);
 const p_hostApi = new HostApi(p_appCtx);
 const p_mapInteractor = new MapInteractor(p_appCtx, p_hostApi, p_map, p_paths, p_gEntries);
+const p_alert = ref<{ title: string; body: string } | null>(null);
+const p_trackUpdateSemaphore = new Semaphore(1);
 
 document.title = `Roadnik: ${p_appCtx.roomId}`;
 
@@ -210,10 +229,10 @@ function setupDataFlow(_map: L.Map) {
     });
 
   if (p_appCtx.roomId !== null) {
-    p_backendApi.setupEventSource(p_appCtx.roomId, {
-      [Consts.WS_MSG_TYPE_HELLO]: async _ev => {
-        console.log(`Received SSE '${Consts.WS_MSG_TYPE_HELLO}' message from server`);
-        const msgData: WsMsgHello = JSON.parse(_ev.data);
+    p_backendApi.setupEventSource(p_appCtx.roomId);
+    p_backendApi.events.subscribe(async _ => {
+      if (_.MsgType === SSE_MSG_TYPE_HELLO) {
+        const msgData = _ as SseMsgHello;
         p_appCtx.maxTrackPoints = msgData.MaxPathPointsPerRoom;
         console.log(`Max saved points: ${p_appCtx.maxTrackPoints}`);
         console.log(`Server time: ${new Date(msgData.UnixTimeMs).toISOString()}`);
@@ -242,27 +261,23 @@ function setupDataFlow(_map: L.Map) {
 
         p_tracksUpdateRequired$.next();
         await updatePointsAsync();
-      },
-      [Consts.WS_MSG_TYPE_DATA_UPDATED]: () => {
-        console.log(`Received SSE '${Consts.WS_MSG_TYPE_DATA_UPDATED}' message from server`);
+      }
+      else if (_.MsgType === SSE_MSG_TYPE_DATA_UPDATED) {
         p_tracksUpdateRequired$.next();
-      },
-      [Consts.WS_MSG_PATH_WIPED]: _ev => {
-        console.log(`Received SSE '${Consts.WS_MSG_PATH_WIPED}' message from server`);
-        const msgData: WsMsgPathWiped = JSON.parse(_ev.data);
+      }
+      else if (_.MsgType === SSE_MSG_PATH_WIPED) {
+        const msgData = _ as SseMsgPathWiped;
         const username = p_appIds.get(msgData.AppId) ?? "unknown";
         if (p_gEntries.has(msgData.AppId)) {
           removeUserPath(msgData.AppId);
           console.log(`Wiped path of user '${msgData.AppId}/${username}' as server indicates that it's wiped`);
         }
-      },
-      [Consts.WS_MSG_ROOM_POINTS_UPDATED]: async () => {
-        console.log(`Received SSE '${Consts.WS_MSG_ROOM_POINTS_UPDATED}' message from server`);
+      }
+      else if (_.MsgType === SSE_MSG_ROOM_POINTS_UPDATED) {
         await updatePointsAsync();
-      },
-      [Consts.WS_MSG_PATH_TRUNCATED]: _ev => {
-        console.log(`Received SSE '${Consts.WS_MSG_PATH_TRUNCATED}' message from server`);
-        const msgData: WsMsgPathTruncated = JSON.parse(_ev.data);
+      }
+      else if (_.MsgType === SSE_MSG_PATH_TRUNCATED) {
+        const msgData = _ as SseMsgPathTruncated;
         const geoEntries = p_gEntries.get(msgData.AppId);
         if (geoEntries !== undefined && geoEntries.length > 0) {
           const entriesToDelete = geoEntries.length - msgData.PathPoints;
@@ -282,19 +297,12 @@ function setupDataFlow(_map: L.Map) {
       const roomIdIsCorrect = await p_backendApi.isRoomIdValidAsync(p_appCtx.roomId);
       if (!roomIdIsCorrect) {
         console.log(`Incorrect room id: ${p_appCtx.roomId}`);
-        DialogAlertError(
-          `Make sure room id is specified and valid.\nCurrent room id: ${p_appCtx.roomId}`,
-          undefined,
-          {
-            header: true,
-            title: "Room id is missed or invalid123",
-            messageType: 'error',
-            icon: true,
-            colorfulShadow: true
-          }
-        );
+        p_alert.value = {
+          title: "Room id is missed or invalid",
+          body: `Make sure room id is specified and valid.\nCurrent room id: ${p_appCtx.roomId}`,
+        };
       }
-    }, 1000);
+    }, 250);
 
     if ("geolocation" in navigator) {
       const options = {
@@ -353,17 +361,20 @@ async function updatePathsAsync() {
     return;
 
   let data: GetPathResData;
+  await p_trackUpdateSemaphore.acquire();
   try {
     data = await p_backendApi.getPathsAsync(p_appCtx.roomId, p_appCtx.lastTracksOffset);
+    p_appCtx.lastTracksOffset = data.LastUpdateUnixMs;
+    console.log(`New last offset: ${p_appCtx.lastTracksOffset}; points to process: ${data.Entries.length}`);
   } catch (error) {
     console.warn(`Got error trying to fetch paths data with offset ${p_appCtx.lastTracksOffset}, retrying...\n${error}`);
     await CommonToolkit.sleepAsync(1000);
     p_tracksUpdateRequired$.next();
     return;
   }
-
-  p_appCtx.lastTracksOffset = data.LastUpdateUnixMs;
-  console.log(`New last offset: ${p_appCtx.lastTracksOffset}; points to process: ${data.Entries.length}`);
+  finally {
+    p_trackUpdateSemaphore.release();
+  }
 
   const appIdWithChanges: AppId[] = updateData(data.Entries);
   p_userPathUpdated$.next(appIdWithChanges);
@@ -710,5 +721,4 @@ function removeUserPath(
 
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

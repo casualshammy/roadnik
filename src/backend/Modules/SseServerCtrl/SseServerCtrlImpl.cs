@@ -29,7 +29,7 @@ internal sealed class SseServerCtrlImpl
     p_sseServer = new SseServerImpl<Guid, string>(
       _lifetime,
       _log,
-      WebSocketJsonCtx.Default,
+      SseJsonCtx.Default,
       TimeSpan.FromSeconds(30),
       100);
 

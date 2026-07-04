@@ -22,51 +22,26 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
       IAppConfig _appConfig,
       IDbProvider _documentStorage,
       ILog _logger,
-      IRoomsController _roomsController,
-      IReqRateLimiter _reqRateLimiter,
-      IFCMPublisher _fCMPublisher,
-      IReadOnlyLifetime _lifetime,
-      IHttpClientProvider _httpClientProvider,
-      IStravaTilesProvider _stravaTilesProvider) => new WebServerImpl(
+      IReadOnlyLifetime _lifetime) => new WebServerImpl(
         _ctx,
         _appConfig,
         _documentStorage,
         _logger["kestrel"],
-        _roomsController,
-        _reqRateLimiter,
-        _fCMPublisher,
-        _lifetime,
-        _httpClientProvider,
-        _stravaTilesProvider));
+        _lifetime));
   }
 
   private readonly IDbProvider p_documentStorage;
   private readonly ILog p_logger;
-  private readonly IRoomsController p_roomsController;
-  private readonly IReqRateLimiter p_reqRateLimiter;
-  private readonly IFCMPublisher p_fCMPublisher;
-  private readonly IHttpClientProvider p_httpClientProvider;
-  private readonly IStravaTilesProvider p_stravaTilesProvider;
 
   private WebServerImpl(
     IAppDependencyCtx _appCtx,
     IAppConfig _appConfig,
     IDbProvider _documentStorage,
     ILog _log,
-    IRoomsController _roomsController,
-    IReqRateLimiter _reqRateLimiter,
-    IFCMPublisher _fCMPublisher,
-    IReadOnlyLifetime _lifetime,
-    IHttpClientProvider _httpClientProvider,
-    IStravaTilesProvider _stravaTilesProvider)
+    IReadOnlyLifetime _lifetime)
   {
     p_documentStorage = _documentStorage;
     p_logger = _log;
-    p_roomsController = _roomsController;
-    p_reqRateLimiter = _reqRateLimiter;
-    p_fCMPublisher = _fCMPublisher;
-    p_httpClientProvider = _httpClientProvider;
-    p_stravaTilesProvider = _stravaTilesProvider;
 
     var thread = new Thread(async () =>
     {
@@ -101,8 +76,12 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     IAppConfig _config,
     IReadOnlyLifetime _life)
   {
-    var wsCtrl = _appCtx.Locate<IWebSocketCtrl>();
     var sseCtrl = _appCtx.Locate<ISseServerCtrl>();
+    var roomsCtrl = _appCtx.Locate<IRoomsController>();
+    var reqRateLimiter = _appCtx.Locate<IReqRateLimiter>();
+    var httpClientProvider = _appCtx.Locate<IHttpClientProvider>();
+    var fcmPublisher = _appCtx.Locate<IFCMPublisher>();
+    var stravaTilesProvider = _appCtx.Locate<IStravaTilesProvider>();
 
     var builder = WebApplication.CreateSlimBuilder();
 
@@ -129,11 +108,14 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
     builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
     builder.Services.AddSingleton(p_logger);
     builder.Services.AddSingleton(p_documentStorage);
-    builder.Services.AddSingleton(p_fCMPublisher);
+    builder.Services.AddSingleton(fcmPublisher);
     builder.Services.AddSingleton(_life);
     builder.Services.AddSingleton(_config);
-    builder.Services.AddSingleton(p_stravaTilesProvider);
+    builder.Services.AddSingleton(stravaTilesProvider);
     builder.Services.AddSingleton(sseCtrl);
+    builder.Services.AddSingleton(roomsCtrl);
+    builder.Services.AddSingleton(reqRateLimiter);
+    builder.Services.AddSingleton(httpClientProvider);
     builder.Services.AddCustomProblemDetails();
     builder.Services.AddCustomRequestId();
     builder.Services.AddCustomRequestLog(true);
@@ -162,16 +144,8 @@ public class WebServerImpl : IWebServer, IAppModule<IWebServer>
         KeepAliveInterval = TimeSpan.FromSeconds(30)
       });
 
-    var webCtrl = new WebController(_config);
-    webCtrl.RegisterPaths(app);
-
-    var apiCtrlV1 = new ApiControllerV1(
-      _config,
-      wsCtrl,
-      p_roomsController,
-      p_reqRateLimiter,
-      p_httpClientProvider);
-    apiCtrlV1.RegisterPaths(app);
+    _ = new WebController(app);
+    _ = new ApiControllerV1(app);
 
     return app;
   }

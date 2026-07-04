@@ -9,14 +9,7 @@ namespace Roadnik.Server.Modules.WebServer.Controllers;
 
 internal class WebController
 {
-  private readonly IAppConfig p_appConfig;
-
-  public WebController(IAppConfig _appConfig)
-  {
-    p_appConfig = _appConfig;
-  }
-
-  public void RegisterPaths(WebApplication _app)
+  public WebController(WebApplication _app)
   {
     var ctrlInfo = new RestControllerInfo("web-ctrl", "web-ctrl");
 
@@ -27,11 +20,13 @@ internal class WebController
   }
 
   public IResult GetIndexFile(
+    IAppConfig _appConfig,
     IScopedLog _log,
     IRequestToolkit _reqToolkit)
-    => GetStaticFile(_log, _reqToolkit, "/");
+    => GetStaticFile(_appConfig, _log, _reqToolkit, "/");
 
   public IResult GetRoomStaticFile(
+    IAppConfig _appConfig,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     [FromRoute(Name = "path")] string? _path)
@@ -39,11 +34,12 @@ internal class WebController
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
 
-    return GetStaticFile(_log, _reqToolkit, $"room/{_path}");
+    return GetStaticFile(_appConfig, _log, _reqToolkit, $"room/{_path}");
   }
 
   [FailToBan(10, 600, HttpStatusCode.NotFound)]
   public IResult GetStaticFile(
+    IAppConfig _appConfig,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     [FromRoute(Name = "path")] string _path)
@@ -53,7 +49,7 @@ internal class WebController
     if (string.IsNullOrWhiteSpace(_path) || _path == "/")
       _path = "index.html";
 
-    var path = Path.Combine(p_appConfig.WebrootDirPath, _path);
+    var path = Path.Combine(_appConfig.WebrootDirPath, _path);
     if (!File.Exists(path))
       return _reqToolkit.NotFound();
 

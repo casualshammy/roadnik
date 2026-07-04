@@ -1,8 +1,8 @@
 ﻿using Ax.Fw.Web.Data.SseServer;
 
-namespace Roadnik.Server.Data.WebSockets;
+namespace Roadnik.Server.Data.SseServer;
 
-internal record WsMsgPathTruncated(
+internal sealed record SseMsgPathTruncated(
   string AppId, 
   string UserName,
   uint PathPoints)

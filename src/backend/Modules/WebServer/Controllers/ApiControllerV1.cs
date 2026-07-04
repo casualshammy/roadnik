@@ -1,5 +1,4 @@
-﻿using Amazon.Runtime.Internal;
-using Ax.Fw;
+﻿using Ax.Fw;
 using Ax.Fw.App.Interfaces;
 using Ax.Fw.Extensions;
 using Ax.Fw.Storage.Data;
@@ -17,7 +16,7 @@ using Roadnik.Common.Toolkit;
 using Roadnik.Interfaces;
 using Roadnik.Server.Attributes;
 using Roadnik.Server.Data.DbTypes;
-using Roadnik.Server.Data.WebSockets;
+using Roadnik.Server.Data.SseServer;
 using Roadnik.Server.Interfaces;
 using System.Net;
 using System.Reactive.Linq;
@@ -29,29 +28,7 @@ namespace Roadnik.Server.Modules.WebServer.Controllers;
 
 internal class ApiControllerV1
 {
-  private static long p_wsSessionsCount = 0;
-
-  private readonly IAppConfig p_appConfig;
-  private readonly IWebSocketCtrl p_webSocketCtrl;
-  private readonly IRoomsController p_roomsController;
-  private readonly IReqRateLimiter p_reqRateLimiter;
-  private readonly IHttpClientProvider p_httpClientProvider;
-
-  public ApiControllerV1(
-    IAppConfig _appConfig,
-    IWebSocketCtrl _webSocketCtrl,
-    IRoomsController _usersController,
-    IReqRateLimiter _reqRateLimiter,
-    IHttpClientProvider _httpClientProvider)
-  {
-    p_appConfig = _appConfig;
-    p_webSocketCtrl = _webSocketCtrl;
-    p_roomsController = _usersController;
-    p_reqRateLimiter = _reqRateLimiter;
-    p_httpClientProvider = _httpClientProvider;
-  }
-
-  public void RegisterPaths(WebApplication _app)
+  public ApiControllerV1(WebApplication _app)
   {
     var ctrlInfo = new RestControllerInfo("api-v1", "api-v1");
 
@@ -66,7 +43,6 @@ internal class ApiControllerV1
     apiGroup.MapPost(ReqPaths.DELETE_ROOM_POINT, DeleteRoomPointAsync).WithMetadata(ctrlInfo);
     apiGroup.MapGet(ReqPaths.GET_FREE_ROOM_ID, GetFreeRoomId).WithMetadata(ctrlInfo);
     apiGroup.MapGet(ReqPaths.IS_ROOM_ID_VALID, IsRoomIdValid).WithMetadata(ctrlInfo);
-    apiGroup.MapGet("/ws", ConnectToWsAsync).WithMetadata(ctrlInfo);
     apiGroup.MapGet("/events", EventsAsync).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.REGISTER_ROOM, RegisterRoom).WithMetadata(ctrlInfo);
     apiGroup.MapPost(ReqPaths.UNREGISTER_ROOM, DeleteRoomRegistration).WithMetadata(ctrlInfo);
@@ -82,6 +58,8 @@ internal class ApiControllerV1
   }
 
   public async Task<IResult> GetMapTileAsync(
+    IHttpClientProvider _httpClientProvider,
+    IAppConfig _appConfig,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -104,7 +82,7 @@ internal class ApiControllerV1
       }
     }
 
-    var tfApiKey = p_appConfig.ThunderforestApiKey;
+    var tfApiKey = _appConfig.ThunderforestApiKey;
     var tfApiKeyParam = tfApiKey.IsNullOrWhiteSpace() ? string.Empty : $"?apikey={tfApiKey}";
     var url = _mapType switch
     {
@@ -128,12 +106,12 @@ internal class ApiControllerV1
         foreach (var (headerName, headerValue) in _stravaTilesProvider.Headers)
           httpReq.Headers.Add(headerName, headerValue);
 
-      using var httpRes = await p_httpClientProvider.HttpClient.SendAsync(httpReq, _ct);
+      using var httpRes = await _httpClientProvider.HttpClient.SendAsync(httpReq, _ct);
       httpRes.EnsureSuccessStatusCode();
 
       var imageBytes = await httpRes.Content.ReadAsByteArrayAsync(_ct);
 
-      var mapCacheSize = p_appConfig.MapTilesCacheSize;
+      var mapCacheSize = _appConfig.MapTilesCacheSize;
       if (mapCacheSize != null && mapCacheSize.Value > 0)
         await _dbProvider.Tiles.WriteBlobAsync(_mapType, cacheKey, imageBytes, _ct);
 
@@ -155,6 +133,9 @@ internal class ApiControllerV1
   }
 
   public async Task<IResult> StorePathPointAsync(
+    IAppConfig _appConfig,
+    IReqRateLimiter _reqRateLimiter,
+    IRoomsController _roomsController,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -171,13 +152,13 @@ internal class ApiControllerV1
     if (!ReqResUtil.IsUsernameSafe(_req.Username))
       return _reqToolkit.BadRequest("Username is incorrect!");
 
-    var room = p_roomsController.GetRoom(_req.RoomId);
-    var maxPathPoints = room?.MaxPathPoints ?? p_appConfig.MaxPathPointsPerRoom;
+    var room = _roomsController.GetRoom(_req.RoomId);
+    var maxPathPoints = room?.MaxPathPoints ?? _appConfig.MaxPathPointsPerRoom;
     if (maxPathPoints == 0)
       return _reqToolkit.Forbidden("Publishing is forbidden!");
 
-    var minInterval = room?.MinPathPointIntervalMs ?? p_appConfig.MinPathPointIntervalMs;
-    if (!p_reqRateLimiter.IsReqOk($"{ReqPaths.STORE_PATH_POINT}/{_req.RoomId}", _httpRequest.HttpContext.Connection.RemoteIpAddress, minInterval))
+    var minInterval = room?.MinPathPointIntervalMs ?? _appConfig.MinPathPointIntervalMs;
+    if (!_reqRateLimiter.IsReqOk($"{ReqPaths.STORE_PATH_POINT}/{_req.RoomId}", _httpRequest.HttpContext.Connection.RemoteIpAddress, minInterval))
     {
       _log.Warn($"Too many requests, time limit: {minInterval} ms");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -195,7 +176,7 @@ internal class ApiControllerV1
       _dbProvider.GenericData.WriteSimpleDocument(sessionKey, new RoomUserSession(_req.SessionId));
 
       if (_req.WipeOldPath == true)
-        p_roomsController.EnqueueUserWipe(_req.RoomId, _req.AppId, _req.Username, nowUnixMs);
+        _roomsController.EnqueueUserWipe(_req.RoomId, _req.AppId, _req.Username, nowUnixMs);
 
       var pushMsgPayload = new PushMsgNewTrackStarted(GenericToolkit.ConcealAppInstanceId(_req.AppId), _req.Username);
       var pushMsgData = JsonSerializer.SerializeToElement(pushMsgPayload, AndroidPushJsonCtx.Default.PushMsgNewTrackStarted);
@@ -206,17 +187,16 @@ internal class ApiControllerV1
     var record = StorageEntry.From(_req);
     _dbProvider.Paths.WriteDocument(_req.RoomId, $"{record.AppId}.{nowUnixMs}", record);
 
-    var msg = new WsMsgUpdateAvailable(nowUnixMs);
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
-    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
+    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, new SseMsgUpdateAvailable(nowUnixMs));
 
     if (room?.MaxPointsPerPath > 0)
-      p_roomsController.EnqueuePathTruncate(_req.RoomId, _req.AppId, _req.Username);
+      _roomsController.EnqueuePathTruncate(_req.RoomId, _req.AppId, _req.Username);
 
     return Results.Ok();
   }
 
   public IResult ListRoomPathPoints(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -233,7 +213,7 @@ internal class ApiControllerV1
     }
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       _log.Warn($"Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -269,6 +249,7 @@ internal class ApiControllerV1
   }
 
   public async Task<IResult> CreateRoomPointAsync(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -286,7 +267,7 @@ internal class ApiControllerV1
       return _reqToolkit.BadRequest($"Incorrect username!");
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_ROOM_POINT, ip, () => new TimeWall(10, TimeSpan.FromSeconds(10))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.CREATE_ROOM_POINT, ip, () => new TimeWall(10, TimeSpan.FromSeconds(10))))
     {
       _log.Warn($"Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -297,9 +278,7 @@ internal class ApiControllerV1
     var point = new RoomPointDocument(_req.AppId, _req.RoomId, _req.Username, _req.Lat, _req.Lng, description);
     _dbProvider.GenericData.WriteSimpleDocument($"{_req.RoomId}.{now.ToUnixTimeMilliseconds()}", point);
 
-    var msg = new WsMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds());
-    await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
-    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
+    _sseServerCtrl.SendMsgByRoomId(_req.RoomId, new SseMsgRoomPointsUpdated(now.ToUnixTimeMilliseconds()));
 
     var pushMsgData = JsonSerializer.SerializeToElement(
       new PushMsgRoomPointAdded(_req.AppId, _req.Username, _req.Description, _req.Lat, _req.Lng),
@@ -312,6 +291,7 @@ internal class ApiControllerV1
   }
 
   public IResult ListRoomPoints(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -324,7 +304,7 @@ internal class ApiControllerV1
       return _reqToolkit.BadRequest($"Incorrect room id: '{_roomId}'!");
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
     {
       _log.Warn($"Too many requests from ip '{ip}'");
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
@@ -338,6 +318,7 @@ internal class ApiControllerV1
   }
 
   public async Task<IResult> DeleteRoomPointAsync(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -352,17 +333,14 @@ internal class ApiControllerV1
       return _reqToolkit.BadRequest($"Incorrect room id!");
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.DELETE_ROOM_POINT, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
 
     foreach (var entry in _dbProvider.GenericData.ListSimpleDocuments<RoomPointDocument>(new LikeExpr($"{_req.RoomId}.%")))
       if (entry.Created.ToUnixTimeMilliseconds() == _req.PointId)
       {
         _dbProvider.GenericData.DeleteSimpleDocument<RoomPointDocument>(entry.Key);
-
-        var msg = new WsMsgRoomPointsUpdated(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
-        await p_webSocketCtrl.SendMsgByRoomIdAsync(_req.RoomId, msg, _ct);
-        _sseServerCtrl.SendMsgByRoomId(_req.RoomId, msg);
+        _sseServerCtrl.SendMsgByRoomId(_req.RoomId, new SseMsgRoomPointsUpdated(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
         break;
       }
 
@@ -370,6 +348,7 @@ internal class ApiControllerV1
   }
 
   public IResult GetFreeRoomId(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     IDbProvider _dbProvider,
@@ -379,7 +358,7 @@ internal class ApiControllerV1
     _log.Info($"Requested **free room id**");
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_FREE_ROOM_ID, ip, () => new TimeWall(10, TimeSpan.FromSeconds(60))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.GET_FREE_ROOM_ID, ip, () => new TimeWall(10, TimeSpan.FromSeconds(60))))
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
 
     using var timedCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -417,31 +396,8 @@ internal class ApiControllerV1
       : Results.StatusCode((int)HttpStatusCode.NotAcceptable);
   }
 
-  public async Task<IResult> ConnectToWsAsync(
-    IScopedLog _log,
-    IRequestToolkit _reqToolkit,
-    HttpRequest _httpRequest,
-    [FromQuery(Name = "roomId")] string _roomId,
-    CancellationToken _ct)
-  {
-    _log.Info($"Requested to **connect to ws** of room __'{_roomId}'__");
-
-    if (!ReqResUtil.IsRoomIdValid(_roomId))
-      return _reqToolkit.BadRequest("Room Id is incorrect!");
-    if (!_httpRequest.HttpContext.WebSockets.IsWebSocketRequest)
-      return _reqToolkit.BadRequest($"Expected web socket request");
-
-    var sessionIndex = Interlocked.Increment(ref p_wsSessionsCount);
-    _log.Info($"**Establishing ws connection** '__{sessionIndex}__' for room '__{_roomId}__'...");
-
-    using var websocket = await _httpRequest.HttpContext.WebSockets.AcceptWebSocketAsync();
-    _ = await p_webSocketCtrl.AcceptSocketAsync(websocket, _roomId);
-    _log.Info($"**Ws connection** '__{sessionIndex}__' for room '__{_roomId}__' is **closed**");
-
-    return Results.Empty;
-  }
-
   public async Task<IResult> EventsAsync(
+    IReqRateLimiter _reqRateLimiter,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     ISseServerCtrl _sseServerCtrl,
@@ -453,7 +409,7 @@ internal class ApiControllerV1
       return _reqToolkit.BadRequest("Room Id is incorrect!");
 
     var ip = _httpRequest.HttpContext.Connection.RemoteIpAddress;
-    if (!p_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
+    if (!_reqRateLimiter.IsReqTimewallOk(ReqPaths.LIST_ROOM_PATH_POINTS, ip, () => new TimeWall(60, TimeSpan.FromSeconds(60))))
       return Results.StatusCode((int)HttpStatusCode.TooManyRequests);
 
     _httpRequest.HttpContext.Response.SetSseHeaders();
@@ -472,36 +428,39 @@ internal class ApiControllerV1
 
   [ApiTokenRequired]
   public IResult RegisterRoom(
+    IRoomsController _roomsController,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     [FromBody] RoomInfo _req)
   {
     _log.Info($"Requested to **register room** __'{_req.RoomId}'__");
 
-    p_roomsController.RegisterRoom(_req);
+    _roomsController.RegisterRoom(_req);
     return _reqToolkit.Ok();
   }
 
   [ApiTokenRequired]
   public IResult DeleteRoomRegistration(
+    IRoomsController _roomsController,
     IScopedLog _log,
     IRequestToolkit _reqToolkit,
     [FromBody] DeleteRoomReq _req)
   {
     _log.Info($"Requested to **unregister room** __'{_req.RoomId}'__");
 
-    p_roomsController.UnregisterRoom(_req.RoomId);
+    _roomsController.UnregisterRoom(_req.RoomId);
     return _reqToolkit.Ok();
   }
 
   [ApiTokenRequired]
   public IResult ListRooms(
+    IRoomsController _roomsController,
     IScopedLog _log,
     IRequestToolkit _reqToolkit)
   {
     _log.Info($"Requested to **list rooms**");
 
-    var users = p_roomsController.ListRegisteredRooms();
+    var users = _roomsController.ListRegisteredRooms();
     return Results.Json(users, RestJsonCtx.Default.IReadOnlyListRoomInfo);
   }
 

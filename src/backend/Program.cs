@@ -14,7 +14,6 @@ using Roadnik.Server.Modules.RoomsController;
 using Roadnik.Server.Modules.SseServerCtrl;
 using Roadnik.Server.Modules.StravaTilesProvider;
 using Roadnik.Server.Modules.WebServer;
-using Roadnik.Server.Modules.WebSocketController;
 using System.Reactive.Linq;
 using System.Text.RegularExpressions;
 
@@ -47,7 +46,6 @@ public partial class Program
       .AddSingleton<IReqRateLimiter>(new ReqRateLimiterImpl())
       .AddModule<FCMPublisherImpl, IFCMPublisher>()
       .AddModule<RoomsControllerImpl, IRoomsController>()
-      .AddModule<WebSocketCtrlImpl, IWebSocketCtrl>()
       .AddModule<SseServerCtrlImpl, ISseServerCtrl>()
       .AddModule<WebServerImpl, IWebServer>()
       .AddModule<EventsControllerImpl, IEventsController>()

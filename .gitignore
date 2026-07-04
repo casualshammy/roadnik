@@ -17,5 +17,6 @@
 /.keys
 /src/backend/Properties/launchSettings.json
 /src/.vs/
-/src/backend/.data/
 /AGENTS.md
+/.data/
+**/.vscode/launch.json

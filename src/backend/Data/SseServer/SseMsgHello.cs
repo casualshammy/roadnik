@@ -1,8 +1,8 @@
 ﻿using Ax.Fw.Web.Data.SseServer;
 
-namespace Roadnik.Server.Data.WebSockets;
+namespace Roadnik.Server.Data.SseServer;
 
-internal sealed record WsMsgHello(
+internal sealed record SseMsgHello(
   long UnixTimeMs,
   uint MaxPathPointsPerRoom,
   IReadOnlyDictionary<string, long> Timestamps)

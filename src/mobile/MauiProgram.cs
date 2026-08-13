@@ -53,7 +53,7 @@ public static partial class MauiProgram
       });
 
     var appStartedVersionStr = $"============= app is launched ({AppInfo.Current.VersionString}) =============";
-    var line = new string(Enumerable.Repeat('=', appStartedVersionStr.Length).ToArray());
+    var line = new string([.. Enumerable.Repeat('=', appStartedVersionStr.Length)]);
     log.Info(line);
     log.Info(appStartedVersionStr);
     log.Info(line);

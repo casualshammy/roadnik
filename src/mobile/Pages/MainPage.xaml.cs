@@ -317,6 +317,14 @@ public partial class MainPage : CContentPage
         });
       });
 
+    // start side buttons animation after page is opened
+    {
+      p_sideBtnAnimCts?.Cancel();
+      var cts = p_sideBtnAnimCts = new CancellationTokenSource();
+      _ = MainThread.InvokeOnMainThreadAsync(async () => await SetupAndShowDiscordBtnAnimationAsync(cts.Token));
+      _ = MainThread.InvokeOnMainThreadAsync(async () => await SetupAndShowHrmBtnAnimationAsync(cts.Token));
+    }
+
     p_log.Info($"Main page is opened");
   }
 

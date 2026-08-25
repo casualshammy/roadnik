@@ -13,6 +13,7 @@ internal class WebController
   {
     var ctrlInfo = new RestControllerInfo("web-ctrl", "web-ctrl");
 
+    _app.MapMethods("/", ["HEAD"], () => Results.Ok()).WithMetadata(ctrlInfo);
     _app.MapMethods("/r/", ["HEAD"], () => Results.Ok()).WithMetadata(ctrlInfo);
     _app.MapGet("/", GetIndexFile).WithMetadata(ctrlInfo);
     _app.MapGet("/r/{**path}", GetRoomStaticFile).WithMetadata(ctrlInfo);

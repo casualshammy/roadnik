@@ -54,6 +54,10 @@ export class HostApi {
     this.sendDataToHost({ msgType: Consts.HOST_MSG_MAP_DRAG_STARTED, data: {} });
   }
 
+  public sendMapReady() {
+    this.sendDataToHost({ msgType: Consts.HOST_MSG_MAP_READY, data: {} });
+  }
+
   private sendDataToHost(_msg: JsToCSharpMsg): void {
     try {
       const json = JSON.stringify(_msg);

@@ -35,6 +35,7 @@ internal static class AppConsts
   public const string JS_TO_CSHARP_MSG_TYPE_WAYPOINT_ADD_STARTED = "js-msg-waypoint-add-started";
   public const string HOST_MSG_MAP_STATE = "host-msg-map-state";
   public const string HOST_MSG_MAP_DRAG_STARTED = "map-drag-started";
+  public const string HOST_MSG_MAP_READY = "map-ready";
 
   public const string NOTIFICATION_CHANNEL_MAP_EVENTS = "MapEventsChannel";
   public const string NOTIFICATION_CHANNEL_INTEGRATIONS = "IntegrationsChannel";

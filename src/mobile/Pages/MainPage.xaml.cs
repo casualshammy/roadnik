@@ -22,6 +22,7 @@ using Roadnik.MAUI.Pages.Parts;
 using Roadnik.MAUI.Toolkit;
 using Roadnik.MAUI.ViewModels;
 using System.Net.Http.Json;
+using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -44,6 +45,7 @@ public partial class MainPage : CContentPage
   private readonly IObservable<bool> p_pageIsVisible;
   private readonly Subject<bool> p_pageAppearedChangeFlow = new();
   private readonly Subject<bool> p_webAppTracksSynchonizedSubj = new();
+  private readonly Subject<Unit> p_mapReadySubj = new();
   private readonly MainPageViewModel p_bindingCtx;
   private readonly PowerManager p_powerManager;
   private readonly MapInteractor p_mapInteractor;
@@ -241,12 +243,12 @@ public partial class MainPage : CContentPage
 
     var compassProvider = Container.Locate<ICompassProvider>();
     var webAppLocationProvider = new AndroidLocationProvider(p_log, p_lifetime);
-    p_webAppTracksSynchonizedSubj
+    p_mapReadySubj
       .CombineLatest(p_pageIsVisible)
       .HotAlive(p_lifetime, null, (_tuple, _life) =>
       {
-        var (webAppTracksReady, pageIsVisible) = _tuple;
-        if (!webAppTracksReady || !pageIsVisible)
+        var (_, pageIsVisible) = _tuple;
+        if (!pageIsVisible)
           return;
 
         _ = Task.Run(async () =>
@@ -512,6 +514,8 @@ public partial class MainPage : CContentPage
       await OnWebAppMsgMapStateAsync(msg);
     else if (msg.MsgType == HOST_MSG_MAP_DRAG_STARTED)
       await OnHostMsgMapDragStartedAsync();
+    else if (msg.MsgType == HOST_MSG_MAP_READY)
+      OnHostMsgMapReadyAsync();
   }
 
   private void OnHostMsgTracksSynchronized(JsToCSharpMsg _msg)
@@ -600,6 +604,8 @@ public partial class MainPage : CContentPage
 
   private Task OnHostMsgMapDragStartedAsync()
     => CancelFollowCurrentLocationAsync();
+
+  private void OnHostMsgMapReadyAsync() => p_mapReadySubj.OnNext();
 
   private async Task OnNotificationAsync(CancellationToken _ct)
   {

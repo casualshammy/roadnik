@@ -85,7 +85,6 @@ internal class LocationReporterImpl : ILocationReporter, IAppModule<ILocationRep
 
     var kalmanFilter = new KalmanFilter(100f * 1000 / 3600);
     var locationFlow = locationProvider.Location
-      .DistinctUntilChanged(_ => _.Timestamp)
       .Buffer(TimeSpan.FromSeconds(1))
       .Select(_locations =>
       {

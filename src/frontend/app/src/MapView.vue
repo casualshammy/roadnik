@@ -94,6 +94,7 @@ function onMapCreated(_map: L.Map) {
 
   setupMap(_map);
   setupDataFlow(_map);
+  p_hostApi.sendMapReady();
 }
 
 function setupMap(_map: L.Map) {

@@ -17,9 +17,9 @@ namespace Roadnik.MAUI.Modules.LocationProvider;
 internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, ILocationProvider
 {
   private static readonly LocationManager p_locationService;
-  private static readonly Pool<ReplaySubject<LocationData>> p_locationSubjPool;
+  private static readonly Pool<Subject<LocationData>> p_locationSubjPool;
   private readonly ILog p_logger;
-  private readonly ReplaySubject<LocationData> p_locationFlow;
+  private readonly Subject<LocationData> p_locationFlow;
   private readonly Subject<string> p_providerDisabledSubj;
   private readonly Subject<string> p_providerEnabledSubj;
   private readonly object p_startStopLock = new();
@@ -27,7 +27,7 @@ internal class AndroidLocationProvider : Java.Lang.Object, ILocationListener, IL
   static AndroidLocationProvider()
   {
     p_locationService = (LocationManager)Platform.AppContext.GetSystemService(Context.LocationService)!;
-    p_locationSubjPool = new Pool<ReplaySubject<LocationData>>(() => new ReplaySubject<LocationData>(1), null);
+    p_locationSubjPool = new Pool<Subject<LocationData>>(() => new Subject<LocationData>(), null);
   }
 
   public AndroidLocationProvider(ILog _logger, IReadOnlyLifetime _lifetime)
